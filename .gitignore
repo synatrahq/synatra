@@ -1,0 +1,26 @@
+# Node
+node_modules
+.pnpm-store
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist
+build
+coverage
+.astro
+packages/server/static
+
+# Editor
+.DS_Store
+*.log
+
+# Turbo
+.turbo
+out
+
+# Claude
+.claude
+/private/

@@ -1,0 +1,41 @@
+{
+  "name": "@synatra/resource-gateway",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "node --import tsx --watch ./src/index.ts",
+    "build": "bun build src/index.ts --target=node --outfile=dist/index.js --external pg --external mysql2 --external redis --external ws --external stripe",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@synatra/core": "workspace:*",
+    "@synatra/util": "workspace:*",
+    "@synatra/service-call": "workspace:*",
+    "@hono/node-server": "1.19.6",
+    "@hono/zod-validator": "^0.7.5",
+    "@octokit/auth-app": "^7.1.1",
+    "hono": "4.10.4",
+    "mysql2": "^3.14.1",
+    "pg": "^8.16.0",
+    "redis": "^5.0.0",
+    "stripe": "^20.0.0",
+    "ws": "^8.18.0",
+    "zod": "4.1.13"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.10",
+    "@types/ws": "^8.5.13",
+    "tsx": "4.19.4",
+    "typescript": "5.9.3",
+    "vitest": "^4.0.15"
+  },
+  "prettier": {
+    "semi": false,
+    "printWidth": 120
+  }
+}

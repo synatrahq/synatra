@@ -1,0 +1,29 @@
+FROM node:22-alpine3.21 AS base
+RUN corepack enable && corepack prepare pnpm@10.24.0 --activate
+RUN npm install -g bun turbo
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+WORKDIR /app
+
+FROM base AS builder
+ARG VITE_GATEWAY_URL
+ENV VITE_GATEWAY_URL=$VITE_GATEWAY_URL
+COPY . .
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+RUN pnpm turbo run build --filter=@synatra/server --filter=@synatra/www --filter=@synatra/console --filter=@synatra/core
+
+FROM node:22-alpine3.21 AS runner
+RUN apk add --no-cache dumb-init ca-certificates
+WORKDIR /app
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/packages ./packages
+
+RUN mkdir -p /app/packages/server/static && \
+    cp -r /app/packages/www/dist /app/packages/server/static/www && \
+    cp -r /app/packages/console/dist /app/packages/server/static/console
+USER nodejs
+ENV NODE_ENV=production
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "packages/server/dist/index.js"]

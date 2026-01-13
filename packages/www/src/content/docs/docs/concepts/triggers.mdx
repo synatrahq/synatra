@@ -1,0 +1,70 @@
+---
+title: Triggers
+description: Cron, webhooks, and app events to start agent workflows.
+---
+
+Triggers allow agents to start workflows automatically based on external events.
+
+## Overview
+
+Synatra supports three trigger types:
+
+| Trigger Type | Description                        | Example                       |
+| ------------ | ---------------------------------- | ----------------------------- |
+| Schedule     | Cron-based recurring execution     | Every day at 9:00 AM          |
+| Webhook      | HTTP endpoint for external systems | Stripe payment failed webhook |
+| App Event    | Events from connected apps         | GitHub issue created          |
+
+## Creating a Trigger
+
+1. Navigate to **Triggers** in the Console
+2. Click **New Trigger**
+3. Select the trigger type
+4. Configure the trigger settings
+5. Assign an agent and initial prompt
+
+## Schedule Triggers
+
+Schedule triggers use cron expressions to run agents on a recurring schedule:
+
+| Example       | Description          |
+| ------------- | -------------------- |
+| `0 9 * * *`   | Every day at 9:00 AM |
+| `0 */2 * * *` | Every 2 hours        |
+| `0 9 * * 1`   | Every Monday at 9 AM |
+| `0 0 1 * *`   | First of each month  |
+
+## Webhook Triggers
+
+Webhook triggers provide an HTTP endpoint that external systems can call:
+
+- Each trigger gets a unique URL
+- Supports POST requests with JSON payload
+- Payload data is available in the agent's prompt
+
+## App Event Triggers
+
+App event triggers respond to events from connected resources:
+
+- **GitHub**: Issue created, PR opened, comment added
+- **Stripe**: Payment failed, subscription cancelled
+- **Intercom**: Conversation created, message received
+
+## Trigger Payload
+
+Triggers can inject dynamic data into the agent's initial prompt using template syntax:
+
+```
+A new issue was created: {{ payload.issue.title }}
+Repository: {{ payload.repository.name }}
+Author: {{ payload.issue.user.login }}
+```
+
+The template uses simple property access with `{{ path.to.value }}` syntax. Objects are automatically converted to JSON strings.
+
+## Version Modes
+
+Triggers support two version modes:
+
+- **Current**: Always use the latest agent release. Changes to the agent are immediately reflected.
+- **Fixed**: Lock to a specific agent release version. Useful for production stability.

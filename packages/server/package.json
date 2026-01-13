@@ -1,0 +1,48 @@
+{
+  "name": "@synatra/server",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.52",
+    "@ai-sdk/google": "^2.0.47",
+    "@ai-sdk/openai": "^2.0.75",
+    "@hono/node-server": "1.19.6",
+    "@hono/zod-validator": "^0.7.5",
+    "@octokit/auth-app": "^7.1.1",
+    "@synatra/core": "workspace:*",
+    "@synatra/service-call": "workspace:*",
+    "@synatra/util": "workspace:*",
+    "@synatra/workflows": "workspace:*",
+    "@temporalio/client": "1.13.2",
+    "ai": "^5.0.105",
+    "ajv": "8.17.1",
+    "better-auth": "1.4.5",
+    "drizzle-orm": "0.43.0",
+    "fuse.js": "^7.1.0",
+    "hono": "4.10.4",
+    "redis": "5.10.0",
+    "stripe": "20.0.0",
+    "yaml": "^2.8.2",
+    "zod": "4.1.13"
+  },
+  "scripts": {
+    "dev": "node --import tsx --watch ./src/index.ts",
+    "build": "bun build src/index.ts --target=node --outfile=dist/index.js --external @temporalio/client --external redis",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "generate:api-docs": "node --import tsx scripts/generate-api-docs.ts"
+  },
+  "devDependencies": {
+    "tsx": "4.19.4",
+    "typescript": "5.9.3",
+    "vitest": "^4.0.15"
+  },
+  "prettier": {
+    "semi": false,
+    "printWidth": 120
+  }
+}

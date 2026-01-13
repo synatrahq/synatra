@@ -1,0 +1,536 @@
+---
+
+---
+
+<section id="problem-section" class="border-t border-surface-border-muted px-6 py-20">
+  <div class="mx-auto max-w-5xl">
+    <p class="text-xs font-medium text-gray-500">Problem</p>
+    <h2 class="mt-4 max-w-3xl text-2xl font-semibold tracking-tight text-white md:text-3xl">
+      Internal tools become debt the moment you ship them
+    </h2>
+    <p class="mt-4 max-w-2xl text-sm text-gray-400">
+      Nobody wants to maintain someone else's Retool app. The original author left. The API got deprecated. And now you're stuck debugging JavaScript embedded in a drag-and-drop canvas.
+    </p>
+
+    <div class="mt-12">
+      <div id="problem-dashboard" class="relative rounded-xl border bg-surface-bg-muted overflow-hidden" style="--chaos: 0;">
+        <div class="dashboard-header flex items-center justify-between border-b px-4 h-10">
+          <div class="flex items-center gap-3">
+            <div class="flex gap-1.5">
+              <div class="traffic-light traffic-light-red h-2.5 w-2.5 rounded-full"></div>
+              <div class="traffic-light traffic-light-yellow h-2.5 w-2.5 rounded-full"></div>
+              <div class="traffic-light traffic-light-green h-2.5 w-2.5 rounded-full"></div>
+            </div>
+            <span class="text-xs text-gray-500">Admin Dashboard</span>
+          </div>
+          <span class="author-note text-[10px] text-gray-600">by @mike</span>
+        </div>
+
+        <div class="relative p-4 md:p-6 min-h-[280px] md:min-h-[320px] overflow-hidden">
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4">
+            <div class="chaos-card chaos-card-1 rounded-lg border bg-surface-bg p-2.5 md:p-3">
+              <p class="text-[10px] text-gray-500">Revenue</p>
+              <p class="card-value card-value-1 text-base md:text-lg font-semibold"><span class="original">$42,350</span><span class="broken">$--,---</span></p>
+            </div>
+            <div class="chaos-card chaos-card-2 rounded-lg border bg-surface-bg p-2.5 md:p-3 z-10">
+              <p class="text-[10px] text-gray-500">Users</p>
+              <p class="card-value card-value-2 text-base md:text-lg font-semibold"><span class="original">1,247</span><span class="broken">NaN</span></p>
+            </div>
+            <div class="chaos-card chaos-card-3 rounded-lg border bg-surface-bg p-2.5 md:p-3">
+              <p class="text-[10px] text-gray-500">Orders</p>
+              <p class="card-value card-value-3 text-base md:text-lg font-semibold"><span class="original">892</span><span class="broken">undefined</span></p>
+            </div>
+            <div class="chaos-card chaos-card-4 rounded-lg border bg-surface-bg p-2.5 md:p-3">
+              <p class="text-[10px] text-gray-500">Growth</p>
+              <p class="text-base md:text-lg font-semibold text-emerald-400">+12%</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+            <div class="chaos-card chaos-card-chart md:col-span-2 rounded-lg border bg-surface-bg p-3 md:p-4 origin-top-left">
+              <div class="flex items-center justify-between mb-3">
+                <p class="text-xs text-gray-400">Monthly Revenue</p>
+                <span class="error-label text-[9px] font-medium px-1.5 py-0.5 rounded">Failed to load</span>
+              </div>
+              <div class="h-20 md:h-28 flex items-end gap-1">
+                <div class="chart-bar chart-bar-1 flex-1 rounded-t origin-bottom" style="height: 60%"></div>
+                <div class="chart-bar chart-bar-2 flex-1 rounded-t origin-bottom" style="height: 75%"></div>
+                <div class="chart-bar chart-bar-3 flex-1 rounded-t origin-bottom" style="height: 45%"></div>
+                <div class="chart-bar chart-bar-4 flex-1 rounded-t origin-bottom" style="height: 80%"></div>
+                <div class="chart-bar chart-bar-5 flex-1 rounded-t origin-bottom" style="height: 30%"></div>
+                <div class="chart-bar chart-bar-6 flex-1 rounded-t origin-bottom" style="height: 90%"></div>
+                <div class="chart-bar chart-bar-7 flex-1 rounded-t origin-bottom" style="height: 70%"></div>
+              </div>
+              <div class="chart-axis mt-2 h-px"></div>
+            </div>
+
+            <div class="chaos-card chaos-card-users rounded-lg border bg-surface-bg p-3">
+              <p class="text-xs text-gray-400 mb-2">Recent Users</p>
+              <div class="space-y-2">
+                <div class="user-row user-row-1 flex items-center gap-2">
+                  <div class="user-avatar-1 h-5 w-5 rounded-full"></div>
+                  <span class="text-[11px] text-gray-300">john@acme.com</span>
+                </div>
+                <div class="user-row user-row-2 flex items-center gap-2">
+                  <div class="user-avatar h-5 w-5 rounded-full"></div>
+                  <span class="user-email text-[11px]"><span class="original">jane@startup.io</span><span class="broken">[Object]</span></span>
+                </div>
+                <div class="user-row user-row-3 flex items-center gap-2">
+                  <div class="user-avatar-3 h-5 w-5 rounded-full"></div>
+                  <span class="text-[11px] text-gray-300">sarah@corp.co</span>
+                </div>
+                <div class="user-row user-row-4 flex items-center gap-2">
+                  <div class="user-avatar-4 h-5 w-5 rounded-full"></div>
+                  <span class="user-email-4 text-[11px]"><span class="original">mike@dev.org</span><span class="broken">null</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chaos-card chaos-table mt-4 rounded-lg border bg-surface-bg overflow-hidden origin-center">
+            <table class="w-full text-[10px] md:text-[11px]">
+              <thead class="bg-surface-bg-elevated">
+                <tr class="text-gray-500">
+                  <th class="px-2 md:px-3 py-1.5 md:py-2 text-left font-medium">Order</th>
+                  <th class="px-2 md:px-3 py-1.5 md:py-2 text-left font-medium">Customer</th>
+                  <th class="px-2 md:px-3 py-1.5 md:py-2 text-left font-medium">Amount</th>
+                  <th class="px-2 md:px-3 py-1.5 md:py-2 text-left font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody class="text-gray-300">
+                <tr class="border-t border-surface-border">
+                  <td class="px-2 md:px-3 py-1.5 md:py-2 font-mono">#4521</td>
+                  <td class="px-2 md:px-3 py-1.5 md:py-2">Acme Corp</td>
+                  <td class="px-2 md:px-3 py-1.5 md:py-2">$2,400</td>
+                  <td class="px-2 md:px-3 py-1.5 md:py-2"><span class="text-emerald-400">Paid</span></td>
+                </tr>
+                <tr class="table-row-error border-t border-surface-border">
+                  <td class="px-2 md:px-3 py-1.5 md:py-2 font-mono"><span class="crossfade order-id"><span class="original">#4520</span><span class="broken">#----</span></span></td>
+                  <td class="px-2 md:px-3 py-1.5 md:py-2"><span class="crossfade customer-name"><span class="original">TechStart Inc</span><span class="broken">[Object]</span></span></td>
+                  <td class="px-2 md:px-3 py-1.5 md:py-2"><span class="crossfade amount"><span class="original">$1,200</span><span class="broken">$NaN</span></span></td>
+                  <td class="px-2 md:px-3 py-1.5 md:py-2"><span class="crossfade status"><span class="original">Pending</span><span class="broken">Error</span></span></td>
+                </tr>
+                <tr class="table-row-fade border-t border-surface-border">
+                  <td class="px-2 md:px-3 py-1.5 md:py-2 font-mono">#4519</td>
+                  <td class="px-2 md:px-3 py-1.5 md:py-2">StartupXYZ</td>
+                  <td class="px-2 md:px-3 py-1.5 md:py-2">$99</td>
+                  <td class="px-2 md:px-3 py-1.5 md:py-2"><span class="status-fade">Paid</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="error-badge absolute top-4 right-4 flex items-center gap-1.5 rounded-full border border-red-500/50 bg-red-950 px-2.5 py-1 text-[10px] text-red-400 font-medium">
+            <span class="error-dot h-2 w-2 rounded-full bg-red-500"></span>
+            <span class="error-count">8 errors</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-10 text-center">
+      <p class="text-sm text-gray-400">
+        What if you never had to build—or maintain—internal tools again?
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  #problem-dashboard {
+    --chaos: 0;
+    border-color: color-mix(in srgb, rgb(239 68 68 / 0.5) calc(var(--chaos) * 100%), var(--color-surface-border));
+  }
+
+  .dashboard-header {
+    background-color: color-mix(in srgb, rgb(127 29 29 / 0.4) calc(var(--chaos) * 100%), rgb(255 255 255 / 0.02));
+    border-color: color-mix(in srgb, rgb(239 68 68 / 0.3) calc(var(--chaos) * 100%), var(--color-surface-border-muted));
+  }
+
+  .traffic-light-red {
+    background-color: color-mix(in srgb, rgb(239 68 68) calc(var(--chaos) * 100%), rgb(239 68 68 / 0.6));
+    box-shadow: 0 0 calc(var(--chaos) * 8px) rgb(239 68 68 / calc(var(--chaos) * 0.8));
+  }
+  .traffic-light-yellow {
+    background-color: color-mix(in srgb, rgb(234 179 8 / 0.5) calc(var(--chaos) * 100%), rgb(234 179 8 / 0.6));
+  }
+  .traffic-light-green {
+    background-color: color-mix(in srgb, rgb(34 197 94 / 0.3) calc(var(--chaos) * 100%), rgb(34 197 94 / 0.6));
+  }
+
+  .author-note::after {
+    content: " (left 3 months ago)";
+    color: rgb(248 113 113);
+    opacity: var(--chaos);
+  }
+
+  .error-badge {
+    opacity: var(--chaos);
+    transform: scale(calc(0.5 + var(--chaos) * 0.5)) translateY(calc((1 - var(--chaos)) * 10px));
+    box-shadow: 0 0 calc(var(--chaos) * 20px) rgb(239 68 68 / calc(var(--chaos) * 0.5));
+  }
+  .error-dot {
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .error-label {
+    opacity: var(--chaos);
+    background-color: rgb(127 29 29 / calc(var(--chaos) * 0.8));
+    color: rgb(252 165 165);
+  }
+
+  .chaos-card {
+    transition: transform 0.15s var(--ease-out), border-color 0.15s, opacity 0.15s, box-shadow 0.15s, background-color 0.15s;
+    border-color: var(--color-surface-border);
+  }
+
+  .chaos-card-1 {
+    transform:
+      rotate(calc(var(--chaos) * 8deg))
+      translate(calc(var(--chaos) * -6px), calc(var(--chaos) * 10px));
+    border-color: color-mix(in srgb, rgb(239 68 68 / 0.4) calc(var(--chaos) * 100%), var(--color-surface-border));
+  }
+  @media (min-width: 768px) {
+    .chaos-card-1 {
+      transform:
+        rotate(calc(var(--chaos) * 8deg))
+        translate(calc(var(--chaos) * -15px), calc(var(--chaos) * 25px));
+    }
+  }
+  .card-value-1 {
+    position: relative;
+    display: inline-block;
+  }
+  .card-value-1 .original {
+    opacity: calc(1 - var(--chaos));
+    color: white;
+  }
+  .card-value-1 .broken {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: var(--chaos);
+    color: rgb(156 163 175);
+  }
+
+  .chaos-card-2 {
+    transform:
+      rotate(calc(var(--chaos) * -10deg))
+      translate(calc(var(--chaos) * 8px), calc(var(--chaos) * -8px))
+      scale(calc(1 + var(--chaos) * 0.03));
+    border-color: color-mix(in srgb, rgb(239 68 68 / 0.7) calc(var(--chaos) * 100%), var(--color-surface-border));
+    background-color: color-mix(in srgb, rgb(127 29 29 / 0.3) calc(var(--chaos) * 100%), var(--color-surface-bg));
+    box-shadow: 0 0 calc(var(--chaos) * 15px) rgb(239 68 68 / calc(var(--chaos) * 0.3));
+  }
+  @media (min-width: 768px) {
+    .chaos-card-2 {
+      transform:
+        rotate(calc(var(--chaos) * -12deg))
+        translate(calc(var(--chaos) * 20px), calc(var(--chaos) * -20px))
+        scale(calc(1 + var(--chaos) * 0.05));
+    }
+  }
+  .card-value-2 {
+    position: relative;
+    display: inline-block;
+  }
+  .card-value-2 .original {
+    opacity: calc(1 - var(--chaos));
+    color: white;
+  }
+  .card-value-2 .broken {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: var(--chaos);
+    color: rgb(248 113 113);
+    font-weight: bold;
+  }
+
+  .chaos-card-3 {
+    transform:
+      rotate(calc(var(--chaos) * -14deg))
+      translate(calc(var(--chaos) * -4px), calc(var(--chaos) * 8px));
+  }
+  @media (min-width: 768px) {
+    .chaos-card-3 {
+      transform:
+        rotate(calc(var(--chaos) * 15deg))
+        translate(calc(var(--chaos) * 30px), calc(var(--chaos) * 15px));
+    }
+  }
+  .card-value-3 {
+    position: relative;
+    display: inline-block;
+  }
+  .card-value-3 .original {
+    opacity: calc(1 - var(--chaos));
+    color: white;
+  }
+  .card-value-3 .broken {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: var(--chaos);
+    color: rgb(107 114 128);
+    font-size: 0.75em;
+    white-space: nowrap;
+  }
+
+  .chaos-card-4 {
+    transform:
+      rotate(calc(var(--chaos) * 12deg))
+      translate(calc(var(--chaos) * 4px), calc(var(--chaos) * 6px));
+    opacity: calc(1 - var(--chaos) * 0.4);
+    filter: blur(calc(var(--chaos) * 1px));
+  }
+  @media (min-width: 768px) {
+    .chaos-card-4 {
+      transform:
+        rotate(calc(var(--chaos) * -6deg))
+        translate(calc(var(--chaos) * -20px), calc(var(--chaos) * 10px));
+    }
+  }
+
+  .chaos-card-chart {
+    transform:
+      rotate(calc(var(--chaos) * -5deg))
+      translate(calc(var(--chaos) * 10px), calc(var(--chaos) * 20px));
+    border-color: color-mix(in srgb, rgb(239 68 68 / 0.4) calc(var(--chaos) * 100%), var(--color-surface-border));
+  }
+
+  .chart-bar {
+    transition: transform 0.15s, background-color 0.15s, opacity 0.15s;
+    background-color: rgb(16 185 129 / 0.6);
+  }
+  .chart-bar-1 {
+    transform: rotate(calc(var(--chaos) * 3deg));
+  }
+  .chart-bar-2 {
+    transform: rotate(calc(var(--chaos) * -8deg));
+  }
+  .chart-bar-3 {
+    transform: rotate(calc(var(--chaos) * 25deg)) translateY(calc(var(--chaos) * 8px));
+    background-color: color-mix(in srgb, rgb(55 65 81) calc(var(--chaos) * 100%), rgb(16 185 129 / 0.6));
+  }
+  .chart-bar-4 {
+    transform: rotate(calc(var(--chaos) * -18deg)) translateY(calc(var(--chaos) * 20px));
+    background-color: color-mix(in srgb, rgb(55 65 81) calc(var(--chaos) * 100%), rgb(16 185 129 / 0.6));
+  }
+  .chart-bar-5 {
+    transform: rotate(calc(var(--chaos) * 35deg)) translateX(calc(var(--chaos) * -10px));
+    background-color: color-mix(in srgb, rgb(239 68 68 / 0.5) calc(var(--chaos) * 100%), rgb(16 185 129 / 0.6));
+  }
+  .chart-bar-6 {
+    transform: rotate(calc(var(--chaos) * -12deg)) translateY(calc(var(--chaos) * -5px));
+    background-color: color-mix(in srgb, transparent calc(var(--chaos) * 100%), rgb(16 185 129 / 0.6));
+    border: calc(var(--chaos) * 2px) dashed rgb(55 65 81);
+  }
+  .chart-bar-7 {
+    transform: rotate(calc(var(--chaos) * 8deg));
+    background-color: color-mix(in srgb, transparent calc(var(--chaos) * 100%), rgb(16 185 129 / 0.6));
+    border: calc(var(--chaos) * 2px) dashed rgb(55 65 81);
+    opacity: calc(1 - var(--chaos) * 0.7);
+  }
+
+  .chart-axis {
+    background: linear-gradient(
+      to right,
+      rgb(55 65 81),
+      color-mix(in srgb, rgb(239 68 68 / 0.6) calc(var(--chaos) * 100%), rgb(55 65 81)) 50%,
+      rgb(55 65 81)
+    );
+    transform: rotate(calc(var(--chaos) * 3deg));
+  }
+
+  .chaos-card-users {
+    transform:
+      rotate(calc(var(--chaos) * 10deg))
+      translate(calc(var(--chaos) * 15px), calc(var(--chaos) * 30px));
+  }
+
+  .user-row {
+    transition: transform 0.15s, opacity 0.15s;
+  }
+  .user-row-1 {
+    transform: rotate(calc(var(--chaos) * -5deg)) translateX(calc(var(--chaos) * -10px));
+  }
+  .user-row-1 .user-avatar-1 {
+    background-color: rgb(59 130 246 / 0.3);
+  }
+  .user-row-2 {
+    transform: translate(calc(var(--chaos) * 25px), 0) rotate(calc(var(--chaos) * 5deg));
+    opacity: calc(1 - var(--chaos) * 0.7);
+  }
+  .user-row-2 .user-avatar {
+    background-color: color-mix(in srgb, rgb(55 65 81) calc(var(--chaos) * 100%), rgb(168 85 247 / 0.3));
+  }
+  .user-row-2 .user-email {
+    position: relative;
+    display: inline-block;
+  }
+  .user-row-2 .user-email .original {
+    opacity: calc(1 - var(--chaos));
+    color: rgb(209 213 219);
+  }
+  .user-row-2 .user-email .broken {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: var(--chaos);
+    color: rgb(107 114 128);
+  }
+
+  .user-row-3 {
+    transform: rotate(calc(var(--chaos) * -8deg)) translateX(calc(var(--chaos) * -20px));
+  }
+  .user-row-3 .user-avatar-3 {
+    background-color: rgb(236 72 153 / 0.3);
+  }
+  .user-row-4 {
+    transform: translateX(calc(var(--chaos) * 40px)) rotate(calc(var(--chaos) * 3deg));
+    opacity: calc(1 - var(--chaos) * 0.5);
+  }
+  .user-row-4 .user-avatar-4 {
+    background-color: color-mix(in srgb, rgb(55 65 81) calc(var(--chaos) * 100%), rgb(16 185 129 / 0.3));
+  }
+  .user-row-4 .user-email-4 {
+    position: relative;
+    display: inline-block;
+  }
+  .user-row-4 .user-email-4 .original {
+    opacity: calc(1 - var(--chaos));
+    color: rgb(209 213 219);
+  }
+  .user-row-4 .user-email-4 .broken {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: var(--chaos);
+    color: rgb(107 114 128);
+  }
+
+  .chaos-table {
+    transform:
+      rotate(calc(var(--chaos) * 4deg))
+      translate(calc(var(--chaos) * 15px), calc(var(--chaos) * -10px));
+    border-color: color-mix(in srgb, rgb(239 68 68 / 0.5) calc(var(--chaos) * 100%), var(--color-surface-border));
+  }
+
+  .table-row-error {
+    background-color: color-mix(in srgb, rgb(127 29 29 / 0.5) calc(var(--chaos) * 100%), transparent);
+    transform: translateX(calc(var(--chaos) * 8px)) skewX(calc(var(--chaos) * -2deg));
+  }
+  .table-row-error .crossfade {
+    position: relative;
+    display: inline-block;
+  }
+  .table-row-error .crossfade .original {
+    opacity: calc(1 - var(--chaos));
+  }
+  .table-row-error .crossfade .broken {
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: var(--chaos);
+    white-space: nowrap;
+  }
+  .table-row-error .order-id .broken {
+    color: rgb(248 113 113);
+  }
+  .table-row-error .customer-name .broken {
+    color: rgb(107 114 128);
+  }
+  .table-row-error .amount .broken {
+    color: rgb(107 114 128);
+  }
+  .table-row-error .status .original {
+    color: rgb(251 191 36);
+  }
+  .table-row-error .status .broken {
+    color: rgb(248 113 113);
+    font-weight: 600;
+  }
+
+  .table-row-fade {
+    opacity: calc(1 - var(--chaos) * 0.8);
+    transform: translateX(calc(var(--chaos) * -15px));
+    filter: blur(calc(var(--chaos) * 1px));
+  }
+  .table-row-fade .status-fade {
+    color: color-mix(in srgb, rgb(107 114 128) calc(var(--chaos) * 100%), rgb(52 211 153));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .chaos-card,
+    .chart-bar,
+    .user-row,
+    .table-row-error,
+    .table-row-fade,
+    .error-badge {
+      transition: none;
+    }
+    .error-dot {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  const section = document.getElementById("problem-section")
+  const dashboard = document.getElementById("problem-dashboard")
+
+  if (section && dashboard && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    let ticking = false
+
+    const handleScroll = () => {
+      if (ticking) return
+      ticking = true
+
+      requestAnimationFrame(() => {
+        const rect = section.getBoundingClientRect()
+        const windowHeight = window.innerHeight
+        const startTrigger = windowHeight * 0.5
+        const endTrigger = windowHeight * 0.15
+
+        let chaos = 0
+        if (rect.top >= startTrigger) {
+          chaos = 0
+        } else if (rect.top <= endTrigger) {
+          chaos = 1
+        } else {
+          const progress = (startTrigger - rect.top) / (startTrigger - endTrigger)
+          chaos = Math.max(0, Math.min(1, progress))
+        }
+
+        dashboard.style.setProperty("--chaos", chaos.toString())
+        ticking = false
+      })
+    }
+
+    let listening = false
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !listening) {
+            listening = true
+            window.addEventListener("scroll", handleScroll, { passive: true })
+            handleScroll()
+          } else if (!entry.isIntersecting && listening) {
+            listening = false
+            window.removeEventListener("scroll", handleScroll)
+          }
+        })
+      },
+      { threshold: 0 }
+    )
+
+    observer.observe(section)
+  } else if (dashboard) {
+    dashboard.style.setProperty("--chaos", "1")
+  }
+</script>

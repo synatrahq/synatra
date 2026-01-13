@@ -1,0 +1,184 @@
+---
+import { PhFileText, PhTable, PhChartLine, PhCheckCircle } from "phosphor-icons-astro"
+---
+
+<section id="on-demand-ui-section" class="border-t border-surface-border-muted px-6 py-20">
+  <div class="mx-auto max-w-5xl">
+    <p class="text-xs font-medium text-gray-500">Zero maintenance</p>
+    <h2 class="mt-4 max-w-2xl text-2xl font-semibold tracking-tight text-white md:text-3xl">
+      UI that builds itself
+    </h2>
+    <p class="mt-4 max-w-2xl text-sm text-gray-400">
+      Forms, tables, charts, approvals—generated fresh for each task. Nothing to maintain.
+    </p>
+    <div class="ui-cards mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="ui-card group rounded-lg border border-surface-border-muted bg-surface-bg-muted p-4 transition-all hover:border-blue-500/30" data-index="0" data-color="blue">
+        <div class="flex items-center gap-2">
+          <div class="ui-icon flex h-8 w-8 items-center justify-center rounded bg-blue-500/10 text-blue-400">
+            <PhFileText class="h-4 w-4" />
+          </div>
+          <p class="text-sm font-medium text-white">Forms</p>
+        </div>
+        <p class="mt-3 text-xs text-gray-500">Text, numbers, dates, dropdowns, checkboxes—whatever the task needs, with built-in validation.</p>
+      </div>
+      <div class="ui-card group rounded-lg border border-surface-border-muted bg-surface-bg-muted p-4 transition-all hover:border-purple-500/30" data-index="1" data-color="purple">
+        <div class="flex items-center gap-2">
+          <div class="ui-icon flex h-8 w-8 items-center justify-center rounded bg-purple-500/10 text-purple-400">
+            <PhTable class="h-4 w-4" />
+          </div>
+          <p class="text-sm font-medium text-white">Tables</p>
+        </div>
+        <p class="mt-3 text-xs text-gray-500">Sortable, selectable rows. Pick one or many for bulk operations. No configuration needed.</p>
+      </div>
+      <div class="ui-card group rounded-lg border border-surface-border-muted bg-surface-bg-muted p-4 transition-all hover:border-emerald-500/30" data-index="2" data-color="emerald">
+        <div class="flex items-center gap-2">
+          <div class="ui-icon flex h-8 w-8 items-center justify-center rounded bg-emerald-500/10 text-emerald-400">
+            <PhChartLine class="h-4 w-4" />
+          </div>
+          <p class="text-sm font-medium text-white">Charts</p>
+        </div>
+        <p class="mt-3 text-xs text-gray-500">Line, bar, pie—visualize any data instantly. No BI tool required.</p>
+      </div>
+      <div class="ui-card group rounded-lg border border-surface-border-muted bg-surface-bg-muted p-4 transition-all hover:border-amber-500/30" data-index="3" data-color="amber">
+        <div class="flex items-center gap-2">
+          <div class="ui-icon flex h-8 w-8 items-center justify-center rounded bg-amber-500/10 text-amber-400">
+            <PhCheckCircle class="h-4 w-4" />
+          </div>
+          <p class="text-sm font-medium text-white">Approvals</p>
+        </div>
+        <p class="mt-3 text-xs text-gray-500">Confirm, modify, or reject. Dangerous operations require human sign-off.</p>
+      </div>
+    </div>
+    <div class="ui-result mt-8 rounded-lg bg-surface-bg-elevated/50 border border-surface-border-muted p-4">
+      <p class="text-center text-sm text-gray-400">
+        <span class="text-white font-medium">Result:</span> Your team talks. AI handles the UI. <span class="ui-strikethrough">No Retool. No React dashboards.</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .ui-card {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+    transition:
+      opacity 0.5s var(--ease-out),
+      transform 0.5s var(--ease-out),
+      border-color 0.2s,
+      box-shadow 0.3s;
+  }
+
+  .ui-card.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  .ui-card.is-materializing {
+    box-shadow: 0 0 30px var(--glow-color, rgb(59 130 246 / 0.3));
+  }
+
+  .ui-card[data-color="blue"] { --glow-color: rgb(59 130 246 / 0.4); }
+  .ui-card[data-color="purple"] { --glow-color: rgb(168 85 247 / 0.4); }
+  .ui-card[data-color="emerald"] { --glow-color: rgb(16 185 129 / 0.4); }
+  .ui-card[data-color="amber"] { --glow-color: rgb(245 158 11 / 0.4); }
+
+  .ui-icon {
+    transition: transform 0.3s var(--ease-out), box-shadow 0.3s;
+  }
+
+  .ui-card.is-materializing .ui-icon {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px var(--glow-color);
+  }
+
+  .ui-result {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.4s var(--ease-out), transform 0.4s var(--ease-out);
+  }
+
+  .ui-result.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .ui-strikethrough {
+    position: relative;
+  }
+
+  .ui-strikethrough::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    width: 0;
+    height: 2px;
+    background: rgb(16 185 129);
+    transition: width 0.6s var(--ease-out);
+  }
+
+  .ui-strikethrough.is-struck::after {
+    width: 100%;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ui-card,
+    .ui-result {
+      opacity: 1;
+      transform: none;
+      transition: border-color 0.2s;
+    }
+    .ui-card.is-materializing {
+      box-shadow: none;
+    }
+    .ui-strikethrough::after {
+      width: 100%;
+      transition: none;
+    }
+  }
+</style>
+
+<script>
+  const section = document.getElementById("on-demand-ui-section")
+
+  if (section && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const cards = section.querySelectorAll(".ui-card")
+    const result = section.querySelector(".ui-result") as HTMLElement
+    const strikethrough = section.querySelector(".ui-strikethrough") as HTMLElement
+    let hasPlayed = false
+
+    const playAnimation = async () => {
+      if (hasPlayed) return
+      hasPlayed = true
+
+      for (let i = 0; i < cards.length; i++) {
+        await new Promise((r) => setTimeout(r, 120))
+        const card = cards[i] as HTMLElement
+        card.classList.add("is-visible", "is-materializing")
+        setTimeout(() => card.classList.remove("is-materializing"), 600)
+      }
+
+      await new Promise((r) => setTimeout(r, 300))
+      result.classList.add("is-visible")
+
+      await new Promise((r) => setTimeout(r, 400))
+      strikethrough.classList.add("is-struck")
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          playAnimation()
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.3 }
+    )
+
+    observer.observe(section)
+  } else {
+    section?.querySelectorAll(".ui-card").forEach((c) => c.classList.add("is-visible"))
+    section?.querySelector(".ui-result")?.classList.add("is-visible")
+    section?.querySelector(".ui-strikethrough")?.classList.add("is-struck")
+  }
+</script>

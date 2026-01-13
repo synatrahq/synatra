@@ -1,0 +1,72 @@
+services:
+  temporal:
+    image: temporalio/auto-setup:1.29.1
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=temporal-db
+      - LOG_LEVEL=warn
+      - BIND_ON_IP=0.0.0.0
+      - DYNAMIC_CONFIG_FILE_PATH=/etc/temporal/dynamic-config.yaml
+    volumes:
+      - ./temporal-dynamic-config.yaml:/etc/temporal/dynamic-config.yaml:ro
+    ports:
+      - "7233:7233"
+    networks:
+      - backend
+      - temporal
+    depends_on:
+      temporal-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  temporal-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_DB: temporal
+    volumes:
+      - temporal_data:/var/lib/postgresql/data
+    networks:
+      - temporal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  temporal-ui:
+    image: temporalio/ui:2.34.0
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:3000,http://localhost:5173
+    ports:
+      - "8080:8080"
+    networks:
+      - temporal
+    depends_on:
+      - temporal
+    restart: unless-stopped
+
+  temporal-init:
+    image: temporalio/admin-tools:1.26.2
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+    volumes:
+      - ./scripts/temporal-init.sh:/init.sh:ro
+    entrypoint: ["/bin/bash", "/init.sh"]
+    networks:
+      - temporal
+    depends_on:
+      - temporal
+    restart: "no"
+
+networks:
+  temporal:
+
+volumes:
+  temporal_data:

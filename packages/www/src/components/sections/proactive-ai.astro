@@ -1,0 +1,269 @@
+---
+import { PhClock, PhWebhooksLogo, PhLightning, PhTray, PhChatCircle, PhCreditCard, PhArrowsClockwise, PhCheckCircle } from "phosphor-icons-astro"
+---
+
+<style>
+  @keyframes trigger-pulse {
+    0%, 100% {
+      opacity: 0.3;
+      transform: scale(0.8);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+
+  .trigger-pulse {
+    animation: trigger-pulse 2s ease-in-out infinite;
+  }
+
+  .trigger-pulse-delay-1 {
+    animation-delay: 0.6s;
+  }
+
+  .trigger-pulse-delay-2 {
+    animation-delay: 1.2s;
+  }
+
+  @keyframes agent-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .agent-spin {
+    animation: agent-spin 1s linear infinite;
+  }
+
+  .agent-spin-delay {
+    animation-delay: 0.3s;
+  }
+</style>
+
+<section class="border-t border-surface-border-muted px-6 py-20">
+  <div class="mx-auto max-w-5xl">
+    <p class="text-xs font-medium text-gray-500">But there's more</p>
+    <h2 class="mt-4 max-w-2xl text-2xl font-semibold tracking-tight text-white md:text-3xl">
+      Your AI messages you first
+    </h2>
+    <p class="mt-4 max-w-2xl text-sm text-gray-400">
+      Like a colleague tapping your shoulder. Set triggers—cron, webhooks, events—and your agents reach out when something needs attention. You respond when you're ready.
+    </p>
+
+    <div class="mt-10 grid grid-cols-3 gap-2 lg:hidden">
+      <div class="flex items-center gap-2 rounded-lg border border-blue-500/30 bg-blue-500/5 px-3 py-2">
+        <PhClock class="h-4 w-4 text-blue-400" />
+        <span class="text-xs font-medium text-white">Cron</span>
+      </div>
+      <div class="flex items-center gap-2 rounded-lg border border-purple-500/30 bg-purple-500/5 px-3 py-2">
+        <PhWebhooksLogo class="h-4 w-4 text-purple-400" />
+        <span class="text-xs font-medium text-white">Webhook</span>
+      </div>
+      <div class="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
+        <PhLightning class="h-4 w-4 text-emerald-400" />
+        <span class="text-xs font-medium text-white">Event</span>
+      </div>
+    </div>
+
+    <div class="hidden lg:grid mt-10 grid-cols-[208px_32px_1fr] grid-rows-[auto_1fr_1fr_1fr]">
+      <div class="row-span-4 grid grid-rows-subgrid rounded-xl border border-surface-border bg-surface-bg-muted overflow-hidden">
+        <div class="flex items-center gap-1.5 border-b border-surface-border-muted px-3 py-2">
+          <PhLightning class="h-3.5 w-3.5 text-gray-400" />
+          <span class="text-xs font-medium text-white">Triggers</span>
+        </div>
+
+        <div class="flex flex-col justify-center px-2 pt-2">
+          <div class="flex flex-col rounded-lg border border-blue-500/30 bg-blue-500/5">
+            <div class="flex items-center gap-2 px-3 py-1.5">
+              <PhClock class="h-4 w-4 text-blue-400" />
+              <span class="text-xs font-medium text-white">Cron</span>
+              <span class="ml-auto text-[10px] text-gray-500">9:00 AM</span>
+            </div>
+            <div class="flex items-center gap-2 border-t border-blue-500/20 bg-blue-500/5 px-3 py-1 rounded-b-lg">
+              <div class="agent-spin h-2 w-2 rounded-full border-[1.5px] border-blue-400 border-t-transparent"></div>
+              <span class="text-[10px] text-gray-400">analyzing...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col justify-center px-2">
+          <div class="flex flex-col rounded-lg border border-purple-500/30 bg-purple-500/5">
+            <div class="flex items-center gap-2 px-3 py-1.5">
+              <PhWebhooksLogo class="h-4 w-4 text-purple-400" />
+              <span class="text-xs font-medium text-white">Webhook</span>
+              <span class="ml-auto text-[10px] text-gray-500 font-mono">Stripe</span>
+            </div>
+            <div class="flex items-center gap-2 border-t border-purple-500/20 bg-purple-500/5 px-3 py-1 rounded-b-lg">
+              <div class="agent-spin agent-spin-delay h-2 w-2 rounded-full border-[1.5px] border-purple-400 border-t-transparent"></div>
+              <span class="text-[10px] text-gray-400">drafting...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-col justify-center px-2 pb-2">
+          <div class="flex flex-col rounded-lg border border-emerald-500/30 bg-emerald-500/5 opacity-60">
+            <div class="flex items-center gap-2 px-3 py-1.5">
+              <PhLightning class="h-4 w-4 text-emerald-400" />
+              <span class="text-xs font-medium text-white">App Event</span>
+              <span class="ml-auto text-[10px] text-gray-500">GitHub</span>
+            </div>
+            <div class="flex items-center gap-2 border-t border-emerald-500/20 bg-emerald-500/5 px-3 py-1 rounded-b-lg">
+              <PhCheckCircle class="h-2 w-2 text-emerald-400" />
+              <span class="text-[10px] text-emerald-400/70">done</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row-span-4 grid grid-rows-subgrid">
+        <div></div>
+        <div class="flex items-center">
+          <div class="h-px flex-1 bg-gradient-to-r from-blue-500/40 to-blue-500/20"></div>
+          <div class="h-2 w-2 rounded-full bg-blue-400 trigger-pulse"></div>
+        </div>
+        <div class="flex items-center">
+          <div class="h-px flex-1 bg-gradient-to-r from-purple-500/40 to-purple-500/20"></div>
+          <div class="h-2 w-2 rounded-full bg-purple-400 trigger-pulse trigger-pulse-delay-1"></div>
+        </div>
+        <div class="flex items-center">
+          <div class="h-px flex-1 bg-gradient-to-r from-emerald-500/40 to-emerald-500/20"></div>
+          <div class="h-2 w-2 rounded-full bg-emerald-400 trigger-pulse trigger-pulse-delay-2"></div>
+        </div>
+      </div>
+
+      <div class="row-span-4 grid grid-rows-subgrid rounded-xl border border-surface-border bg-surface-bg-muted overflow-hidden">
+        <div class="flex items-center justify-between border-b border-surface-border-muted px-3 py-2">
+          <div class="flex items-center gap-1.5">
+            <PhTray class="h-3.5 w-3.5 text-gray-400" />
+            <span class="text-xs font-medium text-white">Inbox</span>
+          </div>
+          <span class="flex items-center gap-1 text-[10px] text-amber-400">
+            <span class="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+            2 awaiting
+          </span>
+        </div>
+
+        <div class="flex items-center gap-2.5 px-3 py-2 hover:bg-surface-bg-elevated/50 cursor-pointer">
+          <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-500/15">
+            <PhChatCircle class="h-3.5 w-3.5 text-blue-400" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-semibold text-white">Support Agent</span>
+              <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+            </div>
+            <p class="text-[11px] text-gray-400 truncate">3 tickets overnight — review drafts?</p>
+          </div>
+          <div class="flex flex-col items-end gap-0.5 shrink-0">
+            <span class="text-[10px] text-emerald-400">now</span>
+            <span class="text-[10px] text-blue-400/70">Cron</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2.5 px-3 py-2 hover:bg-surface-bg-elevated/50 cursor-pointer">
+          <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-purple-500/15">
+            <PhCreditCard class="h-3.5 w-3.5 text-purple-400" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-semibold text-white">Billing Agent</span>
+              <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+            </div>
+            <p class="text-[11px] text-gray-400 truncate">Acme Corp payment failed — send grace email?</p>
+          </div>
+          <div class="flex flex-col items-end gap-0.5 shrink-0">
+            <span class="text-[10px] text-gray-500">2m</span>
+            <span class="text-[10px] text-purple-400/70">Stripe</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2.5 px-3 py-2 opacity-60 hover:bg-surface-bg-elevated/50 cursor-pointer">
+          <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-500/15">
+            <PhArrowsClockwise class="h-3.5 w-3.5 text-emerald-400" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-medium text-white">CI Agent</span>
+              <PhCheckCircle class="h-3 w-3 text-emerald-400" />
+            </div>
+            <p class="text-[11px] text-gray-500 truncate">PR #421 merged — tests passed</p>
+          </div>
+          <div class="flex flex-col items-end gap-0.5 shrink-0">
+            <span class="text-[10px] text-gray-500">5m</span>
+            <span class="text-[10px] text-emerald-400/50">GitHub</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-4 lg:hidden">
+      <div class="rounded-xl border border-surface-border bg-surface-bg-muted overflow-hidden">
+        <div class="flex items-center justify-between border-b border-surface-border-muted px-3 py-2">
+          <div class="flex items-center gap-1.5">
+            <PhTray class="h-3.5 w-3.5 text-gray-400" />
+            <span class="text-xs font-medium text-white">Inbox</span>
+          </div>
+          <span class="flex items-center gap-1 text-[10px] text-amber-400">
+            <span class="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+            2 awaiting
+          </span>
+        </div>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface-bg-elevated/50 cursor-pointer">
+            <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-500/15">
+              <PhChatCircle class="h-3.5 w-3.5 text-blue-400" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-semibold text-white">Support Agent</span>
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+              </div>
+              <p class="text-[11px] text-gray-400 truncate">3 tickets overnight — review drafts?</p>
+            </div>
+            <div class="flex flex-col items-end gap-0.5 shrink-0">
+              <span class="text-[10px] text-emerald-400">now</span>
+              <span class="text-[10px] text-blue-400/70">Cron</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2.5 px-3 py-2.5 hover:bg-surface-bg-elevated/50 cursor-pointer">
+            <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-purple-500/15">
+              <PhCreditCard class="h-3.5 w-3.5 text-purple-400" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-semibold text-white">Billing Agent</span>
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-400"></span>
+              </div>
+              <p class="text-[11px] text-gray-400 truncate">Acme Corp payment failed — send grace email?</p>
+            </div>
+            <div class="flex flex-col items-end gap-0.5 shrink-0">
+              <span class="text-[10px] text-gray-500">2m</span>
+              <span class="text-[10px] text-purple-400/70">Stripe</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2.5 px-3 py-2.5 opacity-60 hover:bg-surface-bg-elevated/50 cursor-pointer">
+            <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-emerald-500/15">
+              <PhArrowsClockwise class="h-3.5 w-3.5 text-emerald-400" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-medium text-white">CI Agent</span>
+                <PhCheckCircle class="h-3 w-3 text-emerald-400" />
+              </div>
+              <p class="text-[11px] text-gray-500 truncate">PR #421 merged — tests passed</p>
+            </div>
+            <div class="flex flex-col items-end gap-0.5 shrink-0">
+              <span class="text-[10px] text-gray-500">5m</span>
+              <span class="text-[10px] text-emerald-400/50">GitHub</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</section>

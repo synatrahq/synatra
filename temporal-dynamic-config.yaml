@@ -1,0 +1,13 @@
+system.enableNexus:
+  - value: false
+
+# Workflow retention (how long completed workflows are kept)
+# 7 days for development, increase for production
+history.workflowExecutionRetentionInDays:
+  - value: 7
+    constraints: {}
+
+# Maximum workflow execution time (30 days)
+limit.maxWorkflowExecutionTimeInSeconds:
+  - value: 2592000
+    constraints: {}

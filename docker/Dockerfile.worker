@@ -1,0 +1,30 @@
+FROM node:22-slim AS base
+RUN corepack enable && corepack prepare pnpm@10.24.0 --activate
+RUN npm install -g bun turbo
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+WORKDIR /app
+
+FROM base AS pruner
+COPY . .
+RUN turbo prune --scope=@synatra/worker --docker
+
+FROM base AS builder
+COPY --from=pruner /app/out/json/ .
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+COPY --from=pruner /app/out/full/ .
+COPY tsconfig.json ./
+RUN pnpm turbo run build --filter=@synatra/worker
+
+FROM node:22-slim AS runner
+RUN apt-get update && apt-get install -y --no-install-recommends dumb-init ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+RUN groupadd -g 1001 nodejs && useradd -u 1001 -g nodejs nodejs
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nodejs /app/packages ./packages
+USER nodejs
+ENV NODE_ENV=production
+ENV TEMPORAL_TASK_QUEUE=agent
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "packages/worker/dist/index.js"]

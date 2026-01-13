@@ -1,0 +1,38 @@
+{
+  "name": "@synatra/code-executor",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "node --import tsx --watch src/index.ts",
+    "build": "bun build src/index.ts --target=node --outfile=dist/index.js --external isolated-vm",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@synatra/core": "workspace:*",
+    "@synatra/util": "workspace:*",
+    "@synatra/service-call": "workspace:*",
+    "@hono/node-server": "1.19.6",
+    "@hono/zod-validator": "^0.7.5",
+    "hono": "4.10.4",
+    "isolated-vm": "^6.0.2",
+    "zod": "4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "22.14.1",
+    "tsx": "4.19.4",
+    "typescript": "5.9.3",
+    "vitest": "^4.0.15"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "prettier": {
+    "semi": false,
+    "printWidth": 120
+  }
+}

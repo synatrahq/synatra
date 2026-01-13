@@ -1,0 +1,37 @@
+# Synatra
+
+> AI agent platform with human-in-the-loop approval workflows. Build, deploy, and manage autonomous AI agents that execute tasks, call user-defined tools, and connect to external resources with configurable approval workflows.
+
+Synatra enables teams to build AI agents that can:
+- Execute tasks using multiple LLM providers (OpenAI, Anthropic, Google)
+- Call user-defined tools with configurable approval workflows
+- Connect to external resources (PostgreSQL, MySQL, Stripe, GitHub, Intercom)
+- Generate on-demand UI widgets (forms, tables, charts) for user interaction
+- Respond to triggers (cron schedules, webhooks, app events)
+- Maintain persistent conversation threads with approval gates
+
+## Key Features
+
+- Human-in-the-Loop: Configurable approval workflows before agents execute sensitive actions
+- On-Demand UI: Agents generate forms, tables, charts, and confirmations as needed
+- Secure Sandbox: User code runs in isolated VMs with memory limits and network isolation
+- Durable Execution: Temporal-based orchestration with automatic state recovery
+- Proactive Triggers: Cron schedules, webhooks, and app events to start agent workflows
+- Multi-Tenant: Organizations, role-based access control, and environment separation
+
+## Documentation
+
+- [Introduction](https://synatrahq.com/docs): Overview of Synatra platform
+- [Quick Start](https://synatrahq.com/docs/quick-start): Get Synatra running locally in minutes
+- [Full Documentation](https://synatrahq.com/llms-full.txt): Complete documentation for LLM context
+
+## Concepts
+
+- [Agents](https://synatrahq.com/docs/concepts/agents): AI executors with versioned configurations
+- [Tools](https://synatrahq.com/docs/concepts/tools): User-defined functions that agents can call
+- [Resources](https://synatrahq.com/docs/concepts/resources): External integrations with encrypted credentials
+- [Triggers](https://synatrahq.com/docs/concepts/triggers): Cron, webhooks, and app events to start workflows
+
+## Optional
+
+- [GitHub Repository](https://github.com/synatrahq/synatra): Open source codebase

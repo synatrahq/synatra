@@ -1,0 +1,48 @@
+{
+  "name": "@synatra/worker",
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./activities": "./src/activities/index.ts"
+  },
+  "scripts": {
+    "dev": "node --import tsx src/index.ts",
+    "dev:watch": "node --import tsx --watch src/index.ts",
+    "prebuild": "node --import tsx scripts/build-workflow-bundle.ts",
+    "build": "bun build src/index.ts --target=node --outfile=dist/index.js --external @temporalio/worker --external @temporalio/activity --external @temporalio/client --external redis",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.52",
+    "@ai-sdk/google": "^2.0.44",
+    "@ai-sdk/openai": "^2.0.75",
+    "@synatra/core": "workspace:*",
+    "@synatra/service-call": "workspace:*",
+    "@synatra/util": "workspace:*",
+    "@synatra/workflows": "workspace:*",
+    "@temporalio/activity": "1.13.2",
+    "@temporalio/client": "1.13.2",
+    "@temporalio/worker": "1.13.2",
+    "@temporalio/workflow": "1.13.2",
+    "ai": "^5.0.105",
+    "ajv": "8.17.1",
+    "redis": "5.10.0",
+    "zod": "4.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "22.14.1",
+    "tsx": "4.19.4",
+    "typescript": "5.9.3",
+    "vitest": "^4.0.15"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "prettier": {
+    "semi": false,
+    "printWidth": 120
+  }
+}

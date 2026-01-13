@@ -1,0 +1,39 @@
+{
+  "github": [
+    "/repos/{owner}/{repo}",
+    "/repos/{owner}/{repo}/issues",
+    "/repos/{owner}/{repo}/pulls",
+    "/repos/{owner}/{repo}/commits",
+    "/repos/{owner}/{repo}/contents",
+    "/repos/{owner}/{repo}/branches",
+    "/repos/{owner}/{repo}/releases",
+    "/users/{username}",
+    "/orgs/{org}/repos",
+    "/search/issues",
+    "/search/repositories"
+  ],
+  "stripe": [
+    "/v1/customers",
+    "/v1/charges",
+    "/v1/payment_intents",
+    "/v1/subscriptions",
+    "/v1/invoices",
+    "/v1/refunds",
+    "/v1/products",
+    "/v1/prices",
+    "/v1/balance",
+    "/v1/checkout/sessions"
+  ],
+  "intercom": [
+    "/contacts",
+    "/conversations",
+    "/tags",
+    "/companies",
+    "/tickets",
+    "/admins",
+    "/teams",
+    "/segments",
+    "/notes",
+    "/data_attributes"
+  ]
+}

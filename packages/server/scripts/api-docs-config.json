@@ -1,0 +1,15 @@
+{
+  "github": {
+    "specUrl": "https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json",
+    "endpoints": "all"
+  },
+  "stripe": {
+    "specUrl": "https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json",
+    "endpoints": "all"
+  },
+  "intercom": {
+    "specUrl": "https://raw.githubusercontent.com/intercom/Intercom-OpenAPI/main/descriptions/2.14/api.intercom.io.yaml",
+    "format": "yaml",
+    "endpoints": "all"
+  }
+}

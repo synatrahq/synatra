@@ -1,0 +1,58 @@
+---
+title: Agents
+description: AI executors with versioned configurations.
+---
+
+Agents are the core execution units in Synatra. Each agent is an AI executor with versioned configurations.
+
+## Overview
+
+An agent consists of:
+
+- **Working copy** - Draft state for iterating on configurations
+- **Releases** - Published, immutable versions with semantic versioning
+- **Model configuration** - Provider, temperature, system prompt
+- **Assigned tools** - Functions the agent can call
+
+## Creating an Agent
+
+1. Navigate to **Agents** in the Console
+2. Click **New Agent**
+3. Configure the model settings
+4. Add tools as needed
+5. Write a system prompt
+
+## Model Configuration
+
+Synatra supports multiple LLM providers:
+
+| Provider  | Models                      | Special Features         |
+| --------- | --------------------------- | ------------------------ |
+| OpenAI    | GPT-4o, GPT-4 Turbo         | Reasoning effort control |
+| Anthropic | Claude 3.5 Sonnet, Claude 4 | Extended thinking        |
+| Google    | Gemini 1.5 Pro, Gemini 2    | Thinking config          |
+
+## Releases
+
+When you're ready to deploy an agent:
+
+1. Review the working copy configuration
+2. Click **Create Release**
+3. The release becomes the active version
+
+Releases are immutable and use semantic versioning (major.minor.patch). To make changes, update the working copy and create a new release.
+
+## UI Widgets
+
+Agents can generate dynamic UI widgets to interact with users:
+
+| Widget Type  | Description                             |
+| ------------ | --------------------------------------- |
+| Form         | Input forms with JSON Schema validation |
+| Table        | Sortable tables with row selection      |
+| Chart        | Line, bar, and pie charts               |
+| Markdown     | Formatted text content                  |
+| Confirmation | Approve/reject dialogs                  |
+| Key-Value    | Display structured data                 |
+
+Widgets can wait for user input before the agent continues, allowing for interactive approval flows and data collection.

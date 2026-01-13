@@ -1,0 +1,49 @@
+{
+  "name": "@synatra/console",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --config vite.config.ts",
+    "build": "vite build --config vite.config.ts",
+    "preview": "vite preview --config vite.config.ts",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@ark-ui/solid": "^5.30.0",
+    "@codemirror/lang-javascript": "^6.2.4",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/lang-markdown": "^6.5.0",
+    "@codemirror/lang-yaml": "^6.1.2",
+    "@codemirror/language": "^6.11.3",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.38.8",
+    "@lezer/highlight": "^1.2.3",
+    "@replit/codemirror-vim": "^6.3.0",
+    "@solidjs/meta": "^0.29.4",
+    "@solidjs/router": "0.15.3",
+    "@synatra/core": "workspace:*",
+    "@synatra/server": "workspace:*",
+    "@synatra/util": "workspace:*",
+    "@tanstack/solid-query": "^5.90.15",
+    "@tanstack/solid-query-devtools": "^5.91.1",
+    "better-auth": "1.4.5",
+    "codemirror": "^6.0.2",
+    "dompurify": "^3.3.0",
+    "hono": "4.10.4",
+    "marked": "^17.0.1",
+    "phosphor-solid-js": "^2.0.0",
+    "plotly.js-basic-dist-min": "^3.1.0",
+    "solid-js": "1.9.10",
+    "yaml": "^2.8.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.11",
+    "tailwindcss": "^4.1.17",
+    "vite": "7.1.11",
+    "vite-plugin-solid": "2.11.10"
+  },
+  "prettier": {
+    "semi": false,
+    "printWidth": 120
+  }
+}

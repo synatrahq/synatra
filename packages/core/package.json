@@ -1,0 +1,42 @@
+{
+  "name": "@synatra/core",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/predeploy.ts --target=node --outfile=dist/predeploy.js",
+    "migrate": "node --import tsx src/migrate.ts",
+    "seed": "node --import tsx src/seed.ts",
+    "migrations:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "migrations:push": "drizzle-kit push --config drizzle.config.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts",
+    "./types": "./src/types/index.ts",
+    "./types/app-payload": "./src/types/app-payload.ts",
+    "./permissions": "./src/permissions.ts",
+    "./system-tools": "./src/system-tools.ts",
+    "./thread-events": "./src/thread-events.ts",
+    "./seed/agent-templates": "./src/seed/agent-templates.ts"
+  },
+  "dependencies": {
+    "@synatra/util": "workspace:*",
+    "better-auth": "1.4.5",
+    "drizzle-orm": "0.43.0",
+    "pg": "8.13.1",
+    "stripe": "20.0.0",
+    "zod": "4.1.13"
+  },
+  "devDependencies": {
+    "@types/pg": "8.11.10",
+    "drizzle-kit": "0.30.5",
+    "vitest": "^4.0.15"
+  },
+  "prettier": {
+    "semi": false,
+    "printWidth": 120
+  }
+}

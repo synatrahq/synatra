@@ -1,0 +1,318 @@
+---
+import githubIcon from "../../assets/github_dark.svg"
+---
+
+<section id="open-source-section" class="border-t border-surface-border-muted px-6 py-20">
+  <div class="mx-auto max-w-5xl">
+    <div class="mb-10">
+      <p class="text-xs font-medium text-gray-500">Full transparency</p>
+      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-white md:text-3xl">
+        Open source, Apache 2.0
+      </h2>
+      <p class="mt-4 max-w-lg text-sm text-gray-400">
+        Self-host or use our cloud. Audit every line. No vendor lock-in.
+      </p>
+    </div>
+
+    <div id="clone-terminal" class="clone-terminal rounded-xl border border-surface-border bg-gray-950 overflow-hidden">
+      <div class="flex items-center gap-1.5 border-b border-surface-border-muted px-4 py-2.5">
+        <div class="h-2.5 w-2.5 rounded-full bg-red-500/60"></div>
+        <div class="h-2.5 w-2.5 rounded-full bg-yellow-500/60"></div>
+        <div class="h-2.5 w-2.5 rounded-full bg-green-500/60"></div>
+        <span class="ml-2 text-[11px] text-gray-500">bash</span>
+      </div>
+      <div class="p-5 font-mono text-xs md:text-sm min-h-[320px]">
+        <div class="line-cmd flex items-center gap-2">
+          <span class="text-emerald-400">$</span>
+          <span class="cmd-text text-gray-300"></span>
+          <span class="cmd-cursor"></span>
+        </div>
+
+        <div class="line-spinner mt-3 invisible opacity-0 absolute">
+          <span class="spinner text-blue-400"></span>
+          <span class="spinner-text text-gray-400 ml-2">Cloning...</span>
+        </div>
+
+        <div class="line-progress mt-3 invisible opacity-0">
+          <div class="flex items-center gap-3">
+            <span class="text-gray-500 text-[11px] w-20">Receiving</span>
+            <div class="progress-bar flex-1 h-2 bg-gray-800 rounded-full overflow-hidden max-w-[200px]">
+              <div class="progress-fill h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-100"></div>
+            </div>
+            <span class="progress-pct text-gray-500 text-[11px] w-10 text-right">0%</span>
+          </div>
+        </div>
+
+        <div class="line-success mt-3 invisible opacity-0">
+          <span class="text-emerald-400">✓</span>
+          <span class="text-gray-300 ml-2">Clone complete!</span>
+        </div>
+
+        <div class="info-panel mt-6 invisible opacity-0">
+          <pre class="text-[10px] md:text-xs leading-relaxed"><span class="text-gray-600">╭─ synatra ────────────────────────────────╮
+│                                          │
+│</span>  <span class="text-gray-500">License</span>   <span class="text-emerald-400">Apache 2.0</span>                    <span class="text-gray-600">│
+│</span>  <span class="text-gray-500">Stack</span>     <span class="text-blue-400">SolidJS</span> · <span class="text-purple-400">Temporal</span> · <span class="text-amber-400">Hono</span>     <span class="text-gray-600">│
+│</span>  <span class="text-gray-500">Stars</span>     <span class="star-count text-yellow-400">★ ---</span>                         <span class="text-gray-600">│
+│                                          │
+╰──────────────────────────────────────────╯</span></pre>
+        </div>
+
+        <div class="mascot-section mt-4 invisible opacity-0">
+          <div class="flex items-end justify-end gap-2">
+            <div class="mascot-bubble text-[10px] md:text-xs">
+              <span class="text-gray-500">╭───────────────────╮</span>
+              <br />
+              <span class="text-gray-500">│</span> <span class="mascot-msg text-emerald-400"></span> <span class="text-gray-500">│</span>
+              <br />
+              <span class="text-gray-500">╰───────────────────╯</span>
+            </div>
+            <pre class="mascot-char text-pink-400 text-[10px] md:text-xs leading-tight">  ∧＿∧
+<span class="mascot-face">（＾ω＾）</span>
+  |    |>
+  U  U</pre>
+          </div>
+        </div>
+      </div>
+      <div class="border-t border-surface-border-muted px-4 py-3">
+        <a href="https://github.com/synatrahq/synatra" class="gh-button inline-flex items-center gap-2 rounded-full border border-surface-border px-4 py-2 text-sm font-medium text-gray-300 transition-all hover:border-gray-500 hover:text-white hover:bg-surface-border/30">
+          <img src={githubIcon.src} alt="GitHub" class="h-4 w-4" />
+          <span>View on GitHub</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cmd-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 16px;
+    background: rgb(52 211 153);
+    animation: cursor-blink 1s step-end infinite;
+    vertical-align: text-bottom;
+  }
+
+  @keyframes cursor-blink {
+    50% { opacity: 0; }
+  }
+
+  .line-spinner,
+  .line-progress,
+  .line-success,
+  .info-panel,
+  .mascot-section {
+    animation: fade-slide-in 0.4s var(--ease-out);
+  }
+
+  @keyframes fade-slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .info-panel {
+    animation: panel-in 0.5s var(--ease-out);
+  }
+
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .mascot-char {
+    animation: mascot-bounce 2s ease-in-out infinite;
+  }
+
+  @keyframes mascot-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
+  }
+
+  .mascot-section {
+    animation: mascot-slide-in 0.6s var(--ease-out);
+  }
+
+  @keyframes mascot-slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cmd-cursor,
+    .spinner,
+    .mascot-char {
+      animation: none;
+    }
+    .line-spinner,
+    .line-progress,
+    .line-success,
+    .info-panel,
+    .mascot-section {
+      animation: none;
+    }
+  }
+</style>
+
+<script>
+  const section = document.getElementById("open-source-section")
+  const terminal = document.getElementById("clone-terminal")
+
+  if (section && terminal && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const cmdText = terminal.querySelector(".cmd-text") as HTMLElement
+    const cmdCursor = terminal.querySelector(".cmd-cursor") as HTMLElement
+    const lineSpinner = terminal.querySelector(".line-spinner") as HTMLElement
+    const spinner = terminal.querySelector(".spinner") as HTMLElement
+    const lineProgress = terminal.querySelector(".line-progress") as HTMLElement
+    const progressFill = terminal.querySelector(".progress-fill") as HTMLElement
+    const progressPct = terminal.querySelector(".progress-pct") as HTMLElement
+    const lineSuccess = terminal.querySelector(".line-success") as HTMLElement
+    const infoPanel = terminal.querySelector(".info-panel") as HTMLElement
+    const starCount = terminal.querySelector(".star-count") as HTMLElement
+    const mascotSection = terminal.querySelector(".mascot-section") as HTMLElement
+    const mascotMsg = terminal.querySelector(".mascot-msg") as HTMLElement
+    const mascotFace = terminal.querySelector(".mascot-face") as HTMLElement
+
+    const command = "git clone https://github.com/synatrahq/synatra"
+    const spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+    let hasPlayed = false
+
+    const typeText = (el: HTMLElement, text: string, speed = 35, jitter = 15): Promise<void> => {
+      return new Promise((resolve) => {
+        let i = 0
+        const type = () => {
+          if (i < text.length) {
+            el.textContent = text.slice(0, i + 1)
+            i++
+            setTimeout(type, speed + Math.random() * jitter)
+          } else {
+            resolve()
+          }
+        }
+        type()
+      })
+    }
+
+    const animateSpinner = (duration: number): Promise<void> => {
+      return new Promise((resolve) => {
+        let frame = 0
+        const interval = setInterval(() => {
+          spinner.textContent = spinnerFrames[frame % spinnerFrames.length]
+          frame++
+        }, 80)
+        setTimeout(() => {
+          clearInterval(interval)
+          resolve()
+        }, duration)
+      })
+    }
+
+    const animateProgress = (duration: number): Promise<void> => {
+      return new Promise((resolve) => {
+        const start = performance.now()
+        const animate = (now: number) => {
+          const elapsed = now - start
+          const progress = Math.min(elapsed / duration, 1)
+          const pct = Math.round(progress * 100)
+          progressFill.style.width = `${pct}%`
+          progressPct.textContent = `${pct}%`
+          if (progress < 1) {
+            requestAnimationFrame(animate)
+          } else {
+            resolve()
+          }
+        }
+        requestAnimationFrame(animate)
+      })
+    }
+
+    const fetchStars = async (): Promise<string> => {
+      try {
+        const res = await fetch("https://api.github.com/repos/synatrahq/synatra")
+        if (res.ok) {
+          const data = await res.json()
+          const stars = data.stargazers_count
+          if (stars >= 1000) {
+            return `★ ${(stars / 1000).toFixed(1)}k`
+          }
+          return `★ ${stars}`
+        }
+      } catch {}
+      return "★ ---"
+    }
+
+    const playAnimation = async () => {
+      if (hasPlayed) return
+      hasPlayed = true
+
+      await typeText(cmdText, command)
+      cmdCursor.style.display = "none"
+
+      await new Promise((r) => setTimeout(r, 200))
+      lineSpinner.classList.remove("invisible", "opacity-0")
+      await animateSpinner(800)
+      lineSpinner.classList.add("invisible", "opacity-0")
+
+      lineProgress.classList.remove("invisible", "opacity-0")
+      await animateProgress(1200)
+
+      await new Promise((r) => setTimeout(r, 200))
+      lineSuccess.classList.remove("invisible", "opacity-0")
+
+      await new Promise((r) => setTimeout(r, 400))
+      const stars = await fetchStars()
+      starCount.textContent = stars
+      infoPanel.classList.remove("invisible", "opacity-0")
+
+      await new Promise((r) => setTimeout(r, 500))
+      mascotSection.classList.remove("invisible", "opacity-0")
+      await typeText(mascotMsg, "Ready to hack!", 60, 0)
+
+      await new Promise((r) => setTimeout(r, 300))
+      mascotFace.textContent = "（＾◡＾）"
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          playAnimation()
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.4 }
+    )
+
+    observer.observe(section)
+  } else if (section && terminal) {
+    const cmdText = terminal.querySelector(".cmd-text") as HTMLElement
+    const lineSuccess = terminal.querySelector(".line-success") as HTMLElement
+    const infoPanel = terminal.querySelector(".info-panel") as HTMLElement
+    const mascotSection = terminal.querySelector(".mascot-section") as HTMLElement
+    const mascotMsg = terminal.querySelector(".mascot-msg") as HTMLElement
+
+    if (cmdText) cmdText.textContent = "git clone https://github.com/synatrahq/synatra"
+    terminal.querySelector(".cmd-cursor")?.remove()
+    if (lineSuccess) lineSuccess.classList.remove("invisible", "opacity-0")
+    if (infoPanel) infoPanel.classList.remove("invisible", "opacity-0")
+    if (mascotSection) mascotSection.classList.remove("invisible", "opacity-0")
+    if (mascotMsg) mascotMsg.textContent = "Ready to hack!"
+  }
+</script>

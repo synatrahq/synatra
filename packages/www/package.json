@@ -1,0 +1,30 @@
+{
+  "name": "@synatra/www",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.6.0",
+    "@astrojs/solid-js": "^5.1.3",
+    "@astrojs/starlight": "^0.37.1",
+    "@astrojs/starlight-tailwind": "^4.0.2",
+    "@phosphor-icons/core": "^2.1.1",
+    "@synatra/core": "workspace:*",
+    "@tailwindcss/vite": "^4.1.18",
+    "astro": "^5.16.6",
+    "phosphor-icons-astro": "2.1.1-17042025",
+    "phosphor-solid-js": "^2.0.0",
+    "sharp": "^0.34.2",
+    "solid-js": "1.9.10",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.6",
+    "typescript": "^5.9.3"
+  }
+}

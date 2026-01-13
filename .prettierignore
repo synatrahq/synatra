@@ -1,0 +1,19 @@
+# Build outputs
+dist
+build
+coverage
+.astro
+.turbo
+out
+packages/server/static
+
+# Auto-generated
+packages/server/src/routes/agents/copilot/api-docs/
+packages/core/migrations/
+
+# Lock files
+*.lock
+
+# Other
+.claude
+/private/

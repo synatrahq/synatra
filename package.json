@@ -1,0 +1,36 @@
+{
+  "name": "synatra",
+  "private": true,
+  "packageManager": "pnpm@10.24.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "dev": "turbo run dev",
+    "test": "turbo run test"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "@tailwindcss/oxide",
+      "@temporalio/core-bridge",
+      "esbuild",
+      "isolated-vm",
+      "protobufjs",
+      "sharp"
+    ]
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.0",
+    "@types/node": "^22.14.1",
+    "prettier": "3.6.2",
+    "tsx": "^4.19.4",
+    "turbo": "^2.5.4",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "stripe": "^20.0.0"
+  }
+}

@@ -1,0 +1,6 @@
+export { default } from "./page"
+export { ResourceDetail } from "./resource-detail"
+export { ResourceCreateModal } from "./resource-create-modal"
+export { ResourceDeleteModal } from "./resource-delete-modal"
+export { ResourcesSidebar } from "./resources-sidebar"
+export { RESOURCE_TYPE_META } from "./types"
