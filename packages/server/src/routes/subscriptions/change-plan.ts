@@ -11,9 +11,9 @@ import {
   principal,
   updateUsageCurrentPeriodLimit,
   ensureStagingEnvironment,
+  getStripe,
 } from "@synatra/core"
 import { SubscriptionPlan } from "@synatra/core/types"
-import { getStripe } from "../../stripe"
 
 const schema = z.object({
   plan: z.enum(SubscriptionPlan),

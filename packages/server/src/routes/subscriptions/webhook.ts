@@ -15,10 +15,10 @@ import {
   findOrganizationByStripeCustomerId,
   findOrganizationById,
   findOwnerMember,
+  getStripe,
 } from "@synatra/core"
 import { SubscriptionPlan, SubscriptionStatus } from "@synatra/core/types"
 import { createError, isAppError } from "@synatra/util/error"
-import { getStripe } from "../../stripe"
 import { config } from "../../config"
 
 export const webhook = new Hono().post("/webhook", async (c) => {

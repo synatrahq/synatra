@@ -1,7 +1,6 @@
 import { randomUUID } from "crypto"
 import { Hono } from "hono"
-import { currentSubscription, updateStripeInfoSubscription, principal } from "@synatra/core"
-import { getStripe } from "../../stripe"
+import { currentSubscription, updateStripeInfoSubscription, principal, getStripe } from "@synatra/core"
 
 export const cancelSchedule = new Hono().post("/cancel-schedule", async (c) => {
   const sub = await currentSubscription({})

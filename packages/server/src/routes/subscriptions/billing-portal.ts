@@ -2,8 +2,7 @@ import { randomUUID } from "crypto"
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
 import { z } from "zod"
-import { currentSubscription } from "@synatra/core"
-import { getStripe } from "../../stripe"
+import { currentSubscription, getStripe } from "@synatra/core"
 
 const schema = z.object({
   returnUrl: z.url(),
