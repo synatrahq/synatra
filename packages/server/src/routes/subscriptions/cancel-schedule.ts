@@ -1,7 +1,7 @@
 import { Hono } from "hono"
-import { cancelScheduledPlanChange } from "@synatra/core"
+import { cancelSubscriptionScheduledPlan } from "@synatra/core"
 
 export const cancelSchedule = new Hono().post("/cancel-schedule", async (c) => {
-  const result = await cancelScheduledPlanChange()
+  const result = await cancelSubscriptionScheduledPlan()
   return c.json(result)
 })

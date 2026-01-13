@@ -251,10 +251,10 @@ export async function createBillingPortalSession(raw: z.input<typeof CreateBilli
   return { url: session.url }
 }
 
-export const CancelScheduledPlanChangeSchema = z.object({}).optional()
+export const CancelSubscriptionScheduledPlanSchema = z.object({}).optional()
 
-export async function cancelScheduledPlanChange(raw?: z.input<typeof CancelScheduledPlanChangeSchema>) {
-  CancelScheduledPlanChangeSchema.parse(raw)
+export async function cancelSubscriptionScheduledPlan(raw?: z.input<typeof CancelSubscriptionScheduledPlanSchema>) {
+  CancelSubscriptionScheduledPlanSchema.parse(raw)
   const sub = await currentSubscription({})
 
   if (!sub.stripeScheduleId) {
@@ -275,12 +275,12 @@ export async function cancelScheduledPlanChange(raw?: z.input<typeof CancelSched
   return { message: "Scheduled plan change cancelled", plan: sub.plan }
 }
 
-export const ChangePlanSchema = z.object({
+export const ChangeSubscriptionPlanSchema = z.object({
   plan: z.enum(SubscriptionPlan),
 })
 
-export async function changePlan(raw: z.input<typeof ChangePlanSchema>) {
-  const input = ChangePlanSchema.parse(raw)
+export async function changeSubscriptionPlan(raw: z.input<typeof ChangeSubscriptionPlanSchema>) {
+  const input = ChangeSubscriptionPlanSchema.parse(raw)
 
   if (input.plan === "free") {
     throw createError("BadRequestError", { message: "Cannot change to free plan via this endpoint" })
