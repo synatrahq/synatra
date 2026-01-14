@@ -82,13 +82,6 @@ export const AgentReleaseTable = pgTable(
     description: text("description").default("").notNull(),
     runtimeConfig: jsonb("runtime_config").$type<AgentRuntimeConfig>().notNull(),
     configHash: text("config_hash").notNull(),
-    modelProvider: text("model_provider"),
-    modelName: text("model_name"),
-    temperature: text("temperature"),
-    topP: text("top_p"),
-    systemPrompt: text("system_prompt"),
-    toolCount: integer("tool_count"),
-    requiresReviewCount: integer("requires_review_count"),
     publishedAt: timestamp("published_at", { withTimezone: true }).defaultNow().notNull(),
     createdBy: uuid("created_by")
       .references(() => UserTable.id, { onDelete: "restrict" })

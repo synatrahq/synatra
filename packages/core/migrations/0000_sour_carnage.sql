@@ -137,13 +137,6 @@ CREATE TABLE "agent_release" (
 	"description" text DEFAULT '' NOT NULL,
 	"runtime_config" jsonb NOT NULL,
 	"config_hash" text NOT NULL,
-	"model_provider" text,
-	"model_name" text,
-	"temperature" text,
-	"top_p" text,
-	"system_prompt" text,
-	"tool_count" integer,
-	"requires_review_count" integer,
 	"published_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_by" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
