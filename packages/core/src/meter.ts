@@ -1,21 +1,10 @@
 import { randomUUID } from "crypto"
-import Stripe from "stripe"
 import { z } from "zod"
 import { currentSubscription } from "./subscription"
-import { config } from "./config"
-
-let stripe: Stripe | null = null
-
-function getStripe(): Stripe | null {
-  if (stripe) return stripe
-  const stripeConfig = config().stripe
-  if (!stripeConfig) return null
-  stripe = new Stripe(stripeConfig.secretKey.trim(), { apiVersion: "2025-11-17.clover" })
-  return stripe
-}
+import { getStripeOrNull } from "./stripe"
 
 async function emit(event: string, value: string, identifier: string): Promise<void> {
-  const client = getStripe()
+  const client = getStripeOrNull()
   if (!client) return
 
   const sub = await currentSubscription({})

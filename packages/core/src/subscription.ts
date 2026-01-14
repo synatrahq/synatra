@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto"
 import { eq } from "drizzle-orm"
 import { z } from "zod"
 import { principal } from "./principal"
@@ -5,6 +6,11 @@ import { withDb } from "./database"
 import { SubscriptionTable } from "./schema"
 import { SubscriptionPlan, SubscriptionStatus, PLAN_HIERARCHY, PLAN_LIMITS } from "./types"
 import { config } from "./config"
+import { getStripe } from "./stripe"
+import { findOrganizationById } from "./organization"
+import { createError } from "@synatra/util/error"
+import { updateUsageCurrentPeriodLimit } from "./usage"
+import { ensureStagingEnvironment } from "./environment"
 
 export function isUpgradeSubscription(current: SubscriptionPlan, next: SubscriptionPlan): boolean {
   return PLAN_HIERARCHY[next] > PLAN_HIERARCHY[current]
@@ -158,4 +164,219 @@ export async function updateSubscription(raw: z.input<typeof UpdateSubscriptionS
   )
 
   return currentSubscription({})
+}
+
+export const CreateCheckoutSessionSchema = z.object({
+  plan: z.enum(SubscriptionPlan),
+  successUrl: z.url(),
+  cancelUrl: z.url(),
+})
+
+export async function createCheckoutSession(raw: z.input<typeof CreateCheckoutSessionSchema>) {
+  const input = CreateCheckoutSessionSchema.parse(raw)
+
+  if (input.plan === "free") {
+    throw createError("BadRequestError", { message: "Invalid plan for checkout" })
+  }
+
+  const priceId = getStripePriceIdSubscription(input.plan)
+  if (!priceId) {
+    throw createError("BadRequestError", { message: "Price ID not found for plan" })
+  }
+
+  const org = await findOrganizationById(principal.orgId())
+  if (!org) {
+    throw createError("NotFoundError", { type: "organization", id: principal.orgId() })
+  }
+
+  const stripe = getStripe()
+  const sub = await currentSubscription({})
+
+  const customerId = sub.stripeCustomerId || (await getOrCreateCustomer(stripe, org))
+
+  if (!sub.stripeCustomerId) {
+    await updateStripeInfoSubscription({ stripeCustomerId: customerId })
+  }
+
+  const session = await stripe.checkout.sessions.create(
+    {
+      customer: customerId,
+      mode: "subscription",
+      line_items: [{ price: priceId }],
+      success_url: input.successUrl,
+      cancel_url: input.cancelUrl,
+      metadata: { organizationId: org.id, plan: input.plan },
+    },
+    { idempotencyKey: randomUUID() },
+  )
+
+  return { sessionId: session.id, url: session.url }
+}
+
+async function getOrCreateCustomer(
+  stripe: ReturnType<typeof getStripe>,
+  org: { id: string; name: string },
+): Promise<string> {
+  const existing = await stripe.customers.search({ query: `metadata['organizationId']:'${org.id}'`, limit: 1 })
+  if (existing.data.length > 0) return existing.data[0].id
+
+  const customer = await stripe.customers.create(
+    { name: org.name, metadata: { organizationId: org.id } },
+    { idempotencyKey: `customer-${org.id}` },
+  )
+  return customer.id
+}
+
+export const CreateBillingPortalSessionSchema = z.object({
+  returnUrl: z.url(),
+})
+
+export async function createBillingPortalSession(raw: z.input<typeof CreateBillingPortalSessionSchema>) {
+  const input = CreateBillingPortalSessionSchema.parse(raw)
+  const sub = await currentSubscription({})
+
+  if (!sub.stripeCustomerId) {
+    throw createError("BadRequestError", { message: "No Stripe customer found" })
+  }
+
+  const stripe = getStripe()
+  const session = await stripe.billingPortal.sessions.create(
+    {
+      customer: sub.stripeCustomerId,
+      return_url: input.returnUrl,
+    },
+    { idempotencyKey: randomUUID() },
+  )
+
+  return { url: session.url }
+}
+
+export const CancelSubscriptionScheduledPlanSchema = z.object({}).optional()
+
+export async function cancelSubscriptionScheduledPlan(raw?: z.input<typeof CancelSubscriptionScheduledPlanSchema>) {
+  CancelSubscriptionScheduledPlanSchema.parse(raw)
+  const sub = await currentSubscription({})
+
+  if (!sub.stripeScheduleId) {
+    throw createError("BadRequestError", { message: "No scheduled plan change found" })
+  }
+
+  const stripe = getStripe()
+  await stripe.subscriptionSchedules.release(sub.stripeScheduleId, { idempotencyKey: randomUUID() })
+
+  await principal.withSystem({ organizationId: sub.organizationId }, () =>
+    updateStripeInfoSubscription({
+      stripeScheduleId: null,
+      scheduledPlan: null,
+      scheduledAt: null,
+    }),
+  )
+
+  return { message: "Scheduled plan change cancelled", plan: sub.plan }
+}
+
+export const ChangeSubscriptionPlanSchema = z.object({
+  plan: z.enum(SubscriptionPlan),
+})
+
+export async function changeSubscriptionPlan(raw: z.input<typeof ChangeSubscriptionPlanSchema>) {
+  const input = ChangeSubscriptionPlanSchema.parse(raw)
+
+  if (input.plan === "free") {
+    throw createError("BadRequestError", { message: "Cannot change to free plan via this endpoint" })
+  }
+
+  const sub = await currentSubscription({})
+
+  if (!sub.stripeSubscriptionId) {
+    throw createError("BadRequestError", {
+      message: "No active subscription found. Please use checkout to start a subscription.",
+    })
+  }
+  if (sub.status === "cancelled") {
+    throw createError("BadRequestError", {
+      message: "Cannot change plan for cancelled subscription. Please reactivate via billing portal.",
+    })
+  }
+  if (sub.plan === input.plan) {
+    throw createError("BadRequestError", { message: "Already on this plan" })
+  }
+  if (sub.stripeScheduleId) {
+    throw createError("BadRequestError", {
+      message: "A plan change is already scheduled. Please cancel it before scheduling another change.",
+    })
+  }
+
+  const priceId = getStripePriceIdSubscription(input.plan)
+  if (!priceId) {
+    throw createError("BadRequestError", { message: "Price ID not found for plan" })
+  }
+
+  const stripe = getStripe()
+  const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId)
+  const item = stripeSub.items.data[0]
+  if (!item) {
+    throw createError("InternalError", { message: "Subscription has no items" })
+  }
+
+  if (isUpgradeSubscription(sub.plan as SubscriptionPlan, input.plan)) {
+    await stripe.subscriptions.update(
+      sub.stripeSubscriptionId,
+      { items: [{ id: item.id, price: priceId }], proration_behavior: "always_invoice" },
+      { idempotencyKey: randomUUID() },
+    )
+
+    await principal.withSystem({ organizationId: sub.organizationId }, async () => {
+      await updateSubscription({ plan: input.plan, stripePriceId: priceId })
+      await updateUsageCurrentPeriodLimit({})
+
+      if (sub.plan === "free") {
+        await ensureStagingEnvironment()
+      }
+    })
+
+    return { message: "Plan upgraded successfully", plan: input.plan, effectiveImmediately: true }
+  }
+
+  const schedule = await stripe.subscriptionSchedules.create(
+    { from_subscription: sub.stripeSubscriptionId },
+    { idempotencyKey: randomUUID() },
+  )
+
+  const [updated, updateErr] = await stripe.subscriptionSchedules
+    .update(
+      schedule.id,
+      {
+        phases: [
+          {
+            items: [{ price: item.price.id }],
+            start_date: schedule.phases[0].start_date,
+            end_date: item.current_period_end,
+          },
+          { items: [{ price: priceId }] },
+        ],
+      },
+      { idempotencyKey: randomUUID() },
+    )
+    .then((r) => [r, null] as const)
+    .catch((e) => [null, e] as const)
+
+  if (updateErr) {
+    await stripe.subscriptionSchedules.release(schedule.id, { idempotencyKey: randomUUID() }).catch(() => {})
+    throw updateErr
+  }
+
+  const scheduledAt = new Date(item.current_period_end * 1000)
+
+  await principal.withSystem({ organizationId: sub.organizationId }, () =>
+    updateStripeInfoSubscription({ stripeScheduleId: updated!.id, scheduledPlan: input.plan, scheduledAt }),
+  )
+
+  return {
+    message: "Plan downgrade scheduled",
+    plan: input.plan,
+    effectiveImmediately: false,
+    effectiveAt: scheduledAt.toISOString(),
+    currentPlan: sub.plan,
+  }
 }
