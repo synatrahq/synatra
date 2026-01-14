@@ -124,7 +124,7 @@ type ModelConfig = {
 
 type ProviderConfig = { apiKey: string; baseUrl?: string }
 
-async function getProductionConfig(): Promise<Record<Provider, ProviderConfig | null>> {
+export async function getProductionConfig(): Promise<Record<Provider, ProviderConfig | null>> {
   const resources = await listResourcesWithConfigs()
   const synatraAi = resources.find((r) => r.type === "synatra_ai" && r.managed)
   const env = synatraAi?.configs.find((c) => c.environmentSlug === "production")

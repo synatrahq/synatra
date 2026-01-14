@@ -11,6 +11,7 @@ import {
   type EndpointDetails,
 } from "./api-docs/api-docs"
 import commonEndpoints from "./api-docs/common-endpoints.json"
+import { getProductionConfig } from "./models"
 
 const LOG_PREFIX = "[Copilot:ApiSearch]"
 const DEBUG = process.env.NODE_ENV === "development"
@@ -24,26 +25,38 @@ function debugLog(message: string, data?: Record<string, unknown>) {
   }
 }
 
-const google = process.env.GOOGLE_GENERATIVE_AI_API_KEY
-  ? createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY })
-  : null
-const openai = process.env.OPENAI_API_KEY ? createOpenAI({ apiKey: process.env.OPENAI_API_KEY }) : null
-const anthropic = process.env.ANTHROPIC_API_KEY ? createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) : null
-
-function getSearchModelName(): string {
-  if (google) return "gemini-2.0-flash-lite"
-  if (openai) return "gpt-4o-mini"
-  if (anthropic) return "claude-3-5-haiku-latest"
-  return "none"
+type SearchModelResult = {
+  model: ReturnType<ReturnType<typeof createGoogleGenerativeAI | typeof createOpenAI | typeof createAnthropic>>
+  name: string
 }
 
-function getSearchModel() {
-  if (google) return google("gemini-2.0-flash-lite")
-  if (openai) return openai("gpt-4o-mini")
-  if (anthropic) return anthropic("claude-3-5-haiku-latest")
-  throw new Error(
-    "No API key configured for endpoint search. Set GOOGLE_GENERATIVE_AI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY.",
-  )
+async function getSearchModel(): Promise<SearchModelResult> {
+  const cfgs = await getProductionConfig()
+
+  if (cfgs.google) {
+    return {
+      model: createGoogleGenerativeAI({ apiKey: cfgs.google.apiKey, baseURL: cfgs.google.baseUrl })(
+        "gemini-2.0-flash-lite",
+      ),
+      name: "gemini-2.0-flash-lite",
+    }
+  }
+  if (cfgs.openai) {
+    return {
+      model: createOpenAI({ apiKey: cfgs.openai.apiKey, baseURL: cfgs.openai.baseUrl })("gpt-4o-mini"),
+      name: "gpt-4o-mini",
+    }
+  }
+  if (cfgs.anthropic) {
+    return {
+      model: createAnthropic({ apiKey: cfgs.anthropic.apiKey, baseURL: cfgs.anthropic.baseUrl })(
+        "claude-3-5-haiku-latest",
+      ),
+      name: "claude-3-5-haiku-latest",
+    }
+  }
+
+  throw new Error("No LLM provider configured. Configure API keys in the Synatra AI resource.")
 }
 
 const PREFILTER_LIMIT = 50
@@ -194,7 +207,7 @@ export async function searchEndpointsWithLLM(
   const index = API_INDEX[apiType] ?? []
 
   const candidateXML = formatCandidatesAsXML(candidates)
-  const modelName = getSearchModelName()
+  const { model: searchModel, name: modelName } = await getSearchModel()
 
   debugLog(`${LOG_PREFIX} Sending to LLM`, {
     apiType,
@@ -212,7 +225,7 @@ export async function searchEndpointsWithLLM(
 
   try {
     const { text } = await generateText({
-      model: getSearchModel(),
+      model: searchModel,
       temperature: 0,
       maxOutputTokens: 200,
       prompt: `You are an API endpoint selector. Select the 5 most relevant endpoints for the user's goal.
