@@ -758,7 +758,7 @@ export async function addTriggerEnvironment(input: z.input<typeof AddTriggerEnvi
         channelId: data.channelId,
         webhookSecret: isWebhook ? generateSecret() : null,
         debugSecret: generateSecret(),
-        isActive: false,
+        active: false,
       })
       .returning(),
   )
@@ -815,7 +815,7 @@ export async function listTriggerEnvironments(triggerId: string) {
         channelId: TriggerEnvironmentTable.channelId,
         webhookSecret: TriggerEnvironmentTable.webhookSecret,
         debugSecret: TriggerEnvironmentTable.debugSecret,
-        isActive: TriggerEnvironmentTable.isActive,
+        active: TriggerEnvironmentTable.active,
         createdAt: TriggerEnvironmentTable.createdAt,
         updatedAt: TriggerEnvironmentTable.updatedAt,
         environment: {
@@ -858,7 +858,7 @@ export async function toggleTriggerEnvironment(input: z.input<typeof ToggleTrigg
   const [updated] = await withDb((db) =>
     db
       .update(TriggerEnvironmentTable)
-      .set({ isActive: !env.isActive, updatedAt: new Date() })
+      .set({ active: !env.active, updatedAt: new Date() })
       .where(eq(TriggerEnvironmentTable.id, env.id))
       .returning(),
   )
@@ -923,7 +923,7 @@ export async function listActiveTriggersByAppAccountAndEvent(
         currentReleaseId: TriggerTable.currentReleaseId,
         environmentId: TriggerEnvironmentTable.environmentId,
         channelId: TriggerEnvironmentTable.channelId,
-        isActive: TriggerEnvironmentTable.isActive,
+        active: TriggerEnvironmentTable.active,
         agentId: TriggerReleaseTable.agentId,
         agentReleaseId: TriggerReleaseTable.agentReleaseId,
         agentVersionMode: TriggerReleaseTable.agentVersionMode,
@@ -948,7 +948,7 @@ export async function listActiveTriggersByAppAccountAndEvent(
         and(
           eq(TriggerReleaseTable.appAccountId, data.appAccountId),
           sql`${data.eventType} = ANY(${TriggerReleaseTable.appEvents})`,
-          eq(TriggerEnvironmentTable.isActive, true),
+          eq(TriggerEnvironmentTable.active, true),
         ),
       ),
   )

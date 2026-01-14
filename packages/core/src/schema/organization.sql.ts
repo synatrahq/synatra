@@ -1,4 +1,4 @@
-import { pgTable, uniqueIndex, uuid, timestamp, text } from "drizzle-orm/pg-core"
+import { pgTable, uniqueIndex, uuid, timestamp, text, jsonb } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 import { UserTable } from "./user.sql"
 
@@ -11,7 +11,7 @@ export const OrganizationTable = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     logo: text("logo"),
-    metadata: text("metadata"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

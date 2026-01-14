@@ -20,14 +20,11 @@ export const ChannelMemberTable = pgTable(
       .notNull()
       .references(() => MemberTable.id, { onDelete: "cascade" }),
     role: channelMemberRoleEnum("role").notNull().default("member"),
-    createdBy: uuid("created_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
+    createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     uniqueIndex("channel_member_unique").on(table.channelId, table.memberId),
-    index("channel_member_channel_idx").on(table.channelId),
     index("channel_member_member_idx").on(table.memberId),
   ],
 )

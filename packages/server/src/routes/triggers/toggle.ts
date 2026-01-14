@@ -30,7 +30,7 @@ export const toggle = new Hono().post(
       throw createError("NotFoundError", { type: "TriggerEnvironment", id: environmentId })
     }
 
-    const willBeActive = !env.isActive
+    const willBeActive = !env.active
 
     if (trigger.type === "schedule") {
       if (!trigger.cron || !trigger.timezone) {

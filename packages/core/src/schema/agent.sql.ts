@@ -1,23 +1,9 @@
 import { sql } from "drizzle-orm"
-import {
-  jsonb,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-  integer,
-  boolean,
-  index,
-} from "drizzle-orm/pg-core"
+import { jsonb, pgTable, text, timestamp, uniqueIndex, uuid, integer, index } from "drizzle-orm/pg-core"
 import { OrganizationTable } from "./organization.sql"
 import { UserTable } from "./user.sql"
 import type { AgentRuntimeConfig } from "../types"
 import { AgentTemplateTable } from "./agent-template.sql"
-import { ApprovalAuthority } from "../types"
-
-export const approvalAuthorityEnum = pgEnum("approval_authority", ApprovalAuthority)
 
 export const AgentTable = pgTable(
   "agent",
@@ -35,12 +21,8 @@ export const AgentTable = pgTable(
     icon: text("icon").default("CircleDashed").notNull(),
     iconColor: text("icon_color").default("blue").notNull(),
     currentReleaseId: uuid("current_release_id"),
-    createdBy: uuid("created_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
-    updatedBy: uuid("updated_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
+    createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
+    updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -50,21 +32,15 @@ export const AgentTable = pgTable(
   ],
 )
 
-export const AgentWorkingCopyTable = pgTable(
-  "agent_working_copy",
-  {
-    agentId: uuid("agent_id")
-      .references(() => AgentTable.id, { onDelete: "cascade" })
-      .primaryKey(),
-    runtimeConfig: jsonb("runtime_config").$type<AgentRuntimeConfig>().notNull(),
-    configHash: text("config_hash").notNull(),
-    updatedBy: uuid("updated_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [uniqueIndex("agent_working_copy_agent_idx").on(table.agentId)],
-)
+export const AgentWorkingCopyTable = pgTable("agent_working_copy", {
+  agentId: uuid("agent_id")
+    .references(() => AgentTable.id, { onDelete: "cascade" })
+    .primaryKey(),
+  runtimeConfig: jsonb("runtime_config").$type<AgentRuntimeConfig>().notNull(),
+  configHash: text("config_hash").notNull(),
+  updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+})
 
 export const AgentReleaseTable = pgTable(
   "agent_release",
@@ -83,9 +59,7 @@ export const AgentReleaseTable = pgTable(
     runtimeConfig: jsonb("runtime_config").$type<AgentRuntimeConfig>().notNull(),
     configHash: text("config_hash").notNull(),
     publishedAt: timestamp("published_at", { withTimezone: true }).defaultNow().notNull(),
-    createdBy: uuid("created_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
+    createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
@@ -99,34 +73,6 @@ export const AgentReleaseTable = pgTable(
   ],
 )
 
-export const AgentReleaseToolTable = pgTable(
-  "agent_release_tool",
-  {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
-    agentReleaseId: uuid("agent_release_id")
-      .references(() => AgentReleaseTable.id, { onDelete: "cascade" })
-      .notNull(),
-    stableToolId: text("stable_tool_id").notNull(),
-    name: text("name").notNull(),
-    description: text("description"),
-    paramsSchema: jsonb("params_schema"),
-    returnsSchema: jsonb("returns_schema"),
-    code: text("code"),
-    requiresReview: boolean("requires_review").default(false).notNull(),
-    approvalAuthority: approvalAuthorityEnum("approval_authority"),
-    selfApproval: boolean("self_approval"),
-    approvalTimeoutMs: integer("approval_timeout_ms"),
-    position: integer("position"),
-  },
-  (table) => [
-    uniqueIndex("agent_release_tool_unique_idx").on(table.agentReleaseId, table.name),
-    uniqueIndex("agent_release_tool_stable_unique_idx").on(table.agentReleaseId, table.stableToolId),
-  ],
-)
-
 export type Agent = typeof AgentTable.$inferSelect
 export type AgentWorkingCopy = typeof AgentWorkingCopyTable.$inferSelect
 export type AgentRelease = typeof AgentReleaseTable.$inferSelect
-export type AgentReleaseTool = typeof AgentReleaseToolTable.$inferSelect

@@ -5,7 +5,6 @@ CREATE TYPE "public"."copilot_resource_request_status" AS ENUM('pending', 'compl
 CREATE TYPE "public"."copilot_tool_status" AS ENUM('started', 'succeeded', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."copilot_trigger_request_action" AS ENUM('create', 'update');--> statement-breakpoint
 CREATE TYPE "public"."copilot_trigger_request_status" AS ENUM('pending', 'completed', 'cancelled');--> statement-breakpoint
-CREATE TYPE "public"."approval_authority" AS ENUM('owner_only', 'any_member');--> statement-breakpoint
 CREATE TYPE "public"."app_id" AS ENUM('intercom', 'github');--> statement-breakpoint
 CREATE TYPE "public"."channel_member_role" AS ENUM('owner', 'member');--> statement-breakpoint
 CREATE TYPE "public"."connector_status" AS ENUM('online', 'offline', 'error');--> statement-breakpoint
@@ -138,24 +137,8 @@ CREATE TABLE "agent_release" (
 	"runtime_config" jsonb NOT NULL,
 	"config_hash" text NOT NULL,
 	"published_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"created_by" uuid NOT NULL,
+	"created_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "agent_release_tool" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"agent_release_id" uuid NOT NULL,
-	"stable_tool_id" text NOT NULL,
-	"name" text NOT NULL,
-	"description" text,
-	"params_schema" jsonb,
-	"returns_schema" jsonb,
-	"code" text,
-	"requires_review" boolean DEFAULT false NOT NULL,
-	"approval_authority" "approval_authority",
-	"self_approval" boolean,
-	"approval_timeout_ms" integer,
-	"position" integer
 );
 --> statement-breakpoint
 CREATE TABLE "agent" (
@@ -168,8 +151,8 @@ CREATE TABLE "agent" (
 	"icon" text DEFAULT 'CircleDashed' NOT NULL,
 	"icon_color" text DEFAULT 'blue' NOT NULL,
 	"current_release_id" uuid,
-	"created_by" uuid NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"created_by" uuid,
+	"updated_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -178,7 +161,7 @@ CREATE TABLE "agent_working_copy" (
 	"agent_id" uuid PRIMARY KEY NOT NULL,
 	"runtime_config" jsonb NOT NULL,
 	"config_hash" text NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"updated_by" uuid,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -189,8 +172,8 @@ CREATE TABLE "app_account" (
 	"name" text NOT NULL,
 	"credentials" jsonb NOT NULL,
 	"metadata" jsonb,
-	"created_by" uuid NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"created_by" uuid,
+	"updated_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -199,7 +182,7 @@ CREATE TABLE "channel_agent" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"channel_id" uuid NOT NULL,
 	"agent_id" uuid NOT NULL,
-	"created_by" uuid NOT NULL,
+	"created_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -208,7 +191,7 @@ CREATE TABLE "channel_member" (
 	"channel_id" uuid NOT NULL,
 	"member_id" uuid NOT NULL,
 	"role" "channel_member_role" DEFAULT 'member' NOT NULL,
-	"created_by" uuid NOT NULL,
+	"created_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -221,9 +204,9 @@ CREATE TABLE "channel" (
 	"icon" text DEFAULT 'Hash' NOT NULL,
 	"icon_color" text DEFAULT 'gray' NOT NULL,
 	"is_default" boolean DEFAULT false NOT NULL,
-	"is_archived" boolean DEFAULT false NOT NULL,
-	"created_by" uuid NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"archived" boolean DEFAULT false NOT NULL,
+	"created_by" uuid,
+	"updated_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -236,8 +219,8 @@ CREATE TABLE "connector" (
 	"status" "connector_status" DEFAULT 'offline' NOT NULL,
 	"last_seen_at" timestamp with time zone,
 	"metadata" jsonb,
-	"created_by" uuid NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"created_by" uuid,
+	"updated_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -248,9 +231,9 @@ CREATE TABLE "environment" (
 	"name" text NOT NULL,
 	"slug" text NOT NULL,
 	"color" text,
-	"is_protected" boolean DEFAULT false NOT NULL,
-	"created_by" uuid NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"protected" boolean DEFAULT false NOT NULL,
+	"created_by" uuid,
+	"updated_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -319,7 +302,7 @@ CREATE TABLE "organization" (
 	"name" text NOT NULL,
 	"slug" text NOT NULL,
 	"logo" text,
-	"metadata" text,
+	"metadata" jsonb,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -349,7 +332,7 @@ CREATE TABLE "prompt_release" (
 	"input_schema" jsonb,
 	"content_hash" text NOT NULL,
 	"published_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"created_by" uuid NOT NULL,
+	"created_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -361,8 +344,8 @@ CREATE TABLE "prompt" (
 	"slug" text NOT NULL,
 	"description" text,
 	"current_release_id" uuid,
-	"created_by" uuid NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"created_by" uuid,
+	"updated_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -374,7 +357,7 @@ CREATE TABLE "prompt_working_copy" (
 	"script" text DEFAULT '' NOT NULL,
 	"input_schema" jsonb,
 	"content_hash" text NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"updated_by" uuid,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -385,8 +368,8 @@ CREATE TABLE "resource_config" (
 	"config" jsonb NOT NULL,
 	"connection_mode" "connection_mode" DEFAULT 'direct' NOT NULL,
 	"connector_id" uuid,
-	"created_by" uuid NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"created_by" uuid,
+	"updated_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -399,8 +382,8 @@ CREATE TABLE "resource" (
 	"description" text,
 	"type" "resource_type" NOT NULL,
 	"managed" boolean DEFAULT false NOT NULL,
-	"created_by" uuid NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"created_by" uuid,
+	"updated_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -523,7 +506,7 @@ CREATE TABLE "trigger_environment" (
 	"channel_id" uuid NOT NULL,
 	"webhook_secret" text,
 	"debug_secret" text,
-	"is_active" boolean DEFAULT false NOT NULL,
+	"active" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -554,7 +537,7 @@ CREATE TABLE "trigger_release" (
 	"app_events" text[],
 	"config_hash" text NOT NULL,
 	"published_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"created_by" uuid NOT NULL,
+	"created_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -564,8 +547,8 @@ CREATE TABLE "trigger" (
 	"name" text NOT NULL,
 	"slug" text NOT NULL,
 	"current_release_id" uuid,
-	"created_by" uuid NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"created_by" uuid,
+	"updated_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -589,7 +572,7 @@ CREATE TABLE "trigger_working_copy" (
 	"app_account_id" uuid,
 	"app_events" text[],
 	"config_hash" text NOT NULL,
-	"updated_by" uuid NOT NULL,
+	"updated_by" uuid,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -634,36 +617,35 @@ ALTER TABLE "agent_copilot_trigger_request" ADD CONSTRAINT "agent_copilot_trigge
 ALTER TABLE "agent_copilot_trigger_request" ADD CONSTRAINT "agent_copilot_trigger_request_message_id_agent_copilot_message_id_fk" FOREIGN KEY ("message_id") REFERENCES "public"."agent_copilot_message"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_copilot_trigger_request" ADD CONSTRAINT "agent_copilot_trigger_request_trigger_id_trigger_id_fk" FOREIGN KEY ("trigger_id") REFERENCES "public"."trigger"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_release" ADD CONSTRAINT "agent_release_agent_id_agent_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "agent_release" ADD CONSTRAINT "agent_release_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "agent_release_tool" ADD CONSTRAINT "agent_release_tool_agent_release_id_agent_release_id_fk" FOREIGN KEY ("agent_release_id") REFERENCES "public"."agent_release"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "agent_release" ADD CONSTRAINT "agent_release_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent" ADD CONSTRAINT "agent_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent" ADD CONSTRAINT "agent_template_id_agent_template_id_fk" FOREIGN KEY ("template_id") REFERENCES "public"."agent_template"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "agent" ADD CONSTRAINT "agent_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "agent" ADD CONSTRAINT "agent_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "agent" ADD CONSTRAINT "agent_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "agent" ADD CONSTRAINT "agent_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_working_copy" ADD CONSTRAINT "agent_working_copy_agent_id_agent_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "agent_working_copy" ADD CONSTRAINT "agent_working_copy_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "agent_working_copy" ADD CONSTRAINT "agent_working_copy_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "app_account" ADD CONSTRAINT "app_account_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "app_account" ADD CONSTRAINT "app_account_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "app_account" ADD CONSTRAINT "app_account_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "app_account" ADD CONSTRAINT "app_account_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "app_account" ADD CONSTRAINT "app_account_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "channel_agent" ADD CONSTRAINT "channel_agent_channel_id_channel_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channel"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "channel_agent" ADD CONSTRAINT "channel_agent_agent_id_agent_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "channel_agent" ADD CONSTRAINT "channel_agent_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "channel_agent" ADD CONSTRAINT "channel_agent_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "channel_member" ADD CONSTRAINT "channel_member_channel_id_channel_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channel"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "channel_member" ADD CONSTRAINT "channel_member_member_id_member_id_fk" FOREIGN KEY ("member_id") REFERENCES "public"."member"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "channel_member" ADD CONSTRAINT "channel_member_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "channel_member" ADD CONSTRAINT "channel_member_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "channel" ADD CONSTRAINT "channel_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "channel" ADD CONSTRAINT "channel_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "channel" ADD CONSTRAINT "channel_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "channel" ADD CONSTRAINT "channel_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "channel" ADD CONSTRAINT "channel_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "connector" ADD CONSTRAINT "connector_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "connector" ADD CONSTRAINT "connector_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "connector" ADD CONSTRAINT "connector_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "connector" ADD CONSTRAINT "connector_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "connector" ADD CONSTRAINT "connector_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "environment" ADD CONSTRAINT "environment_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "environment" ADD CONSTRAINT "environment_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "environment" ADD CONSTRAINT "environment_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "environment" ADD CONSTRAINT "environment_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "environment" ADD CONSTRAINT "environment_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "human_request" ADD CONSTRAINT "human_request_thread_id_thread_id_fk" FOREIGN KEY ("thread_id") REFERENCES "public"."thread"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "human_request" ADD CONSTRAINT "human_request_run_id_run_id_fk" FOREIGN KEY ("run_id") REFERENCES "public"."run"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "human_response" ADD CONSTRAINT "human_response_request_id_human_request_id_fk" FOREIGN KEY ("request_id") REFERENCES "public"."human_request"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "human_response" ADD CONSTRAINT "human_response_responded_by_user_id_fk" FOREIGN KEY ("responded_by") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "human_response" ADD CONSTRAINT "human_response_responded_by_user_id_fk" FOREIGN KEY ("responded_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitation" ADD CONSTRAINT "invitation_inviter_id_user_id_fk" FOREIGN KEY ("inviter_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitation" ADD CONSTRAINT "invitation_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "member" ADD CONSTRAINT "member_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -673,21 +655,21 @@ ALTER TABLE "message" ADD CONSTRAINT "message_run_id_run_id_fk" FOREIGN KEY ("ru
 ALTER TABLE "output_item" ADD CONSTRAINT "output_item_thread_id_thread_id_fk" FOREIGN KEY ("thread_id") REFERENCES "public"."thread"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "output_item" ADD CONSTRAINT "output_item_run_id_run_id_fk" FOREIGN KEY ("run_id") REFERENCES "public"."run"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "prompt_release" ADD CONSTRAINT "prompt_release_prompt_id_prompt_id_fk" FOREIGN KEY ("prompt_id") REFERENCES "public"."prompt"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "prompt_release" ADD CONSTRAINT "prompt_release_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "prompt_release" ADD CONSTRAINT "prompt_release_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "prompt" ADD CONSTRAINT "prompt_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "prompt" ADD CONSTRAINT "prompt_agent_id_agent_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "prompt" ADD CONSTRAINT "prompt_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "prompt" ADD CONSTRAINT "prompt_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "prompt" ADD CONSTRAINT "prompt_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "prompt" ADD CONSTRAINT "prompt_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "prompt_working_copy" ADD CONSTRAINT "prompt_working_copy_prompt_id_prompt_id_fk" FOREIGN KEY ("prompt_id") REFERENCES "public"."prompt"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "prompt_working_copy" ADD CONSTRAINT "prompt_working_copy_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "prompt_working_copy" ADD CONSTRAINT "prompt_working_copy_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "resource_config" ADD CONSTRAINT "resource_config_resource_id_resource_id_fk" FOREIGN KEY ("resource_id") REFERENCES "public"."resource"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "resource_config" ADD CONSTRAINT "resource_config_environment_id_environment_id_fk" FOREIGN KEY ("environment_id") REFERENCES "public"."environment"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "resource_config" ADD CONSTRAINT "resource_config_connector_id_connector_id_fk" FOREIGN KEY ("connector_id") REFERENCES "public"."connector"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "resource_config" ADD CONSTRAINT "resource_config_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "resource_config" ADD CONSTRAINT "resource_config_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "resource_config" ADD CONSTRAINT "resource_config_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "resource_config" ADD CONSTRAINT "resource_config_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "resource" ADD CONSTRAINT "resource_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "resource" ADD CONSTRAINT "resource_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "resource" ADD CONSTRAINT "resource_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "resource" ADD CONSTRAINT "resource_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "resource" ADD CONSTRAINT "resource_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "run" ADD CONSTRAINT "run_thread_id_thread_id_fk" FOREIGN KEY ("thread_id") REFERENCES "public"."thread"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "run" ADD CONSTRAINT "run_parent_run_id_run_id_fk" FOREIGN KEY ("parent_run_id") REFERENCES "public"."run"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "run" ADD CONSTRAINT "run_agent_id_agent_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -704,8 +686,8 @@ ALTER TABLE "thread" ADD CONSTRAINT "thread_agent_release_id_agent_release_id_fk
 ALTER TABLE "thread" ADD CONSTRAINT "thread_channel_id_channel_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channel"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "thread" ADD CONSTRAINT "thread_trigger_id_trigger_id_fk" FOREIGN KEY ("trigger_id") REFERENCES "public"."trigger"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "thread" ADD CONSTRAINT "thread_trigger_release_id_trigger_release_id_fk" FOREIGN KEY ("trigger_release_id") REFERENCES "public"."trigger_release"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "thread" ADD CONSTRAINT "thread_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "thread" ADD CONSTRAINT "thread_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "thread" ADD CONSTRAINT "thread_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "thread" ADD CONSTRAINT "thread_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_environment" ADD CONSTRAINT "trigger_environment_trigger_id_trigger_id_fk" FOREIGN KEY ("trigger_id") REFERENCES "public"."trigger"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_environment" ADD CONSTRAINT "trigger_environment_environment_id_environment_id_fk" FOREIGN KEY ("environment_id") REFERENCES "public"."environment"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_environment" ADD CONSTRAINT "trigger_environment_channel_id_channel_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channel"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -715,17 +697,17 @@ ALTER TABLE "trigger_release" ADD CONSTRAINT "trigger_release_agent_release_id_a
 ALTER TABLE "trigger_release" ADD CONSTRAINT "trigger_release_prompt_id_prompt_id_fk" FOREIGN KEY ("prompt_id") REFERENCES "public"."prompt"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_release" ADD CONSTRAINT "trigger_release_prompt_release_id_prompt_release_id_fk" FOREIGN KEY ("prompt_release_id") REFERENCES "public"."prompt_release"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_release" ADD CONSTRAINT "trigger_release_app_account_id_app_account_id_fk" FOREIGN KEY ("app_account_id") REFERENCES "public"."app_account"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trigger_release" ADD CONSTRAINT "trigger_release_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "trigger_release" ADD CONSTRAINT "trigger_release_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger" ADD CONSTRAINT "trigger_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trigger" ADD CONSTRAINT "trigger_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trigger" ADD CONSTRAINT "trigger_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "trigger" ADD CONSTRAINT "trigger_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "trigger" ADD CONSTRAINT "trigger_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_trigger_id_trigger_id_fk" FOREIGN KEY ("trigger_id") REFERENCES "public"."trigger"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_agent_id_agent_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_agent_release_id_agent_release_id_fk" FOREIGN KEY ("agent_release_id") REFERENCES "public"."agent_release"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_prompt_id_prompt_id_fk" FOREIGN KEY ("prompt_id") REFERENCES "public"."prompt"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_prompt_release_id_prompt_release_id_fk" FOREIGN KEY ("prompt_release_id") REFERENCES "public"."prompt_release"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_app_account_id_app_account_id_fk" FOREIGN KEY ("app_account_id") REFERENCES "public"."app_account"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "usage_period" ADD CONSTRAINT "usage_period_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "agent_copilot_message_thread_idx" ON "agent_copilot_message" USING btree ("thread_id","created_at");--> statement-breakpoint
 CREATE INDEX "agent_copilot_proposal_thread_idx" ON "agent_copilot_proposal" USING btree ("thread_id","created_at");--> statement-breakpoint
@@ -734,28 +716,23 @@ CREATE INDEX "agent_copilot_resource_request_thread_idx" ON "agent_copilot_resou
 CREATE INDEX "agent_copilot_thread_agent_user_idx" ON "agent_copilot_thread" USING btree ("agent_id","user_id","created_at");--> statement-breakpoint
 CREATE INDEX "agent_copilot_thread_org_agent_idx" ON "agent_copilot_thread" USING btree ("organization_id","agent_id","created_at");--> statement-breakpoint
 CREATE INDEX "agent_copilot_tool_log_thread_idx" ON "agent_copilot_tool_log" USING btree ("thread_id","created_at");--> statement-breakpoint
-CREATE INDEX "agent_copilot_tool_log_status_idx" ON "agent_copilot_tool_log" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "agent_copilot_trigger_request_thread_idx" ON "agent_copilot_trigger_request" USING btree ("thread_id","status","created_at");--> statement-breakpoint
+CREATE INDEX "agent_template_display_order_idx" ON "agent_template" USING btree ("display_order");--> statement-breakpoint
 CREATE UNIQUE INDEX "agent_release_unique_idx" ON "agent_release" USING btree ("agent_id","version");--> statement-breakpoint
 CREATE UNIQUE INDEX "agent_release_semver_idx" ON "agent_release" USING btree ("agent_id","version_major","version_minor","version_patch");--> statement-breakpoint
-CREATE UNIQUE INDEX "agent_release_tool_unique_idx" ON "agent_release_tool" USING btree ("agent_release_id","name");--> statement-breakpoint
-CREATE UNIQUE INDEX "agent_release_tool_stable_unique_idx" ON "agent_release_tool" USING btree ("agent_release_id","stable_tool_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "agent_org_slug_idx" ON "agent" USING btree ("organization_id","slug");--> statement-breakpoint
 CREATE INDEX "agent_template_idx" ON "agent" USING btree ("template_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "agent_working_copy_agent_idx" ON "agent_working_copy" USING btree ("agent_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "app_account_org_name_idx" ON "app_account" USING btree ("organization_id","name");--> statement-breakpoint
 CREATE UNIQUE INDEX "channel_agent_unique" ON "channel_agent" USING btree ("channel_id","agent_id");--> statement-breakpoint
-CREATE INDEX "channel_agent_channel_idx" ON "channel_agent" USING btree ("channel_id");--> statement-breakpoint
 CREATE INDEX "channel_agent_agent_idx" ON "channel_agent" USING btree ("agent_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "channel_member_unique" ON "channel_member" USING btree ("channel_id","member_id");--> statement-breakpoint
-CREATE INDEX "channel_member_channel_idx" ON "channel_member" USING btree ("channel_id");--> statement-breakpoint
 CREATE INDEX "channel_member_member_idx" ON "channel_member" USING btree ("member_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "channel_org_slug_idx" ON "channel" USING btree ("organization_id","slug");--> statement-breakpoint
-CREATE INDEX "channel_org_idx" ON "channel" USING btree ("organization_id","is_archived","created_at");--> statement-breakpoint
+CREATE INDEX "channel_org_idx" ON "channel" USING btree ("organization_id","archived","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "connector_org_name_idx" ON "connector" USING btree ("organization_id","name");--> statement-breakpoint
 CREATE UNIQUE INDEX "environment_org_slug_idx" ON "environment" USING btree ("organization_id","slug");--> statement-breakpoint
-CREATE INDEX "human_request_thread_idx" ON "human_request" USING btree ("thread_id");--> statement-breakpoint
-CREATE INDEX "human_request_run_idx" ON "human_request" USING btree ("run_id");--> statement-breakpoint
+CREATE INDEX "human_request_thread_status_idx" ON "human_request" USING btree ("thread_id","status","created_at");--> statement-breakpoint
+CREATE INDEX "human_request_run_status_idx" ON "human_request" USING btree ("run_id","status");--> statement-breakpoint
 CREATE INDEX "human_request_tool_call_idx" ON "human_request" USING btree ("tool_call_id");--> statement-breakpoint
 CREATE INDEX "human_request_status_idx" ON "human_request" USING btree ("status","expires_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "human_request_pending_thread_idx" ON "human_request" USING btree ("thread_id") WHERE status = 'pending';--> statement-breakpoint
@@ -771,9 +748,9 @@ CREATE INDEX "output_item_tool_call_idx" ON "output_item" USING btree ("tool_cal
 CREATE UNIQUE INDEX "prompt_release_unique_idx" ON "prompt_release" USING btree ("prompt_id","version");--> statement-breakpoint
 CREATE UNIQUE INDEX "prompt_release_semver_idx" ON "prompt_release" USING btree ("prompt_id","version_major","version_minor","version_patch");--> statement-breakpoint
 CREATE UNIQUE INDEX "prompt_org_slug_idx" ON "prompt" USING btree ("organization_id","slug");--> statement-breakpoint
-CREATE UNIQUE INDEX "prompt_working_copy_prompt_idx" ON "prompt_working_copy" USING btree ("prompt_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "resource_config_resource_env_idx" ON "resource_config" USING btree ("resource_id","environment_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "resource_org_slug_idx" ON "resource" USING btree ("organization_id","slug");--> statement-breakpoint
+CREATE INDEX "resource_org_type_managed_idx" ON "resource" USING btree ("organization_id","type","managed");--> statement-breakpoint
 CREATE INDEX "run_thread_idx" ON "run" USING btree ("thread_id","created_at");--> statement-breakpoint
 CREATE INDEX "run_parent_idx" ON "run" USING btree ("parent_run_id");--> statement-breakpoint
 CREATE INDEX "run_thread_depth_idx" ON "run" USING btree ("thread_id","depth","created_at");--> statement-breakpoint
@@ -795,11 +772,10 @@ CREATE INDEX "thread_kind_user_idx" ON "thread" USING btree ("kind","created_by"
 CREATE INDEX "thread_playground_idx" ON "thread" USING btree ("kind","agent_id","user_id","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "trigger_environment_idx" ON "trigger_environment" USING btree ("trigger_id","environment_id");--> statement-breakpoint
 CREATE INDEX "trigger_environment_channel_idx" ON "trigger_environment" USING btree ("channel_id");--> statement-breakpoint
-CREATE INDEX "trigger_environment_active_idx" ON "trigger_environment" USING btree ("environment_id","is_active");--> statement-breakpoint
+CREATE INDEX "trigger_environment_active_idx" ON "trigger_environment" USING btree ("environment_id","active");--> statement-breakpoint
 CREATE UNIQUE INDEX "trigger_release_unique_idx" ON "trigger_release" USING btree ("trigger_id","version");--> statement-breakpoint
 CREATE UNIQUE INDEX "trigger_release_semver_idx" ON "trigger_release" USING btree ("trigger_id","version_major","version_minor","version_patch");--> statement-breakpoint
 CREATE UNIQUE INDEX "trigger_org_slug_idx" ON "trigger" USING btree ("organization_id","slug");--> statement-breakpoint
 CREATE INDEX "trigger_current_release_idx" ON "trigger" USING btree ("current_release_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "trigger_working_copy_trigger_idx" ON "trigger_working_copy" USING btree ("trigger_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "usage_period_org_period_idx" ON "usage_period" USING btree ("organization_id","period_start");--> statement-breakpoint
 CREATE UNIQUE INDEX "user_email_idx" ON "user" USING btree ("email");

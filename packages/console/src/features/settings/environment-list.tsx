@@ -92,7 +92,7 @@ export function EnvironmentList(props: EnvironmentListProps) {
                   <span class="h-2 w-2 shrink-0 rounded-full" style={{ background: env.color ?? defaultColor }} />
                   <span class="truncate font-code text-2xs text-text-muted">{env.color ?? defaultColor}</span>
                 </div>
-                <Show when={env.isProtected} fallback={<span class="text-2xs text-text-muted">—</span>}>
+                <Show when={env.protected} fallback={<span class="text-2xs text-text-muted">—</span>}>
                   <span class="text-2xs text-text-muted">Protected</span>
                 </Show>
                 <div
@@ -108,7 +108,7 @@ export function EnvironmentList(props: EnvironmentListProps) {
                         label: "Delete",
                         onClick: () => props.onDeleteClick(env),
                         variant: "danger",
-                        disabled: env.isProtected,
+                        disabled: env.protected,
                       },
                     ]}
                     trigger={

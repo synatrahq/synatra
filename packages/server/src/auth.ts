@@ -165,7 +165,7 @@ export const auth = betterAuth({
                   name: env.name,
                   slug: env.slug,
                   color: env.color,
-                  isProtected: env.isProtected,
+                  protected: env.protected,
                   createdBy: user.id,
                 })),
               ),

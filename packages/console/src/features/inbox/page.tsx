@@ -66,7 +66,7 @@ type ChannelSettingsData = {
   name: string
   slug: string
   description: string | null
-  isArchived: boolean
+  archived: boolean
 }
 
 type StatusFilter = "all" | "waiting_human" | "running" | "completed" | "failed" | "rejected" | "skipped" | "archive"
@@ -1275,7 +1275,7 @@ export default function InboxPage() {
                 channelName={channel().name}
                 channelSlug={channel().slug}
                 channelDescription={channel().description}
-                isArchived={channel().isArchived}
+                archived={channel().archived}
                 members={channelMembers()}
                 agents={channelAgents()}
                 currentUserId={currentUserId()}
