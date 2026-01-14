@@ -1,5 +1,5 @@
 {
-  "id": "b05096c8-24c3-4a2e-bd08-6571c79a397e",
+  "id": "061843c0-aff0-4496-809f-07ad26e2f888",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1095,48 +1095,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "model_provider": {
-          "name": "model_provider",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "model_name": {
-          "name": "model_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "temperature": {
-          "name": "temperature",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "top_p": {
-          "name": "top_p",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "system_prompt": {
-          "name": "system_prompt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "tool_count": {
-          "name": "tool_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "requires_review_count": {
-          "name": "requires_review_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
         },
         "published_at": {
           "name": "published_at",

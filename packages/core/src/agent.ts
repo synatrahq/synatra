@@ -65,17 +65,6 @@ function hashConfig(config: unknown): string {
   return createHash("sha256").update(serializeConfig(config)).digest("hex")
 }
 
-function extractVersionStats(config: AgentRuntimeConfig) {
-  const modelProvider = config.model?.provider ?? null
-  const modelName = config.model?.model ?? null
-  const temperature = config.model?.temperature !== undefined ? String(config.model.temperature) : null
-  const topP = config.model?.topP !== undefined ? String(config.model.topP) : null
-  const systemPrompt = config.systemPrompt ?? null
-  const toolCount = Array.isArray(config.tools) ? config.tools.length : null
-  const requiresReviewCount = Array.isArray(config.tools) ? config.tools.filter((t) => t.requiresReview).length : null
-  return { modelProvider, modelName, temperature, topP, systemPrompt, toolCount, requiresReviewCount }
-}
-
 async function replaceReleaseTools(agentReleaseId: string, tools: AgentTool[] | undefined) {
   await withDb((db) => db.delete(AgentReleaseToolTable).where(eq(AgentReleaseToolTable.agentReleaseId, agentReleaseId)))
   if (!Array.isArray(tools) || tools.length === 0) return
@@ -122,7 +111,6 @@ function releaseValues(input: {
   description: string
   runtimeConfig: AgentRuntimeConfig
   configHash: string
-  stats: ReturnType<typeof extractVersionStats>
   userId: string
 }) {
   return {
@@ -134,13 +122,6 @@ function releaseValues(input: {
     description: input.description,
     runtimeConfig: input.runtimeConfig,
     configHash: input.configHash,
-    modelProvider: input.stats.modelProvider,
-    modelName: input.stats.modelName,
-    temperature: input.stats.temperature,
-    topP: input.stats.topP,
-    systemPrompt: input.stats.systemPrompt,
-    toolCount: input.stats.toolCount ?? undefined,
-    requiresReviewCount: input.stats.requiresReviewCount ?? undefined,
     publishedAt: new Date(),
     createdBy: input.userId,
   }
@@ -211,7 +192,6 @@ export async function createAgent(input: z.input<typeof CreateAgentSchema>) {
   const versionText = stringifyVersion(versionParsed)
   const configHash = hashConfig(data.runtimeConfig)
   const config = data.runtimeConfig as AgentRuntimeConfig
-  const stats = extractVersionStats(config)
   const sub = await currentSubscription({})
   const limits = PLAN_LIMITS[sub.plan as SubscriptionPlan]
 
@@ -255,7 +235,6 @@ export async function createAgent(input: z.input<typeof CreateAgentSchema>) {
           description: data.descriptionText,
           runtimeConfig: config,
           configHash,
-          stats,
           userId,
         }),
       )
@@ -346,8 +325,6 @@ export async function deployAgent(input: z.input<typeof DeployAgentSchema>) {
   if (data.version && data.bump) throw new Error("Specify either version or bump, not both")
 
   const config = working.runtimeConfig as AgentRuntimeConfig
-
-  const stats = extractVersionStats(config)
   const userId = principal.userId()
 
   const [release] = await withTx(async (db) => {
@@ -378,7 +355,6 @@ export async function deployAgent(input: z.input<typeof DeployAgentSchema>) {
           description: data.description,
           runtimeConfig: config,
           configHash: working.configHash,
-          stats,
           userId,
         }),
       )
