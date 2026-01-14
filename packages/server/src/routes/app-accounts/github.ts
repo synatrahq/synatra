@@ -145,7 +145,7 @@ export const github = new Hono().post(
 
     setCookie(c, "github_install_state", state, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: !config().app.isDevelopment,
       sameSite: "Lax",
       maxAge: 600,
       path: "/",

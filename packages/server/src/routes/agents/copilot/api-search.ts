@@ -12,9 +12,10 @@ import {
 } from "./api-docs/api-docs"
 import commonEndpoints from "./api-docs/common-endpoints.json"
 import { getProductionConfig } from "./models"
+import { config } from "../../../config"
 
 const LOG_PREFIX = "[Copilot:ApiSearch]"
-const DEBUG = process.env.NODE_ENV === "development"
+const DEBUG = config().app.isDevelopment
 
 function debugLog(message: string, data?: Record<string, unknown>) {
   if (!DEBUG) return
