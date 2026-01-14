@@ -128,10 +128,7 @@ export const AgentCopilotToolLogTable = pgTable(
     payload: jsonb("payload").$type<Record<string, unknown>>(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [
-    index("agent_copilot_tool_log_thread_idx").on(table.threadId, table.createdAt),
-    index("agent_copilot_tool_log_status_idx").on(table.status),
-  ],
+  (table) => [index("agent_copilot_tool_log_thread_idx").on(table.threadId, table.createdAt)],
 )
 
 export type CopilotResourceRequestSuggestion = {

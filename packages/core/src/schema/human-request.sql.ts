@@ -56,8 +56,8 @@ export const HumanRequestTable = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    index("human_request_thread_idx").on(table.threadId),
-    index("human_request_run_idx").on(table.runId),
+    index("human_request_thread_status_idx").on(table.threadId, table.status, table.createdAt),
+    index("human_request_run_status_idx").on(table.runId, table.status),
     index("human_request_tool_call_idx").on(table.toolCallId),
     index("human_request_status_idx").on(table.status, table.expiresAt),
     uniqueIndex("human_request_pending_thread_idx")

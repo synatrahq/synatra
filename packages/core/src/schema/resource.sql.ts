@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, uuid, text, jsonb, timestamp, uniqueIndex, boolean } from "drizzle-orm/pg-core"
+import { pgTable, pgEnum, uuid, text, jsonb, timestamp, uniqueIndex, boolean, index } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 import { OrganizationTable } from "./organization.sql"
 import { EnvironmentTable } from "./environment.sql"
@@ -30,7 +30,10 @@ export const ResourceTable = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [uniqueIndex("resource_org_slug_idx").on(table.organizationId, table.slug)],
+  (table) => [
+    uniqueIndex("resource_org_slug_idx").on(table.organizationId, table.slug),
+    index("resource_org_type_managed_idx").on(table.organizationId, table.type, table.managed),
+  ],
 )
 
 export const ResourceConfigTable = pgTable(

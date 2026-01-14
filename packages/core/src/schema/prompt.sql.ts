@@ -65,22 +65,18 @@ export const PromptReleaseTable = pgTable(
   ],
 )
 
-export const PromptWorkingCopyTable = pgTable(
-  "prompt_working_copy",
-  {
-    promptId: uuid("prompt_id")
-      .references(() => PromptTable.id, { onDelete: "cascade" })
-      .primaryKey(),
-    mode: promptModeEnum("mode").default("template").notNull(),
-    content: text("content").default("").notNull(),
-    script: text("script").default("").notNull(),
-    inputSchema: jsonb("input_schema"),
-    contentHash: text("content_hash").notNull(),
-    updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [uniqueIndex("prompt_working_copy_prompt_idx").on(table.promptId)],
-)
+export const PromptWorkingCopyTable = pgTable("prompt_working_copy", {
+  promptId: uuid("prompt_id")
+    .references(() => PromptTable.id, { onDelete: "cascade" })
+    .primaryKey(),
+  mode: promptModeEnum("mode").default("template").notNull(),
+  content: text("content").default("").notNull(),
+  script: text("script").default("").notNull(),
+  inputSchema: jsonb("input_schema"),
+  contentHash: text("content_hash").notNull(),
+  updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+})
 
 export type Prompt = typeof PromptTable.$inferSelect
 export type PromptRelease = typeof PromptReleaseTable.$inferSelect

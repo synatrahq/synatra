@@ -95,36 +95,32 @@ export const TriggerReleaseTable = pgTable(
   ],
 )
 
-export const TriggerWorkingCopyTable = pgTable(
-  "trigger_working_copy",
-  {
-    triggerId: uuid("trigger_id")
-      .references(() => TriggerTable.id, { onDelete: "cascade" })
-      .primaryKey(),
-    agentId: uuid("agent_id")
-      .references(() => AgentTable.id, { onDelete: "cascade" })
-      .notNull(),
-    agentReleaseId: uuid("agent_release_id").references(() => AgentReleaseTable.id, { onDelete: "set null" }),
-    agentVersionMode: versionModeEnum("agent_version_mode").default("current").notNull(),
-    promptId: uuid("prompt_id").references(() => PromptTable.id, { onDelete: "set null" }),
-    promptReleaseId: uuid("prompt_release_id").references(() => PromptReleaseTable.id, { onDelete: "set null" }),
-    promptVersionMode: versionModeEnum("prompt_version_mode").default("current").notNull(),
-    mode: triggerModeEnum("mode").default("template").notNull(),
-    template: text("template").default("").notNull(),
-    script: text("script").default("").notNull(),
-    payloadSchema: jsonb("payload_schema"),
-    type: triggerTypeEnum("type").default("webhook").notNull(),
-    cron: text("cron"),
-    timezone: text("timezone").default("UTC").notNull(),
-    input: jsonb("input"),
-    appAccountId: uuid("app_account_id").references(() => AppAccountTable.id, { onDelete: "set null" }),
-    appEvents: text("app_events").array(),
-    configHash: text("config_hash").notNull(),
-    updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [uniqueIndex("trigger_working_copy_trigger_idx").on(table.triggerId)],
-)
+export const TriggerWorkingCopyTable = pgTable("trigger_working_copy", {
+  triggerId: uuid("trigger_id")
+    .references(() => TriggerTable.id, { onDelete: "cascade" })
+    .primaryKey(),
+  agentId: uuid("agent_id")
+    .references(() => AgentTable.id, { onDelete: "cascade" })
+    .notNull(),
+  agentReleaseId: uuid("agent_release_id").references(() => AgentReleaseTable.id, { onDelete: "set null" }),
+  agentVersionMode: versionModeEnum("agent_version_mode").default("current").notNull(),
+  promptId: uuid("prompt_id").references(() => PromptTable.id, { onDelete: "set null" }),
+  promptReleaseId: uuid("prompt_release_id").references(() => PromptReleaseTable.id, { onDelete: "set null" }),
+  promptVersionMode: versionModeEnum("prompt_version_mode").default("current").notNull(),
+  mode: triggerModeEnum("mode").default("template").notNull(),
+  template: text("template").default("").notNull(),
+  script: text("script").default("").notNull(),
+  payloadSchema: jsonb("payload_schema"),
+  type: triggerTypeEnum("type").default("webhook").notNull(),
+  cron: text("cron"),
+  timezone: text("timezone").default("UTC").notNull(),
+  input: jsonb("input"),
+  appAccountId: uuid("app_account_id").references(() => AppAccountTable.id, { onDelete: "set null" }),
+  appEvents: text("app_events").array(),
+  configHash: text("config_hash").notNull(),
+  updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+})
 
 export const TriggerEnvironmentTable = pgTable(
   "trigger_environment",

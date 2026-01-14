@@ -21,7 +21,6 @@ export const ChannelAgentTable = pgTable(
   },
   (table) => [
     uniqueIndex("channel_agent_unique").on(table.channelId, table.agentId),
-    index("channel_agent_channel_idx").on(table.channelId),
     index("channel_agent_agent_idx").on(table.agentId),
   ],
 )

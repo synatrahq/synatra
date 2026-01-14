@@ -32,19 +32,15 @@ export const AgentTable = pgTable(
   ],
 )
 
-export const AgentWorkingCopyTable = pgTable(
-  "agent_working_copy",
-  {
-    agentId: uuid("agent_id")
-      .references(() => AgentTable.id, { onDelete: "cascade" })
-      .primaryKey(),
-    runtimeConfig: jsonb("runtime_config").$type<AgentRuntimeConfig>().notNull(),
-    configHash: text("config_hash").notNull(),
-    updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [uniqueIndex("agent_working_copy_agent_idx").on(table.agentId)],
-)
+export const AgentWorkingCopyTable = pgTable("agent_working_copy", {
+  agentId: uuid("agent_id")
+    .references(() => AgentTable.id, { onDelete: "cascade" })
+    .primaryKey(),
+  runtimeConfig: jsonb("runtime_config").$type<AgentRuntimeConfig>().notNull(),
+  configHash: text("config_hash").notNull(),
+  updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+})
 
 export const AgentReleaseTable = pgTable(
   "agent_release",
