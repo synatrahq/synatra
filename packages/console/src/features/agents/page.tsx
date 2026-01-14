@@ -145,12 +145,12 @@ export default function AgentsPage() {
     mutationFn: async (data: AgentCreateInput) => {
       const res = await api.api.agents.$post({ json: data })
       if (!res.ok) throw new Error("Failed to create agent")
-      return res.json()
+      return { agent: await res.json(), fromTemplate: !!data.templateId }
     },
-    onSuccess: (created) => {
+    onSuccess: ({ agent, fromTemplate }) => {
       queryClient.invalidateQueries({ queryKey: ["agents"] })
       setCreateModalOpen(false)
-      navigate(`/agents/${created.id}?startCopilot=true`)
+      navigate(fromTemplate ? `/agents/${agent.id}?startCopilot=true` : `/agents/${agent.id}`)
     },
   }))
 
