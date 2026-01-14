@@ -107,7 +107,7 @@ type TriggerEnvironmentInfo = {
   channelId: string
   webhookSecret: string | null
   debugSecret: string | null
-  isActive: boolean
+  active: boolean
   createdAt: string
   updatedAt: string
   environment: { id: string; name: string; slug: string; color: string }

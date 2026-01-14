@@ -11,7 +11,7 @@ export const CreateEnvironmentSchema = z.object({
   name: z.string().min(1),
   slug: z.string().optional(),
   color: z.string().optional(),
-  isProtected: z.boolean().optional(),
+  protected: z.boolean().optional(),
 })
 
 export const CreateManyEnvironmentsSchema = z.array(
@@ -19,7 +19,7 @@ export const CreateManyEnvironmentsSchema = z.array(
     name: z.string().min(1),
     slug: z.string().optional(),
     color: z.string().optional(),
-    isProtected: z.boolean().optional(),
+    protected: z.boolean().optional(),
     organizationId: z.string(),
     createdBy: z.string(),
     updatedBy: z.string().optional(),
@@ -52,13 +52,13 @@ function normalizeColor(color: string): string {
   return `#${prefixed.slice(1).toUpperCase()}`
 }
 
-function prepareValues(input: { name: string; slug?: string; color?: string; isProtected?: boolean }) {
+function prepareValues(input: { name: string; slug?: string; color?: string; protected?: boolean }) {
   const slug = input.slug?.trim() || generateSlug(input.name)
   return {
     name: input.name,
     slug,
     color: input.color ? normalizeColor(input.color) : DEFAULT_COLOR,
-    isProtected: input.isProtected ?? ["production", "staging"].includes(slug),
+    protected: input.protected ?? ["production", "staging"].includes(slug),
   }
 }
 
@@ -140,7 +140,7 @@ export async function updateEnvironment(input: z.input<typeof UpdateEnvironmentS
   const data = UpdateEnvironmentSchema.parse(input)
   const existing = await getEnvironmentById(data.id)
 
-  if (data.slug !== undefined && existing.isProtected && data.slug !== existing.slug) {
+  if (data.slug !== undefined && existing.protected && data.slug !== existing.slug) {
     throw createError("BadRequestError", { message: "Protected environments cannot change slug" })
   }
 
@@ -165,7 +165,7 @@ export async function updateEnvironment(input: z.input<typeof UpdateEnvironmentS
 
 export async function removeEnvironment(id: string) {
   const existing = await getEnvironmentById(id)
-  if (existing.isProtected) {
+  if (existing.protected) {
     throw createError("BadRequestError", { message: "Protected environments cannot be deleted" })
   }
 

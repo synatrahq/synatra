@@ -57,7 +57,7 @@ export async function listChannels(input?: z.input<typeof ListChannelsSchema>) {
   if (isOrgAdminOrOwnerChannelMember(member?.role)) {
     const conditions = [eq(ChannelTable.organizationId, organizationId)]
     if (!filters?.includeArchived) {
-      conditions.push(eq(ChannelTable.isArchived, false))
+      conditions.push(eq(ChannelTable.archived, false))
     }
     return withDb((db) =>
       db
@@ -72,7 +72,7 @@ export async function listChannels(input?: z.input<typeof ListChannelsSchema>) {
 
   const conditions = [eq(ChannelTable.organizationId, organizationId), eq(ChannelMemberTable.memberId, member.id)]
   if (!filters?.includeArchived) {
-    conditions.push(eq(ChannelTable.isArchived, false))
+    conditions.push(eq(ChannelTable.archived, false))
   }
 
   return withDb((db) =>
@@ -243,7 +243,7 @@ export async function archiveChannel(id: string) {
   const [updated] = await withDb((db) =>
     db
       .update(ChannelTable)
-      .set({ isArchived: true, updatedAt: new Date(), updatedBy: principal.userId() })
+      .set({ archived: true, updatedAt: new Date(), updatedBy: principal.userId() })
       .where(eq(ChannelTable.id, id))
       .returning(),
   )
@@ -256,7 +256,7 @@ export async function unarchiveChannel(id: string) {
   const [channel] = await withDb((db) =>
     db
       .update(ChannelTable)
-      .set({ isArchived: false, updatedAt: new Date(), updatedBy: principal.userId() })
+      .set({ archived: false, updatedAt: new Date(), updatedBy: principal.userId() })
       .where(eq(ChannelTable.id, id))
       .returning(),
   )
@@ -291,12 +291,12 @@ export async function countChannels() {
           channelIcon: ChannelTable.icon,
           channelIconColor: ChannelTable.iconColor,
           channelIsDefault: ChannelTable.isDefault,
-          channelIsArchived: ChannelTable.isArchived,
+          channelArchived: ChannelTable.archived,
           count: count(),
         })
         .from(ChannelTable)
         .leftJoin(ThreadTable, eq(ChannelTable.id, ThreadTable.channelId))
-        .where(and(eq(ChannelTable.organizationId, organizationId), eq(ChannelTable.isArchived, false)))
+        .where(and(eq(ChannelTable.organizationId, organizationId), eq(ChannelTable.archived, false)))
         .groupBy(
           ChannelTable.id,
           ChannelTable.name,
@@ -304,7 +304,7 @@ export async function countChannels() {
           ChannelTable.icon,
           ChannelTable.iconColor,
           ChannelTable.isDefault,
-          ChannelTable.isArchived,
+          ChannelTable.archived,
         ),
     )
 
@@ -330,7 +330,7 @@ export async function countChannels() {
         channelIcon: ChannelTable.icon,
         channelIconColor: ChannelTable.iconColor,
         channelIsDefault: ChannelTable.isDefault,
-        channelIsArchived: ChannelTable.isArchived,
+        channelArchived: ChannelTable.archived,
         count: count(),
       })
       .from(ChannelTable)
@@ -339,7 +339,7 @@ export async function countChannels() {
       .where(
         and(
           eq(ChannelTable.organizationId, organizationId),
-          eq(ChannelTable.isArchived, false),
+          eq(ChannelTable.archived, false),
           eq(ChannelMemberTable.memberId, member.id),
         ),
       )
@@ -350,7 +350,7 @@ export async function countChannels() {
         ChannelTable.icon,
         ChannelTable.iconColor,
         ChannelTable.isDefault,
-        ChannelTable.isArchived,
+        ChannelTable.archived,
       ),
   )
 

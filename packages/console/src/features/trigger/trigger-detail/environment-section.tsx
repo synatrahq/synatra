@@ -29,7 +29,7 @@ type TriggerEnvironmentInfo = {
   channelId: string
   webhookSecret: string | null
   debugSecret: string | null
-  isActive: boolean
+  active: boolean
   createdAt: string
   updatedAt: string
   environment: { id: string; name: string; slug: string; color: string }
@@ -254,10 +254,10 @@ function EnvironmentItem(props: {
             </span>
           </div>
           <div class="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-            <Show when={props.env.isActive}>
+            <Show when={props.env.active}>
               <span class="rounded bg-success/10 px-1.5 py-0.5 text-2xs font-medium text-success">Active</span>
             </Show>
-            <Switch checked={props.env.isActive} onClick={handleToggle} disabled={toggling()} class="scale-75" />
+            <Switch checked={props.env.active} onClick={handleToggle} disabled={toggling()} class="scale-75" />
             <DropdownMenu
               items={menuItems}
               trigger={

@@ -29,7 +29,7 @@ type ChannelPanelProps = {
   channelName: string
   channelSlug: string
   channelDescription: string | null
-  isArchived: boolean
+  archived: boolean
   members: ChannelMembers
   agents: ChannelAgents
   currentUserId: string
@@ -267,7 +267,7 @@ export function ChannelPanel(props: ChannelPanelProps) {
   const handleArchive = async () => {
     setArchiving(true)
     try {
-      if (props.isArchived) {
+      if (props.archived) {
         await props.onUnarchive()
       } else {
         await props.onArchive()
@@ -518,25 +518,25 @@ export function ChannelPanel(props: ChannelPanelProps) {
                 <div class="border-t border-border pt-3">
                   <div class="flex items-center justify-between rounded border border-danger/30 bg-danger/5 px-2.5 py-2">
                     <div class="flex items-center gap-2">
-                      <Show when={props.isArchived} fallback={<Archive class="h-3.5 w-3.5 text-danger" />}>
+                      <Show when={props.archived} fallback={<Archive class="h-3.5 w-3.5 text-danger" />}>
                         <ArrowCounterClockwise class="h-3.5 w-3.5 text-text-muted" />
                       </Show>
                       <div>
                         <p class="text-xs font-medium text-text">
-                          {props.isArchived ? "Unarchive channel" : "Archive channel"}
+                          {props.archived ? "Unarchive channel" : "Archive channel"}
                         </p>
                         <p class="text-2xs text-text-muted">
-                          {props.isArchived ? "Restore visibility" : "Hide from active list"}
+                          {props.archived ? "Restore visibility" : "Hide from active list"}
                         </p>
                       </div>
                     </div>
                     <Button
-                      variant={props.isArchived ? "default" : "destructive"}
+                      variant={props.archived ? "default" : "destructive"}
                       size="sm"
                       onClick={handleArchive}
                       disabled={archiving()}
                     >
-                      {archiving() ? <Spinner size="xs" /> : props.isArchived ? "Unarchive" : "Archive"}
+                      {archiving() ? <Spinner size="xs" /> : props.archived ? "Unarchive" : "Archive"}
                     </Button>
                   </div>
                 </div>

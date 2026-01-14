@@ -143,14 +143,14 @@ export const TriggerEnvironmentTable = pgTable(
       .notNull(),
     webhookSecret: text("webhook_secret"),
     debugSecret: text("debug_secret"),
-    isActive: boolean("is_active").default(false).notNull(),
+    active: boolean("active").default(false).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     uniqueIndex("trigger_environment_idx").on(table.triggerId, table.environmentId),
     index("trigger_environment_channel_idx").on(table.channelId),
-    index("trigger_environment_active_idx").on(table.environmentId, table.isActive),
+    index("trigger_environment_active_idx").on(table.environmentId, table.active),
   ],
 )
 

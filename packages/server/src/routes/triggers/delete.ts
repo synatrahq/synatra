@@ -9,7 +9,7 @@ export const remove = new Hono().delete("/:id", requirePermission("trigger", "de
   if (trigger.type === "schedule") {
     const environments = await listTriggerEnvironments(id)
     for (const env of environments) {
-      if (env.isActive) {
+      if (env.active) {
         await deleteSchedule(getScheduleId(id, env.environmentId))
       }
     }

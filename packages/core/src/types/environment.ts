@@ -26,19 +26,19 @@ export type DefaultEnvironment = {
   name: string
   slug: string
   color: string
-  isProtected: boolean
+  protected: boolean
 }
 
 export const PRODUCTION_ENV: DefaultEnvironment = {
   name: "Production",
   slug: "production",
   color: "#3B82F6",
-  isProtected: true,
+  protected: true,
 }
 
 export const STAGING_ENV: DefaultEnvironment = {
   name: "Staging",
   slug: "staging",
   color: "#22C55E",
-  isProtected: true,
+  protected: true,
 }
