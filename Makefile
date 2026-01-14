@@ -128,3 +128,16 @@ render-status:
 
 render-logs-%:
 	@render logs --service $*
+
+TEMPORAL_ENV ?= staging
+
+.PHONY: temporal-init temporal-plan temporal-apply
+
+temporal-init:
+	@cd infra/temporal && terraform init
+
+temporal-plan:
+	@cd infra/temporal && terraform plan -var-file=$(TEMPORAL_ENV).tfvars
+
+temporal-apply:
+	@cd infra/temporal && terraform apply -var-file=$(TEMPORAL_ENV).tfvars
