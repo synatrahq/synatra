@@ -49,11 +49,7 @@ function generateSlug(name: string): string {
     .replace(/^-|-$/g, "")
 }
 
-const GREETING_MESSAGES = [
-  "Hey, I'm here to work for you.",
-  "Tell me what's wasting your time—failed payments, support tickets, reports—and I'll handle it.",
-  "Pick a starting point, or describe what you need.",
-]
+const GREETING_MESSAGES = ["Hey, I'm here to work for you.", "What's eating your time?"]
 
 type GreetingScreenProps = {
   onComplete: (sourceRect: DOMRect | null) => void
@@ -86,17 +82,17 @@ function GreetingScreen(props: GreetingScreenProps) {
   const typeChar = (line: string, i: number, idx: number) => {
     if (i <= line.length) {
       setText(line.slice(0, i))
-      wait(() => typeChar(line, i + 1, idx), 12 + Math.random() * 8)
+      wait(() => typeChar(line, i + 1, idx), 8 + Math.random() * 6)
     } else {
       setLines((prev) => [...prev, line])
       setText("")
       if (idx < GREETING_MESSAGES.length - 1) {
-        wait(() => startLine(idx + 1), 500)
+        wait(() => startLine(idx + 1), 300)
       } else {
         wait(() => {
           setCursor(false)
-          wait(complete, 1200)
-        }, 500)
+          wait(complete, 600)
+        }, 300)
       }
     }
   }
@@ -107,9 +103,9 @@ function GreetingScreen(props: GreetingScreenProps) {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setLines(GREETING_MESSAGES)
       setCursor(false)
-      wait(complete, 2000)
+      wait(complete, 800)
     } else {
-      wait(() => startLine(0), 600)
+      wait(() => startLine(0), 400)
     }
   })
 
@@ -150,7 +146,7 @@ function TransitionScreen(props: { onComplete: () => void }) {
 
   onMount(() => {
     if (reducedMotion) {
-      const id = window.setTimeout(() => ref.mounted && props.onComplete(), 1500)
+      const id = window.setTimeout(() => ref.mounted && props.onComplete(), 800)
       ref.timeouts.push(id)
       return
     }
@@ -160,7 +156,7 @@ function TransitionScreen(props: { onComplete: () => void }) {
         if (!ref.mounted || !iconRef || !textRef) return
 
         textRef.animate([{ opacity: 1 }, { opacity: 0 }], {
-          duration: 400,
+          duration: 300,
           easing: "ease-out",
           fill: "forwards",
         })
@@ -170,11 +166,11 @@ function TransitionScreen(props: { onComplete: () => void }) {
             { transform: "translateX(0) scale(1)", opacity: 1 },
             { transform: "translateX(calc(50vw - 60px)) scale(0.8)", opacity: 0 },
           ],
-          { duration: 700, easing: "cubic-bezier(0.4, 0, 0.2, 1)", fill: "forwards" },
+          { duration: 500, easing: "cubic-bezier(0.4, 0, 0.2, 1)", fill: "forwards" },
         )
 
         anim.onfinish = () => ref.mounted && props.onComplete()
-      }, 2200),
+      }, 1000),
     )
   })
 
@@ -193,11 +189,8 @@ function TransitionScreen(props: { onComplete: () => void }) {
         >
           <Sparkle class="h-5 w-5 text-accent" weight="duotone" />
         </div>
-        <div ref={textRef} class="space-y-1 pt-1" style={{ "will-change": "opacity" }}>
-          <p class="animate-fade-in text-base leading-relaxed text-text">Your agent is ready to come alive.</p>
-          <p class="animate-fade-in text-base leading-relaxed text-text-muted">
-            I'll be in the Copilot panel — let's build it together.
-          </p>
+        <div ref={textRef} class="pt-2" style={{ "will-change": "opacity" }}>
+          <p class="animate-fade-in text-base leading-relaxed text-text">Let's build it.</p>
         </div>
       </div>
     </div>

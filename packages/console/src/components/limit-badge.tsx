@@ -10,7 +10,8 @@ export function LimitBadge(props: LimitBadgeProps) {
   const pct = createMemo(() => (props.limit === null ? 0 : (props.current / props.limit) * 100))
 
   const variant = createMemo(() => {
-    if (pct() >= 100) return "danger"
+    if (pct() > 100) return "danger"
+    if (pct() === 100) return "neutral"
     if (pct() >= 80) return "warning"
     return "success"
   })
@@ -27,6 +28,7 @@ export function LimitBadge(props: LimitBadgeProps) {
         "bg-success-soft text-success": variant() === "success",
         "bg-warning-soft text-warning": variant() === "warning",
         "bg-danger-soft text-danger": variant() === "danger",
+        "bg-surface-muted text-text-muted": variant() === "neutral",
       }}
     >
       {text()}

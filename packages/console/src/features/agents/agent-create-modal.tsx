@@ -335,7 +335,7 @@ export function AgentCreateModal(props: AgentCreateModalProps) {
                     </div>
                     <div class="flex flex-col">
                       <span class="text-xs font-medium text-text">Start from scratch</span>
-                      <span class="text-2xs text-text-muted">Build a custom agent with Copilot guidance</span>
+                      <span class="text-2xs text-text-muted">Build a custom agent from the ground up</span>
                     </div>
                   </button>
 
@@ -461,7 +461,7 @@ export function AgentCreateModal(props: AgentCreateModalProps) {
                 </div>
                 <div class="flex flex-col">
                   <span class="text-xs font-medium text-text">Start from Scratch</span>
-                  <span class="text-2xs text-text-muted">Build with Copilot guidance</span>
+                  <span class="text-2xs text-text-muted">Configure your agent manually</span>
                 </div>
               </div>
 
