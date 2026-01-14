@@ -1,5 +1,5 @@
 {
-  "id": "061843c0-aff0-4496-809f-07ad26e2f888",
+  "id": "cbd041bc-80e0-4af4-a66d-4c53e4cae5b3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -727,21 +727,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "agent_copilot_tool_log_status_idx": {
-          "name": "agent_copilot_tool_log_status_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -1020,7 +1005,23 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "agent_template_display_order_idx": {
+          "name": "agent_template_display_order_idx",
+          "columns": [
+            {
+              "expression": "display_order",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
@@ -1107,7 +1108,7 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1197,158 +1198,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.agent_release_tool": {
-      "name": "agent_release_tool",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "agent_release_id": {
-          "name": "agent_release_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "stable_tool_id": {
-          "name": "stable_tool_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "params_schema": {
-          "name": "params_schema",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "returns_schema": {
-          "name": "returns_schema",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "code": {
-          "name": "code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "requires_review": {
-          "name": "requires_review",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "approval_authority": {
-          "name": "approval_authority",
-          "type": "approval_authority",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "self_approval": {
-          "name": "self_approval",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "approval_timeout_ms": {
-          "name": "approval_timeout_ms",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "position": {
-          "name": "position",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "agent_release_tool_unique_idx": {
-          "name": "agent_release_tool_unique_idx",
-          "columns": [
-            {
-              "expression": "agent_release_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "agent_release_tool_stable_unique_idx": {
-          "name": "agent_release_tool_stable_unique_idx",
-          "columns": [
-            {
-              "expression": "agent_release_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "stable_tool_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "agent_release_tool_agent_release_id_agent_release_id_fk": {
-          "name": "agent_release_tool_agent_release_id_agent_release_id_fk",
-          "tableFrom": "agent_release_tool",
-          "tableTo": "agent_release",
-          "columnsFrom": [
-            "agent_release_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1423,13 +1273,13 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "updated_by": {
           "name": "updated_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1521,7 +1371,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "agent_updated_by_user_id_fk": {
@@ -1534,7 +1384,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1570,7 +1420,7 @@
           "name": "updated_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "updated_at": {
           "name": "updated_at",
@@ -1580,23 +1430,7 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "agent_working_copy_agent_idx": {
-          "name": "agent_working_copy_agent_idx",
-          "columns": [
-            {
-              "expression": "agent_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "agent_working_copy_agent_id_agent_id_fk": {
           "name": "agent_working_copy_agent_id_agent_id_fk",
@@ -1621,7 +1455,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1677,13 +1511,13 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "updated_by": {
           "name": "updated_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1747,7 +1581,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "app_account_updated_by_user_id_fk": {
@@ -1760,7 +1594,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1797,7 +1631,7 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1825,21 +1659,6 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "channel_agent_channel_idx": {
-          "name": "channel_agent_channel_idx",
-          "columns": [
-            {
-              "expression": "channel_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -1897,7 +1716,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1942,7 +1761,7 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -1970,21 +1789,6 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "channel_member_channel_idx": {
-          "name": "channel_member_channel_idx",
-          "columns": [
-            {
-              "expression": "channel_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -2042,7 +1846,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -2108,8 +1912,8 @@
           "notNull": true,
           "default": false
         },
-        "is_archived": {
-          "name": "is_archived",
+        "archived": {
+          "name": "archived",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -2119,13 +1923,13 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "updated_by": {
           "name": "updated_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -2174,7 +1978,7 @@
               "nulls": "last"
             },
             {
-              "expression": "is_archived",
+              "expression": "archived",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2216,7 +2020,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "channel_updated_by_user_id_fk": {
@@ -2229,7 +2033,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -2292,13 +2096,13 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "updated_by": {
           "name": "updated_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -2362,7 +2166,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "connector_updated_by_user_id_fk": {
@@ -2375,7 +2179,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -2420,8 +2224,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "is_protected": {
-          "name": "is_protected",
+        "protected": {
+          "name": "protected",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -2431,13 +2235,13 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "updated_by": {
           "name": "updated_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -2501,7 +2305,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "environment_updated_by_user_id_fk": {
@@ -2514,7 +2318,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -2629,11 +2433,23 @@
         }
       },
       "indexes": {
-        "human_request_thread_idx": {
-          "name": "human_request_thread_idx",
+        "human_request_thread_status_idx": {
+          "name": "human_request_thread_status_idx",
           "columns": [
             {
               "expression": "thread_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2644,11 +2460,17 @@
           "method": "btree",
           "with": {}
         },
-        "human_request_run_idx": {
-          "name": "human_request_run_idx",
+        "human_request_run_status_idx": {
+          "name": "human_request_run_status_idx",
           "columns": [
             {
               "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2831,7 +2653,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -3227,7 +3049,7 @@
         },
         "metadata": {
           "name": "metadata",
-          "type": "text",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -3506,7 +3328,7 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -3596,7 +3418,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -3657,13 +3479,13 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "updated_by": {
           "name": "updated_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -3740,7 +3562,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "prompt_updated_by_user_id_fk": {
@@ -3753,7 +3575,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -3811,7 +3633,7 @@
           "name": "updated_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "updated_at": {
           "name": "updated_at",
@@ -3821,23 +3643,7 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "prompt_working_copy_prompt_idx": {
-          "name": "prompt_working_copy_prompt_idx",
-          "columns": [
-            {
-              "expression": "prompt_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "prompt_working_copy_prompt_id_prompt_id_fk": {
           "name": "prompt_working_copy_prompt_id_prompt_id_fk",
@@ -3862,7 +3668,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -3919,13 +3725,13 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "updated_by": {
           "name": "updated_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -4015,7 +3821,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "resource_config_updated_by_user_id_fk": {
@@ -4028,7 +3834,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -4091,13 +3897,13 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "updated_by": {
           "name": "updated_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -4135,6 +3941,33 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "resource_org_type_managed_idx": {
+          "name": "resource_org_type_managed_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "managed",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -4161,7 +3994,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "resource_updated_by_user_id_fk": {
@@ -4174,7 +4007,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -5513,7 +5346,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "thread_user_id_user_id_fk": {
@@ -5526,7 +5359,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -5577,8 +5410,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "is_active": {
-          "name": "is_active",
+        "active": {
+          "name": "active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -5646,7 +5479,7 @@
               "nulls": "last"
             },
             {
-              "expression": "is_active",
+              "expression": "active",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5876,7 +5709,7 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -6031,7 +5864,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -6080,13 +5913,13 @@
           "name": "created_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "updated_by": {
           "name": "updated_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -6165,7 +5998,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "trigger_updated_by_user_id_fk": {
@@ -6178,7 +6011,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -6315,7 +6148,7 @@
           "name": "updated_by",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "updated_at": {
           "name": "updated_at",
@@ -6325,23 +6158,7 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "trigger_working_copy_trigger_idx": {
-          "name": "trigger_working_copy_trigger_idx",
-          "columns": [
-            {
-              "expression": "trigger_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "trigger_working_copy_trigger_id_trigger_id_fk": {
           "name": "trigger_working_copy_trigger_id_trigger_id_fk",
@@ -6431,7 +6248,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -6699,14 +6516,6 @@
         "pending",
         "completed",
         "cancelled"
-      ]
-    },
-    "public.approval_authority": {
-      "name": "approval_authority",
-      "schema": "public",
-      "values": [
-        "owner_only",
-        "any_member"
       ]
     },
     "public.app_id": {
