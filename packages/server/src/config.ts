@@ -18,9 +18,11 @@ const ConfigSchema = z.object({
     baseUrl: z.url(),
   }),
   app: z.object({
+    port: z.number().int().positive(),
     url: z.url(),
     origins: z.array(z.url()).min(1),
     cookieDomain: z.string().optional(),
+    isDevelopment: z.boolean(),
   }),
   console: z.object({
     url: z.url(),
@@ -104,9 +106,11 @@ export function config(): ConfigType {
       baseUrl: apiUrl,
     },
     app: {
+      port: Number(process.env.PORT ?? "8787"),
       url: apiUrl,
       origins: parseOrigins(process.env.APP_ORIGINS, undefined, consoleUrl),
       cookieDomain: process.env.APP_COOKIE_DOMAIN?.trim(),
+      isDevelopment: process.env.NODE_ENV !== "production",
     },
     console: {
       url: consoleUrl,
