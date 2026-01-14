@@ -36,12 +36,8 @@ export const TriggerTable = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     currentReleaseId: uuid("current_release_id"),
-    createdBy: uuid("created_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
-    updatedBy: uuid("updated_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
+    createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
+    updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -85,9 +81,7 @@ export const TriggerReleaseTable = pgTable(
     appEvents: text("app_events").array(),
     configHash: text("config_hash").notNull(),
     publishedAt: timestamp("published_at", { withTimezone: true }).defaultNow().notNull(),
-    createdBy: uuid("created_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
+    createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
@@ -126,9 +120,7 @@ export const TriggerWorkingCopyTable = pgTable(
     appAccountId: uuid("app_account_id").references(() => AppAccountTable.id, { onDelete: "set null" }),
     appEvents: text("app_events").array(),
     configHash: text("config_hash").notNull(),
-    updatedBy: uuid("updated_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
+    updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [uniqueIndex("trigger_working_copy_trigger_idx").on(table.triggerId)],

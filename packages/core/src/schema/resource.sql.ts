@@ -25,12 +25,8 @@ export const ResourceTable = pgTable(
     type: resourceTypeEnum("type").notNull(),
     managed: boolean("managed").default(false).notNull(),
 
-    createdBy: uuid("created_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
-    updatedBy: uuid("updated_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
+    createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
+    updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -54,12 +50,8 @@ export const ResourceConfigTable = pgTable(
     connectionMode: connectionModeEnum("connection_mode").default("direct").notNull(),
     connectorId: uuid("connector_id").references(() => ConnectorTable.id, { onDelete: "set null" }),
 
-    createdBy: uuid("created_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
-    updatedBy: uuid("updated_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
+    createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
+    updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

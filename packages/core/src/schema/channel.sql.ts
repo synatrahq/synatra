@@ -19,12 +19,8 @@ export const ChannelTable = pgTable(
     iconColor: text("icon_color").default("gray").notNull(),
     isDefault: boolean("is_default").default(false).notNull(),
     isArchived: boolean("is_archived").default(false).notNull(),
-    createdBy: uuid("created_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
-    updatedBy: uuid("updated_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
+    createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
+    updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

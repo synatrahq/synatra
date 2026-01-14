@@ -16,9 +16,7 @@ export const ChannelAgentTable = pgTable(
     agentId: uuid("agent_id")
       .notNull()
       .references(() => AgentTable.id, { onDelete: "cascade" }),
-    createdBy: uuid("created_by")
-      .references(() => UserTable.id, { onDelete: "restrict" })
-      .notNull(),
+    createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
