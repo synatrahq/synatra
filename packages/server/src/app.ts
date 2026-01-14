@@ -5,6 +5,7 @@ import { initEncryption } from "@synatra/util/crypto"
 import { auth } from "./auth"
 import { config } from "./config"
 import { principalMiddleware, requireAuth, requireOrganization, requirePermission } from "./middleware/principal"
+import { stagingAuth, noIndex } from "./middleware/staging-auth"
 import { agents } from "./routes/agents"
 import { channels } from "./routes/channels"
 import { connectors } from "./routes/connectors"
@@ -35,6 +36,8 @@ export const app = new Hono()
     const problem = appError.toProblemDetails()
     return c.json(problem, problem.status as 400)
   })
+  .use("*", stagingAuth)
+  .use("*", noIndex)
   .use(
     "/api/*",
     cors({

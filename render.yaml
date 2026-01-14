@@ -83,6 +83,15 @@ projects:
               - key: STRIPE_PRICE_BUSINESS
                 sync: false
 
+          - name: synatra-staging-auth
+            envVars:
+              - key: STAGING_AUTH
+                value: "true"
+              - key: STAGING_USER
+                generateValue: true
+              - key: STAGING_PASSWORD
+                generateValue: true
+
         services:
           - type: web
             name: synatra-staging-server
@@ -104,6 +113,7 @@ projects:
               - fromGroup: synatra-staging-intercom
               - fromGroup: synatra-staging-github
               - fromGroup: synatra-staging-stripe
+              - fromGroup: synatra-staging-auth
               - key: VITE_GATEWAY_URL
                 value: wss://synatra-staging-resource-gateway.onrender.com
               - key: NODE_ENV
