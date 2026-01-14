@@ -60,9 +60,9 @@ export const ThreadTable = pgTable(
 
     seq: bigint("seq", { mode: "number" }).notNull().default(0),
 
-    createdBy: uuid("created_by").references(() => UserTable.id),
+    createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
 
-    userId: uuid("user_id").references(() => UserTable.id),
+    userId: uuid("user_id").references(() => UserTable.id, { onDelete: "set null" }),
 
     archived: boolean("archived").notNull().default(false),
     archivedAt: timestamp("archived_at", { withTimezone: true }),

@@ -3,9 +3,9 @@ import { and, eq, desc, getTableColumns, count } from "drizzle-orm"
 import { createHash } from "crypto"
 import { principal } from "./principal"
 import { withDb, withTx, first } from "./database"
-import { AgentTable, AgentReleaseTable, AgentReleaseToolTable, AgentWorkingCopyTable } from "./schema/agent.sql"
+import { AgentTable, AgentReleaseTable, AgentWorkingCopyTable } from "./schema/agent.sql"
 import { UserTable } from "./schema/user.sql"
-import type { AgentRuntimeConfig, AgentTool } from "./types"
+import type { AgentRuntimeConfig } from "./types"
 import { AgentRuntimeConfigSchema, SubscriptionPlan, PLAN_LIMITS } from "./types"
 import { serializeConfig } from "@synatra/util/normalize"
 import { createError } from "@synatra/util/error"
@@ -63,27 +63,6 @@ export const FindAgentByReleaseSchema = z.object({
 
 function hashConfig(config: unknown): string {
   return createHash("sha256").update(serializeConfig(config)).digest("hex")
-}
-
-async function replaceReleaseTools(agentReleaseId: string, tools: AgentTool[] | undefined) {
-  await withDb((db) => db.delete(AgentReleaseToolTable).where(eq(AgentReleaseToolTable.agentReleaseId, agentReleaseId)))
-  if (!Array.isArray(tools) || tools.length === 0) return
-  const rows = tools.map((tool, index) => ({
-    agentReleaseId,
-    stableToolId:
-      tool.stableId ?? createHash("sha256").update(`${agentReleaseId}-${index}`).update(tool.name).digest("hex"),
-    name: tool.name,
-    description: tool.description ?? null,
-    paramsSchema: tool.params ?? null,
-    returnsSchema: tool.returns ?? null,
-    code: tool.code ?? null,
-    requiresReview: tool.requiresReview ?? false,
-    approvalAuthority: tool.approvalAuthority ?? null,
-    selfApproval: tool.selfApproval ?? null,
-    approvalTimeoutMs: tool.approvalTimeoutMs ?? null,
-    position: index,
-  }))
-  await withDb((db) => db.insert(AgentReleaseToolTable).values(rows))
 }
 
 async function loadRelease(agentId: string, releaseId: string, orgId?: string) {
@@ -240,8 +219,6 @@ export async function createAgent(input: z.input<typeof CreateAgentSchema>) {
       )
       .returning()
 
-    await replaceReleaseTools(release.id, config.tools)
-
     await db.insert(AgentWorkingCopyTable).values({
       agentId: agent.id,
       runtimeConfig: config,
@@ -360,7 +337,6 @@ export async function deployAgent(input: z.input<typeof DeployAgentSchema>) {
       )
       .returning()
 
-    await replaceReleaseTools(created.id, config.tools)
     await db
       .update(AgentTable)
       .set({ currentReleaseId: created.id, updatedAt: new Date(), updatedBy: userId })

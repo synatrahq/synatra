@@ -1,23 +1,9 @@
 import { sql } from "drizzle-orm"
-import {
-  jsonb,
-  pgEnum,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-  integer,
-  boolean,
-  index,
-} from "drizzle-orm/pg-core"
+import { jsonb, pgTable, text, timestamp, uniqueIndex, uuid, integer, index } from "drizzle-orm/pg-core"
 import { OrganizationTable } from "./organization.sql"
 import { UserTable } from "./user.sql"
 import type { AgentRuntimeConfig } from "../types"
 import { AgentTemplateTable } from "./agent-template.sql"
-import { ApprovalAuthority } from "../types"
-
-export const approvalAuthorityEnum = pgEnum("approval_authority", ApprovalAuthority)
 
 export const AgentTable = pgTable(
   "agent",
@@ -99,34 +85,6 @@ export const AgentReleaseTable = pgTable(
   ],
 )
 
-export const AgentReleaseToolTable = pgTable(
-  "agent_release_tool",
-  {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
-    agentReleaseId: uuid("agent_release_id")
-      .references(() => AgentReleaseTable.id, { onDelete: "cascade" })
-      .notNull(),
-    stableToolId: text("stable_tool_id").notNull(),
-    name: text("name").notNull(),
-    description: text("description"),
-    paramsSchema: jsonb("params_schema"),
-    returnsSchema: jsonb("returns_schema"),
-    code: text("code"),
-    requiresReview: boolean("requires_review").default(false).notNull(),
-    approvalAuthority: approvalAuthorityEnum("approval_authority"),
-    selfApproval: boolean("self_approval"),
-    approvalTimeoutMs: integer("approval_timeout_ms"),
-    position: integer("position"),
-  },
-  (table) => [
-    uniqueIndex("agent_release_tool_unique_idx").on(table.agentReleaseId, table.name),
-    uniqueIndex("agent_release_tool_stable_unique_idx").on(table.agentReleaseId, table.stableToolId),
-  ],
-)
-
 export type Agent = typeof AgentTable.$inferSelect
 export type AgentWorkingCopy = typeof AgentWorkingCopyTable.$inferSelect
 export type AgentRelease = typeof AgentReleaseTable.$inferSelect
-export type AgentReleaseTool = typeof AgentReleaseToolTable.$inferSelect

@@ -79,7 +79,7 @@ export const HumanResponseTable = pgTable(
 
     status: humanResponseStatusEnum("status").notNull(),
 
-    respondedBy: uuid("responded_by").references(() => UserTable.id),
+    respondedBy: uuid("responded_by").references(() => UserTable.id, { onDelete: "set null" }),
 
     data: jsonb("data").$type<unknown>(),
 
