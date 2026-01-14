@@ -68,11 +68,6 @@ pnpm install
 cp .env.example .env
 ```
 
-Edit `.env` and add your API keys:
-- `OPENAI_API_KEY` - Required for OpenAI models
-- `ANTHROPIC_API_KEY` - Optional, for Claude models
-- `GOOGLE_GENERATIVE_AI_API_KEY` - Optional, for Gemini models
-
 4. **Start services**
 
 ```bash
