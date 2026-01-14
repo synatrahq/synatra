@@ -237,3 +237,236 @@ projects:
             region: oregon
             postgresMajorVersion: "18"
             ipAllowList: []
+
+      - name: Production
+        envVarGroups:
+          - name: synatra-production-general
+            envVars:
+              - key: SERVICE_SECRET
+                generateValue: true
+              - key: ENCRYPTION_KEY
+                generateValue: true
+
+          - name: synatra-production-temporal
+            envVars:
+              - key: TEMPORAL_ADDRESS
+                sync: false
+              - key: TEMPORAL_NAMESPACE
+                sync: false
+              - key: TEMPORAL_API_KEY
+                sync: false
+              - key: TEMPORAL_TASK_QUEUE
+                value: agent
+
+          - name: synatra-production-llm
+            envVars:
+              - key: ANTHROPIC_API_KEY
+                sync: false
+              - key: OPENAI_API_KEY
+                sync: false
+              - key: GOOGLE_API_KEY
+                sync: false
+
+          - name: synatra-production-resend
+            envVars:
+              - key: RESEND_API_KEY
+                sync: false
+              - key: RESEND_FROM_EMAIL
+                sync: false
+
+          - name: synatra-production-google-oauth
+            envVars:
+              - key: GOOGLE_CLIENT_ID
+                sync: false
+              - key: GOOGLE_CLIENT_SECRET
+                sync: false
+
+          - name: synatra-production-intercom
+            envVars:
+              - key: INTERCOM_CLIENT_ID
+                sync: false
+              - key: INTERCOM_CLIENT_SECRET
+                sync: false
+
+          - name: synatra-production-github
+            envVars:
+              - key: GITHUB_APP_ID
+                sync: false
+              - key: GITHUB_PRIVATE_KEY
+                sync: false
+              - key: GITHUB_APP_SLUG
+                sync: false
+              - key: GITHUB_WEBHOOK_SECRET
+                sync: false
+
+          - name: synatra-production-stripe
+            envVars:
+              - key: STRIPE_SECRET_KEY
+                sync: false
+              - key: STRIPE_WEBHOOK_SECRET
+                sync: false
+              - key: STRIPE_RUN_METER_ID
+                sync: false
+              - key: STRIPE_LLM_METER_ID
+                sync: false
+              - key: STRIPE_PRICE_STARTER
+                sync: false
+              - key: STRIPE_PRICE_PRO
+                sync: false
+              - key: STRIPE_PRICE_BUSINESS
+                sync: false
+
+        services:
+          - type: web
+            name: synatra-production-server
+            runtime: docker
+            region: oregon
+            plan: standard
+            branch: main
+            dockerfilePath: ./docker/Dockerfile.server
+            dockerContext: .
+            healthCheckPath: /api/health
+            maxShutdownDelaySeconds: 30
+            preDeployCommand: node packages/core/dist/predeploy.js
+            envVars:
+              - fromGroup: synatra-production-general
+              - fromGroup: synatra-production-temporal
+              - fromGroup: synatra-production-llm
+              - fromGroup: synatra-production-resend
+              - fromGroup: synatra-production-google-oauth
+              - fromGroup: synatra-production-intercom
+              - fromGroup: synatra-production-github
+              - fromGroup: synatra-production-stripe
+              - key: VITE_GATEWAY_URL
+                value: wss://synatra-production-resource-gateway.onrender.com
+              - key: NODE_ENV
+                value: production
+              - key: PORT
+                value: "10000"
+              - key: DATABASE_URL
+                fromDatabase:
+                  name: synatra-production-db
+                  property: connectionString
+              - key: REDIS_URL
+                fromService:
+                  name: synatra-production-redis
+                  type: redis
+                  property: connectionString
+              - key: CODE_EXECUTOR_URL
+                value: http://synatra-production-code-executor:10000
+              - key: RESOURCE_GATEWAY_URL
+                value: http://synatra-production-resource-gateway:3000
+              - key: THREAD_STREAM_MODE
+                value: redis
+              - key: API_URL
+                value: https://synatra-production-server.onrender.com
+              - key: CONSOLE_URL
+                value: https://synatra-production-server.onrender.com/console
+              - key: BETTER_AUTH_SECRET
+                generateValue: true
+
+          - type: worker
+            name: synatra-production-worker
+            runtime: docker
+            region: oregon
+            plan: standard
+            branch: main
+            dockerfilePath: ./docker/Dockerfile.worker
+            dockerContext: .
+            maxShutdownDelaySeconds: 120
+            envVars:
+              - fromGroup: synatra-production-general
+              - fromGroup: synatra-production-temporal
+              - fromGroup: synatra-production-llm
+              - key: NODE_ENV
+                value: production
+              - key: DATABASE_URL
+                fromDatabase:
+                  name: synatra-production-db
+                  property: connectionString
+              - key: REDIS_URL
+                fromService:
+                  name: synatra-production-redis
+                  type: redis
+                  property: connectionString
+              - key: CODE_EXECUTOR_URL
+                value: http://synatra-production-code-executor:10000
+              - key: RESOURCE_GATEWAY_URL
+                value: http://synatra-production-resource-gateway:3000
+              - key: THREAD_STREAM_MODE
+                value: redis
+
+          - type: web
+            name: synatra-production-resource-gateway
+            runtime: docker
+            region: oregon
+            plan: starter
+            branch: main
+            dockerfilePath: ./docker/Dockerfile
+            dockerContext: .
+            healthCheckPath: /health
+            maxShutdownDelaySeconds: 30
+            dockerCommand: node packages/resource-gateway/dist/index.js
+            envVars:
+              - fromGroup: synatra-production-general
+              - fromGroup: synatra-production-github
+              - key: PACKAGE
+                value: "@synatra/resource-gateway"
+              - key: NODE_ENV
+                value: production
+              - key: PORT
+                value: "10000"
+              - key: INTERNAL_PORT
+                value: "3000"
+              - key: DATABASE_URL
+                fromDatabase:
+                  name: synatra-production-db
+                  property: connectionString
+              - key: REDIS_MODE
+                value: redis
+              - key: REDIS_URL
+                fromService:
+                  name: synatra-production-redis
+                  type: redis
+                  property: connectionString
+
+          - type: pserv
+            name: synatra-production-code-executor
+            runtime: docker
+            region: oregon
+            plan: starter
+            branch: main
+            dockerfilePath: ./docker/Dockerfile
+            dockerContext: .
+            maxShutdownDelaySeconds: 10
+            dockerCommand: node packages/code-executor/dist/index.js
+            envVars:
+              - fromGroup: synatra-production-general
+              - key: PACKAGE
+                value: "@synatra/code-executor"
+              - key: NODE_ENV
+                value: production
+              - key: PORT
+                value: "10000"
+              - key: POOL_SIZE
+                value: "4"
+              - key: MEMORY_LIMIT_MB
+                value: "128"
+              - key: QUEUE_LIMIT
+                value: "100"
+              - key: RESOURCE_GATEWAY_URL
+                value: http://synatra-production-resource-gateway:3000
+
+          - type: redis
+            name: synatra-production-redis
+            plan: starter
+            region: oregon
+            maxmemoryPolicy: allkeys-lru
+            ipAllowList: []
+
+        databases:
+          - name: synatra-production-db
+            plan: basic-1gb
+            region: oregon
+            postgresMajorVersion: "18"
+            ipAllowList: []
