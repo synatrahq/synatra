@@ -1,6 +1,7 @@
 {
   "name": "@synatra/workflows",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -11,9 +12,5 @@
   "dependencies": {
     "@synatra/core": "workspace:*",
     "@temporalio/workflow": "1.13.2"
-  },
-  "prettier": {
-    "semi": false,
-    "printWidth": 120
   }
 }

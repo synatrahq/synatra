@@ -1,6 +1,7 @@
 {
   "name": "@synatra/service-call",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "typecheck": "tsc --project tsconfig.json --noEmit"
@@ -25,9 +26,5 @@
     "hono": {
       "optional": true
     }
-  },
-  "prettier": {
-    "semi": false,
-    "printWidth": 120
   }
 }

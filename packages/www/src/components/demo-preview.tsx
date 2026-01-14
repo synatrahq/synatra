@@ -1,13 +1,5 @@
-import {
-  For,
-  Match,
-  Show,
-  Switch,
-  createEffect,
-  createSignal,
-  onCleanup,
-} from "solid-js";
-import { Dynamic } from "solid-js/web";
+import { For, Match, Show, Switch, createEffect, createSignal, onCleanup } from "solid-js"
+import { Dynamic } from "solid-js/web"
 import {
   CheckCircle,
   CircleNotch,
@@ -27,16 +19,9 @@ import {
   Heartbeat,
   ListChecks,
   Calendar,
-} from "phosphor-solid-js";
-import { Badge, Button, Spinner } from "./ui";
-import type {
-  DemoScenario,
-  DemoStep,
-  DemoWidget,
-  DemoQuestion,
-  DemoSelectRows,
-  DemoConfirm,
-} from "@synatra/core/types";
+} from "phosphor-solid-js"
+import { Badge, Button, Spinner } from "./ui"
+import type { DemoScenario, DemoStep, DemoWidget, DemoQuestion, DemoSelectRows, DemoConfirm } from "@synatra/core/types"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ICON_MAP: Record<string, any> = {
@@ -52,46 +37,46 @@ const ICON_MAP: Record<string, any> = {
   Heartbeat,
   ListChecks,
   Calendar,
-};
+}
 
 type DemoItem = {
-  id: string;
-  type: DemoStep["type"];
-  text?: string;
-  name?: string;
-  status?: "running" | "success";
-  approvalState?: "pending" | "approving" | "approved";
-  widget?: DemoWidget;
-  question?: DemoQuestion;
-  questionState?: "pending" | "selecting" | "answered";
-  selectRows?: DemoSelectRows;
-  selectRowsState?: "pending" | "selecting" | "selected";
-  confirm?: DemoConfirm;
-  confirmState?: "pending" | "confirming" | "confirmed";
-};
+  id: string
+  type: DemoStep["type"]
+  text?: string
+  name?: string
+  status?: "running" | "success"
+  approvalState?: "pending" | "approving" | "approved"
+  widget?: DemoWidget
+  question?: DemoQuestion
+  questionState?: "pending" | "selecting" | "answered"
+  selectRows?: DemoSelectRows
+  selectRowsState?: "pending" | "selecting" | "selected"
+  confirm?: DemoConfirm
+  confirmState?: "pending" | "confirming" | "confirmed"
+}
 
-type Speed = "slow" | "normal" | "fast" | "instant";
+type Speed = "slow" | "normal" | "fast" | "instant"
 
 type DemoPreviewProps = {
-  scenario: DemoScenario;
-  agent?: { icon: string; iconColor: string; name: string } | null;
-  class?: string;
-  loop?: boolean;
-  speed?: Speed;
-};
+  scenario: DemoScenario
+  agent?: { icon: string; iconColor: string; name: string } | null
+  class?: string
+  loop?: boolean
+  speed?: Speed
+}
 
 const SPEED_MULTIPLIER: Record<Speed, number> = {
   slow: 1.5,
   normal: 1,
   fast: 0.5,
   instant: 0,
-};
+}
 const CHAR_DELAY: Record<Speed, { user: number; agent: number }> = {
   slow: { user: 20, agent: 15 },
   normal: { user: 10, agent: 15 },
   fast: { user: 6, agent: 8 },
   instant: { user: 0, agent: 0 },
-};
+}
 
 const ICON_COLORS = [
   { id: "gray", value: "#6B7280" },
@@ -101,23 +86,16 @@ const ICON_COLORS = [
   { id: "green", value: "#22C55E" },
   { id: "plum", value: "#A855F7" },
   { id: "indigo", value: "#6366F1" },
-] as const;
+] as const
 
 function getIconComponent(name: string) {
-  return ICON_MAP[name] ?? null;
+  return ICON_MAP[name] ?? null
 }
 
-function AgentAvatar(props: {
-  icon?: string;
-  iconColor?: string;
-  size?: number;
-}) {
-  const size = () => props.size ?? 24;
-  const colorValue = () =>
-    ICON_COLORS.find((c) => c.id === props.iconColor)?.value ??
-    ICON_COLORS[0].value;
-  const IconComponent = () =>
-    props.icon ? getIconComponent(props.icon) : null;
+function AgentAvatar(props: { icon?: string; iconColor?: string; size?: number }) {
+  const size = () => props.size ?? 24
+  const colorValue = () => ICON_COLORS.find((c) => c.id === props.iconColor)?.value ?? ICON_COLORS[0].value
+  const IconComponent = () => (props.icon ? getIconComponent(props.icon) : null)
 
   return (
     <span
@@ -129,23 +107,18 @@ function AgentAvatar(props: {
       }}
     >
       {IconComponent() ? (
-        <Dynamic
-          component={IconComponent()!}
-          size={size() * 0.55}
-          weight="duotone"
-          style={{ color: colorValue() }}
-        />
+        <Dynamic component={IconComponent()!} size={size() * 0.55} weight="duotone" style={{ color: colorValue() }} />
       ) : (
         <span class="text-[10px] font-medium" style={{ color: colorValue() }}>
           AI
         </span>
       )}
     </span>
-  );
+  )
 }
 
 function SimpleTableWidget(props: { widget: DemoWidget }) {
-  const table = () => props.widget.table;
+  const table = () => props.widget.table
   return (
     <Show when={table()}>
       <div class="rounded border border-gray-700 overflow-hidden">
@@ -153,9 +126,7 @@ function SimpleTableWidget(props: { widget: DemoWidget }) {
           <thead class="bg-gray-800">
             <tr class="text-gray-400">
               <For each={table()!.columns}>
-                {(col) => (
-                  <th class="px-2 py-1.5 text-left font-medium">{col.label}</th>
-                )}
+                {(col) => <th class="px-2 py-1.5 text-left font-medium">{col.label}</th>}
               </For>
             </tr>
           </thead>
@@ -164,13 +135,7 @@ function SimpleTableWidget(props: { widget: DemoWidget }) {
               {(row) => (
                 <tr class="border-t border-gray-700">
                   <For each={table()!.columns}>
-                    {(col) => (
-                      <td class="px-2 py-1.5">
-                        {String(
-                          (row as Record<string, unknown>)[col.key] ?? "",
-                        )}
-                      </td>
-                    )}
+                    {(col) => <td class="px-2 py-1.5">{String((row as Record<string, unknown>)[col.key] ?? "")}</td>}
                   </For>
                 </tr>
               )}
@@ -179,48 +144,41 @@ function SimpleTableWidget(props: { widget: DemoWidget }) {
         </table>
       </div>
     </Show>
-  );
+  )
 }
 
 function SimpleChartWidget(props: { widget: DemoWidget }) {
-  const chart = () => props.widget.chart;
-  const data = () => chart()?.data.datasets[0]?.data ?? [];
-  const labels = () => chart()?.data.labels ?? [];
-  const max = () => Math.max(...data(), 1);
+  const chart = () => props.widget.chart
+  const data = () => chart()?.data.datasets[0]?.data ?? []
+  const labels = () => chart()?.data.labels ?? []
+  const max = () => Math.max(...data(), 1)
 
   return (
     <Show when={chart()}>
       <div class="rounded border border-gray-700 bg-gray-800/50 p-3">
-        <div class="text-[10px] text-gray-400 mb-2">
-          {props.widget.title ?? "Chart"}
-        </div>
+        <div class="text-[10px] text-gray-400 mb-2">{props.widget.title ?? "Chart"}</div>
         <div class="flex items-end gap-1" style={{ height: "80px" }}>
           <For each={data()}>
             {(val, idx) => {
-              const height = max() > 0 ? (val / max()) * 100 : 0;
+              const height = max() > 0 ? (val / max()) * 100 : 0
               return (
                 <div class="flex-1 flex flex-col items-end h-full">
                   <div class="w-full flex-1 flex items-end">
-                    <div
-                      class="w-full bg-blue-500/60 rounded-t"
-                      style={{ height: `${height}%` }}
-                    />
+                    <div class="w-full bg-blue-500/60 rounded-t" style={{ height: `${height}%` }} />
                   </div>
-                  <span class="text-[8px] text-gray-500 mt-1 truncate w-full text-center">
-                    {labels()[idx()] ?? ""}
-                  </span>
+                  <span class="text-[8px] text-gray-500 mt-1 truncate w-full text-center">{labels()[idx()] ?? ""}</span>
                 </div>
-              );
+              )
             }}
           </For>
         </div>
       </div>
     </Show>
-  );
+  )
 }
 
 function SimpleKeyValueWidget(props: { widget: DemoWidget }) {
-  const kv = () => props.widget.keyValue;
+  const kv = () => props.widget.keyValue
   return (
     <Show when={kv()}>
       <div class="rounded border border-gray-700 bg-gray-800/50 p-3 space-y-2">
@@ -234,44 +192,31 @@ function SimpleKeyValueWidget(props: { widget: DemoWidget }) {
         </For>
       </div>
     </Show>
-  );
+  )
 }
 
 function parseSimpleMarkdown(text: string): string {
   return text
-    .replace(
-      /\*\*(.+?)\*\*/g,
-      '<strong class="text-white font-medium">$1</strong>',
-    )
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-white font-medium">$1</strong>')
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(
-      /`(.+?)`/g,
-      '<code class="bg-gray-700 px-1 rounded text-[10px]">$1</code>',
-    );
+    .replace(/`(.+?)`/g, '<code class="bg-gray-700 px-1 rounded text-[10px]">$1</code>')
 }
 
 function SimpleMarkdownWidget(props: { widget: DemoWidget }) {
-  const md = () => props.widget.markdown;
-  const html = () => (md() ? parseSimpleMarkdown(md()!.content) : "");
+  const md = () => props.widget.markdown
+  const html = () => (md() ? parseSimpleMarkdown(md()!.content) : "")
   return (
     <Show when={md()}>
       <div class="rounded border border-gray-700 bg-gray-800/50 p-3">
-        <p
-          class="text-[11px] text-gray-300 whitespace-pre-wrap leading-relaxed"
-          innerHTML={html()}
-        />
+        <p class="text-[11px] text-gray-300 whitespace-pre-wrap leading-relaxed" innerHTML={html()} />
       </div>
     </Show>
-  );
+  )
 }
 
 function WidgetRenderer(props: { widget: DemoWidget }) {
   return (
-    <Switch
-      fallback={
-        <div class="text-[10px] text-gray-500">Unknown widget type</div>
-      }
-    >
+    <Switch fallback={<div class="text-[10px] text-gray-500">Unknown widget type</div>}>
       <Match when={props.widget.type === "table"}>
         <SimpleTableWidget widget={props.widget} />
       </Match>
@@ -285,7 +230,7 @@ function WidgetRenderer(props: { widget: DemoWidget }) {
         <SimpleMarkdownWidget widget={props.widget} />
       </Match>
     </Switch>
-  );
+  )
 }
 
 const CONFIRM_STYLES = {
@@ -304,11 +249,10 @@ const CONFIRM_STYLES = {
     bg: "bg-blue-500/5",
     color: "text-blue-500",
   },
-} as const;
+} as const
 
 function ConfirmIcon(props: { variant: "danger" | "warning" | "info" }) {
-  const iconClass = () =>
-    `h-4 w-4 shrink-0 ${CONFIRM_STYLES[props.variant].color}`;
+  const iconClass = () => `h-4 w-4 shrink-0 ${CONFIRM_STYLES[props.variant].color}`
   return (
     <Switch fallback={<Info class={iconClass()} weight="fill" />}>
       <Match when={props.variant === "danger"}>
@@ -318,15 +262,12 @@ function ConfirmIcon(props: { variant: "danger" | "warning" | "info" }) {
         <Warning class={iconClass()} weight="fill" />
       </Match>
     </Switch>
-  );
+  )
 }
 
-function ConfirmPending(props: {
-  confirm: DemoConfirm;
-  state: "pending" | "confirming" | "confirmed";
-}) {
-  const variant = () => props.confirm.variant ?? "info";
-  const styles = () => CONFIRM_STYLES[variant()];
+function ConfirmPending(props: { confirm: DemoConfirm; state: "pending" | "confirming" | "confirmed" }) {
+  const variant = () => props.confirm.variant ?? "info"
+  const styles = () => CONFIRM_STYLES[variant()]
 
   return (
     <div class={`rounded border p-2 ${styles().border} ${styles().bg}`}>
@@ -336,20 +277,12 @@ function ConfirmPending(props: {
       </div>
       <div class="flex items-center gap-1">
         <Show when={props.state === "confirming"}>
-          <Button
-            variant="default"
-            size="xs"
-            class="bg-emerald-600 pointer-events-none"
-          >
+          <Button variant="default" size="xs" class="bg-emerald-600 pointer-events-none">
             <Spinner size="xs" class="border-white border-t-transparent" />
           </Button>
         </Show>
         <Show when={props.state === "pending"}>
-          <Button
-            variant="default"
-            size="xs"
-            class="bg-emerald-600 pointer-events-none"
-          >
+          <Button variant="default" size="xs" class="bg-emerald-600 pointer-events-none">
             Confirm
           </Button>
           <Button variant="outline" size="xs" class="pointer-events-none">
@@ -358,60 +291,54 @@ function ConfirmPending(props: {
         </Show>
       </div>
     </div>
-  );
+  )
 }
 
 export function DemoPreview(props: DemoPreviewProps) {
-  const [items, setItems] = createSignal<DemoItem[]>([]);
-  const [isThinking, setIsThinking] = createSignal(false);
-  let step = 0;
-  let count = 0;
-  let times: number[] = [];
-  let ticks: number[] = [];
-  let scrollRef: HTMLDivElement | undefined;
+  const [items, setItems] = createSignal<DemoItem[]>([])
+  const [isThinking, setIsThinking] = createSignal(false)
+  let step = 0
+  let count = 0
+  let times: number[] = []
+  let ticks: number[] = []
+  let scrollRef: HTMLDivElement | undefined
 
-  const speed = () => props.speed ?? "normal";
-  const multiplier = () => SPEED_MULTIPLIER[speed()];
-  const charDelay = () => CHAR_DELAY[speed()];
-  const agentName = () => props.agent?.name ?? "Agent";
+  const speed = () => props.speed ?? "normal"
+  const multiplier = () => SPEED_MULTIPLIER[speed()]
+  const charDelay = () => CHAR_DELAY[speed()]
+  const agentName = () => props.agent?.name ?? "Agent"
 
   const scrollToBottom = () => {
-    if (scrollRef) scrollRef.scrollTop = scrollRef.scrollHeight;
-  };
+    if (scrollRef) scrollRef.scrollTop = scrollRef.scrollHeight
+  }
 
   const clear = () => {
-    times.forEach((id) => window.clearTimeout(id));
-    ticks.forEach((id) => window.clearInterval(id));
-    times = [];
-    ticks = [];
-  };
+    times.forEach((id) => window.clearTimeout(id))
+    ticks.forEach((id) => window.clearInterval(id))
+    times = []
+    ticks = []
+  }
 
   const wait = (fn: () => void, ms: number) => {
-    const id = window.setTimeout(fn, ms);
-    times.push(id);
-  };
+    const id = window.setTimeout(fn, ms)
+    times.push(id)
+  }
 
   const push = (item: DemoItem) => {
-    setItems((prev) => [...prev, item]);
-    requestAnimationFrame(scrollToBottom);
-  };
+    setItems((prev) => [...prev, item])
+    requestAnimationFrame(scrollToBottom)
+  }
 
   const change = (id: string, text: string) => {
-    setItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, text } : item)),
-    );
-    requestAnimationFrame(scrollToBottom);
-  };
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, text } : item)))
+    requestAnimationFrame(scrollToBottom)
+  }
 
-  const isInstant = () => speed() === "instant";
+  const isInstant = () => speed() === "instant"
 
   const updateState = (id: string, field: string, value: string) => {
-    setItems((prev) =>
-      prev.map((entry) =>
-        entry.id === id ? { ...entry, [field]: value } : entry,
-      ),
-    );
-  };
+    setItems((prev) => prev.map((entry) => (entry.id === id ? { ...entry, [field]: value } : entry)))
+  }
 
   const runStateTransition = (
     id: string,
@@ -419,203 +346,189 @@ export function DemoPreview(props: DemoPreviewProps) {
     states: [string, string],
     delays: [number, number, number],
   ) => {
-    const [d1, d2, d3] = isInstant() ? [50, 50, 50] : delays;
+    const [d1, d2, d3] = isInstant() ? [50, 50, 50] : delays
     wait(() => {
-      updateState(id, field, states[0]);
+      updateState(id, field, states[0])
       wait(() => {
-        updateState(id, field, states[1]);
-        wait(next, d3);
-      }, d2);
-    }, d1);
-  };
+        updateState(id, field, states[1])
+        wait(next, d3)
+      }, d2)
+    }, d1)
+  }
 
-  const runText = (
-    id: string,
-    text: string,
-    charSpeed: number,
-    done: () => void,
-  ) => {
+  const runText = (id: string, text: string, charSpeed: number, done: () => void) => {
     if (isInstant() || charSpeed === 0) {
-      change(id, text);
-      wait(done, 50);
-      return;
+      change(id, text)
+      wait(done, 50)
+      return
     }
-    let pos = 0;
+    let pos = 0
     const timer = window.setInterval(() => {
-      pos += 1;
-      change(id, text.slice(0, pos));
-      if (pos < text.length) return;
-      window.clearInterval(timer);
-      wait(done, 250);
-    }, charSpeed);
-    ticks.push(timer);
-  };
+      pos += 1
+      change(id, text.slice(0, pos))
+      if (pos < text.length) return
+      window.clearInterval(timer)
+      wait(done, 250)
+    }, charSpeed)
+    ticks.push(timer)
+  }
 
   const updateTool = (name: string, status: "running" | "success") => {
     setItems((prev) => {
-      const list = [...prev];
+      const list = [...prev]
       for (let i = list.length - 1; i >= 0; i -= 1) {
-        const item = list[i];
-        if (item.type !== "tool_call") continue;
-        if (item.name !== name) continue;
-        list[i] = { ...item, status };
-        return list;
+        const item = list[i]
+        if (item.type !== "tool_call") continue
+        if (item.name !== name) continue
+        list[i] = { ...item, status }
+        return list
       }
-      return [
-        ...list,
-        { id: `tool-${count++}`, type: "tool_call", name, status },
-      ];
-    });
-  };
+      return [...list, { id: `tool-${count++}`, type: "tool_call", name, status }]
+    })
+  }
 
   const next = () => {
-    const seq = props.scenario?.sequence;
-    if (!seq || seq.length === 0) return;
+    const seq = props.scenario?.sequence
+    if (!seq || seq.length === 0) return
     if (step >= seq.length) {
-      if (props.loop === false) return;
-      wait(start, 4000 * multiplier());
-      return;
+      if (props.loop === false) return
+      wait(start, 4000 * multiplier())
+      return
     }
 
-    const item = seq[step];
-    step += 1;
+    const item = seq[step]
+    step += 1
 
     if (item.type === "user") {
-      const id = `user-${count++}`;
-      push({ id, type: "user", text: "" });
-      runText(id, item.text, charDelay().user, next);
-      return;
+      const id = `user-${count++}`
+      push({ id, type: "user", text: "" })
+      runText(id, item.text, charDelay().user, next)
+      return
     }
 
     if (item.type === "agent") {
-      const id = `agent-${count++}`;
-      push({ id, type: "agent", text: "" });
-      runText(id, item.text, charDelay().agent, next);
-      return;
+      const id = `agent-${count++}`
+      push({ id, type: "agent", text: "" })
+      runText(id, item.text, charDelay().agent, next)
+      return
     }
 
     if (item.type === "thinking") {
-      setIsThinking(true);
+      setIsThinking(true)
       wait(() => {
-        setIsThinking(false);
-        next();
-      }, item.duration * multiplier());
-      return;
+        setIsThinking(false)
+        next()
+      }, item.duration * multiplier())
+      return
     }
 
     if (item.type === "tool_call") {
-      updateTool(item.name, item.status);
-      wait(next, 350 * multiplier());
-      return;
+      updateTool(item.name, item.status)
+      wait(next, 350 * multiplier())
+      return
     }
 
     if (item.type === "approval") {
-      const id = `approval-${count++}`;
+      const id = `approval-${count++}`
       push({
         id,
         type: "approval",
         text: item.action,
         approvalState: "pending",
-      });
+      })
       runStateTransition(
         id,
         "approvalState",
         ["approving", "approved"],
         [1000 * multiplier(), 800 * multiplier(), 400 * multiplier()],
-      );
-      return;
+      )
+      return
     }
 
     if (item.type === "delay") {
-      wait(next, item.ms * multiplier());
-      return;
+      wait(next, item.ms * multiplier())
+      return
     }
 
     if (item.type === "widget") {
-      const id = `widget-${count++}`;
-      push({ id, type: "widget", widget: item.widget });
-      wait(next, isInstant() ? 50 : 300 * multiplier());
-      return;
+      const id = `widget-${count++}`
+      push({ id, type: "widget", widget: item.widget })
+      wait(next, isInstant() ? 50 : 300 * multiplier())
+      return
     }
 
     if (item.type === "question") {
-      const id = `question-${count++}`;
+      const id = `question-${count++}`
       push({
         id,
         type: "question",
         question: item.question,
         questionState: "pending",
-      });
+      })
       runStateTransition(
         id,
         "questionState",
         ["selecting", "answered"],
         [800 * multiplier(), 600 * multiplier(), 400 * multiplier()],
-      );
-      return;
+      )
+      return
     }
 
     if (item.type === "select_rows") {
-      const id = `select-rows-${count++}`;
+      const id = `select-rows-${count++}`
       push({
         id,
         type: "select_rows",
         selectRows: item.selectRows,
         selectRowsState: "pending",
-      });
+      })
       runStateTransition(
         id,
         "selectRowsState",
         ["selecting", "selected"],
         [800 * multiplier(), 600 * multiplier(), 400 * multiplier()],
-      );
-      return;
+      )
+      return
     }
 
     if (item.type === "confirm") {
-      const id = `confirm-${count++}`;
+      const id = `confirm-${count++}`
       push({
         id,
         type: "confirm",
         confirm: item.confirm,
         confirmState: "pending",
-      });
+      })
       runStateTransition(
         id,
         "confirmState",
         ["confirming", "confirmed"],
         [800 * multiplier(), 600 * multiplier(), 400 * multiplier()],
-      );
-      return;
+      )
+      return
     }
-  };
+  }
 
   const start = () => {
-    clear();
-    setItems([]);
-    setIsThinking(false);
-    step = 0;
-    count = 0;
-    wait(next, 200);
-  };
+    clear()
+    setItems([])
+    setIsThinking(false)
+    step = 0
+    count = 0
+    wait(next, 200)
+  }
 
   createEffect(() => {
-    props.scenario;
-    start();
-  });
+    props.scenario
+    start()
+  })
 
-  onCleanup(clear);
+  onCleanup(clear)
 
   return (
-    <div
-      class={`flex flex-col overflow-hidden rounded-lg border border-gray-700 bg-gray-900 ${props.class ?? ""}`}
-    >
+    <div class={`flex flex-col overflow-hidden rounded-lg border border-gray-700 bg-gray-900 ${props.class ?? ""}`}>
       <div class="flex items-center gap-2 border-b border-gray-700 px-3 py-2">
-        <AgentAvatar
-          icon={props.agent?.icon}
-          iconColor={props.agent?.iconColor}
-          size={20}
-        />
+        <AgentAvatar icon={props.agent?.icon} iconColor={props.agent?.iconColor} size={20} />
         <span class="text-xs font-medium text-white">{agentName()}</span>
         <Badge variant="default" class="text-[10px]">
           Preview
@@ -634,26 +547,16 @@ export function DemoPreview(props: DemoPreviewProps) {
                     </div>
                     <div class="flex-1 min-w-0">
                       <div class="text-[10px] text-gray-500 mb-0.5">You</div>
-                      <p class="text-xs leading-relaxed text-gray-300 whitespace-pre-wrap">
-                        {item.text}
-                      </p>
+                      <p class="text-xs leading-relaxed text-gray-300 whitespace-pre-wrap">{item.text}</p>
                     </div>
                   </div>
                 </Match>
                 <Match when={item.type === "agent"}>
                   <div class="flex gap-2">
-                    <AgentAvatar
-                      icon={props.agent?.icon}
-                      iconColor={props.agent?.iconColor}
-                      size={20}
-                    />
+                    <AgentAvatar icon={props.agent?.icon} iconColor={props.agent?.iconColor} size={20} />
                     <div class="flex-1 min-w-0">
-                      <div class="text-[10px] text-gray-500 mb-0.5">
-                        {agentName()}
-                      </div>
-                      <p class="text-xs leading-relaxed text-gray-300 whitespace-pre-wrap">
-                        {item.text}
-                      </p>
+                      <div class="text-[10px] text-gray-500 mb-0.5">{agentName()}</div>
+                      <p class="text-xs leading-relaxed text-gray-300 whitespace-pre-wrap">{item.text}</p>
                     </div>
                   </div>
                 </Match>
@@ -667,10 +570,7 @@ export function DemoPreview(props: DemoPreviewProps) {
                           <CircleNotch class="h-3 w-3 animate-spin" />
                         </Show>
                         <Show when={item.status === "success"}>
-                          <CheckCircle
-                            class="h-3 w-3 text-emerald-500"
-                            weight="fill"
-                          />
+                          <CheckCircle class="h-3 w-3 text-emerald-500" weight="fill" />
                         </Show>
                       </div>
                     </div>
@@ -678,11 +578,7 @@ export function DemoPreview(props: DemoPreviewProps) {
                 </Match>
                 <Match when={item.type === "approval"}>
                   <div class="flex gap-2">
-                    <AgentAvatar
-                      icon={props.agent?.icon}
-                      iconColor={props.agent?.iconColor}
-                      size={20}
-                    />
+                    <AgentAvatar icon={props.agent?.icon} iconColor={props.agent?.iconColor} size={20} />
                     <div class="flex-1 min-w-0">
                       <Switch>
                         <Match when={item.approvalState === "approved"}>
@@ -691,9 +587,7 @@ export function DemoPreview(props: DemoPreviewProps) {
                               <Badge variant="success" class="text-[10px]">
                                 Approved
                               </Badge>
-                              <span class="text-[10px] text-gray-400 truncate">
-                                {item.text}
-                              </span>
+                              <span class="text-[10px] text-gray-400 truncate">{item.text}</span>
                             </div>
                           </div>
                         </Match>
@@ -704,19 +598,10 @@ export function DemoPreview(props: DemoPreviewProps) {
                                 Approval
                               </Badge>
                             </div>
-                            <div class="mb-1.5 text-[10px] text-gray-300">
-                              {item.text}
-                            </div>
+                            <div class="mb-1.5 text-[10px] text-gray-300">{item.text}</div>
                             <div class="flex items-center gap-1">
-                              <Button
-                                variant="default"
-                                size="xs"
-                                class="bg-emerald-600 pointer-events-none"
-                              >
-                                <Spinner
-                                  size="xs"
-                                  class="border-white border-t-transparent"
-                                />
+                              <Button variant="default" size="xs" class="bg-emerald-600 pointer-events-none">
+                                <Spinner size="xs" class="border-white border-t-transparent" />
                               </Button>
                             </div>
                           </div>
@@ -728,22 +613,12 @@ export function DemoPreview(props: DemoPreviewProps) {
                                 Approval
                               </Badge>
                             </div>
-                            <div class="mb-1.5 text-[10px] text-gray-300">
-                              {item.text}
-                            </div>
+                            <div class="mb-1.5 text-[10px] text-gray-300">{item.text}</div>
                             <div class="flex items-center gap-1">
-                              <Button
-                                variant="default"
-                                size="xs"
-                                class="bg-emerald-600 pointer-events-none"
-                              >
+                              <Button variant="default" size="xs" class="bg-emerald-600 pointer-events-none">
                                 Approve
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="xs"
-                                class="pointer-events-none"
-                              >
+                              <Button variant="outline" size="xs" class="pointer-events-none">
                                 Reject
                               </Button>
                             </div>
@@ -760,11 +635,7 @@ export function DemoPreview(props: DemoPreviewProps) {
                 </Match>
                 <Match when={item.type === "question" && item.question}>
                   <div class="flex gap-2">
-                    <AgentAvatar
-                      icon={props.agent?.icon}
-                      iconColor={props.agent?.iconColor}
-                      size={20}
-                    />
+                    <AgentAvatar icon={props.agent?.icon} iconColor={props.agent?.iconColor} size={20} />
                     <div class="flex-1 min-w-0">
                       <Switch>
                         <Match when={item.questionState === "answered"}>
@@ -774,16 +645,9 @@ export function DemoPreview(props: DemoPreviewProps) {
                                 Answered
                               </Badge>
                             </div>
-                            <div class="text-[10px] text-gray-300">
-                              {item.question!.question}
-                            </div>
+                            <div class="text-[10px] text-gray-300">{item.question!.question}</div>
                             <div class="mt-1 text-[10px] text-gray-400">
-                              →{" "}
-                              {
-                                item.question!.options[
-                                  item.question!.selectedIndex ?? 0
-                                ]?.label
-                              }
+                              → {item.question!.options[item.question!.selectedIndex ?? 0]?.label}
                             </div>
                           </div>
                         </Match>
@@ -794,9 +658,7 @@ export function DemoPreview(props: DemoPreviewProps) {
                                 Question
                               </Badge>
                             </div>
-                            <div class="mb-2 text-[10px] text-gray-300">
-                              {item.question!.question}
-                            </div>
+                            <div class="mb-2 text-[10px] text-gray-300">{item.question!.question}</div>
                             <div class="space-y-1">
                               <For each={item.question!.options}>
                                 {(opt, idx) => (
@@ -817,15 +679,11 @@ export function DemoPreview(props: DemoPreviewProps) {
                                 Question
                               </Badge>
                             </div>
-                            <div class="mb-2 text-[10px] text-gray-300">
-                              {item.question!.question}
-                            </div>
+                            <div class="mb-2 text-[10px] text-gray-300">{item.question!.question}</div>
                             <div class="space-y-1">
                               <For each={item.question!.options}>
                                 {(opt) => (
-                                  <div class="rounded bg-gray-800 px-2 py-1 text-[10px] text-gray-400">
-                                    {opt.label}
-                                  </div>
+                                  <div class="rounded bg-gray-800 px-2 py-1 text-[10px] text-gray-400">{opt.label}</div>
                                 )}
                               </For>
                             </div>
@@ -837,11 +695,7 @@ export function DemoPreview(props: DemoPreviewProps) {
                 </Match>
                 <Match when={item.type === "select_rows" && item.selectRows}>
                   <div class="flex gap-2">
-                    <AgentAvatar
-                      icon={props.agent?.icon}
-                      iconColor={props.agent?.iconColor}
-                      size={20}
-                    />
+                    <AgentAvatar icon={props.agent?.icon} iconColor={props.agent?.iconColor} size={20} />
                     <div class="flex-1 min-w-0">
                       <Switch>
                         <Match when={item.selectRowsState === "selected"}>
@@ -859,11 +713,7 @@ export function DemoPreview(props: DemoPreviewProps) {
                                 <thead class="bg-gray-800">
                                   <tr>
                                     <For each={item.selectRows!.columns}>
-                                      {(col) => (
-                                        <th class="px-2 py-1 text-left text-gray-400">
-                                          {col.label}
-                                        </th>
-                                      )}
+                                      {(col) => <th class="px-2 py-1 text-left text-gray-400">{col.label}</th>}
                                     </For>
                                   </tr>
                                 </thead>
@@ -875,11 +725,8 @@ export function DemoPreview(props: DemoPreviewProps) {
                                           {(col) => (
                                             <td class="px-2 py-1 text-gray-300">
                                               {String(
-                                                (
-                                                  item.selectRows!.data[
-                                                    idx
-                                                  ] as Record<string, unknown>
-                                                )?.[col.key] ?? "",
+                                                (item.selectRows!.data[idx] as Record<string, unknown>)?.[col.key] ??
+                                                  "",
                                               )}
                                             </td>
                                           )}
@@ -908,11 +755,7 @@ export function DemoPreview(props: DemoPreviewProps) {
                                   <tr>
                                     <th class="w-6 px-2 py-1" />
                                     <For each={item.selectRows!.columns}>
-                                      {(col) => (
-                                        <th class="px-2 py-1 text-left text-gray-400">
-                                          {col.label}
-                                        </th>
-                                      )}
+                                      {(col) => <th class="px-2 py-1 text-left text-gray-400">{col.label}</th>}
                                     </For>
                                   </tr>
                                 </thead>
@@ -930,11 +773,7 @@ export function DemoPreview(props: DemoPreviewProps) {
                                         <For each={item.selectRows!.columns}>
                                           {(col) => (
                                             <td class="px-2 py-1 text-gray-300">
-                                              {String(
-                                                (
-                                                  row as Record<string, unknown>
-                                                )[col.key] ?? "",
-                                              )}
+                                              {String((row as Record<string, unknown>)[col.key] ?? "")}
                                             </td>
                                           )}
                                         </For>
@@ -952,11 +791,7 @@ export function DemoPreview(props: DemoPreviewProps) {
                 </Match>
                 <Match when={item.type === "confirm" && item.confirm}>
                   <div class="flex gap-2">
-                    <AgentAvatar
-                      icon={props.agent?.icon}
-                      iconColor={props.agent?.iconColor}
-                      size={20}
-                    />
+                    <AgentAvatar icon={props.agent?.icon} iconColor={props.agent?.iconColor} size={20} />
                     <div class="flex-1 min-w-0">
                       <Switch>
                         <Match when={item.confirmState === "confirmed"}>
@@ -965,17 +800,12 @@ export function DemoPreview(props: DemoPreviewProps) {
                               <Badge variant="success" class="text-[10px]">
                                 Confirmed
                               </Badge>
-                              <span class="text-[10px] text-gray-400 truncate">
-                                {item.confirm!.message}
-                              </span>
+                              <span class="text-[10px] text-gray-400 truncate">{item.confirm!.message}</span>
                             </div>
                           </div>
                         </Match>
                         <Match when={true}>
-                          <ConfirmPending
-                            confirm={item.confirm!}
-                            state={item.confirmState!}
-                          />
+                          <ConfirmPending confirm={item.confirm!} state={item.confirmState!} />
                         </Match>
                       </Switch>
                     </div>
@@ -992,15 +822,10 @@ export function DemoPreview(props: DemoPreviewProps) {
                   class="absolute h-5 w-5 animate-ping rounded-full opacity-30"
                   style={{
                     "background-color":
-                      ICON_COLORS.find((c) => c.id === props.agent?.iconColor)
-                        ?.value ?? ICON_COLORS[0].value,
+                      ICON_COLORS.find((c) => c.id === props.agent?.iconColor)?.value ?? ICON_COLORS[0].value,
                   }}
                 />
-                <AgentAvatar
-                  icon={props.agent?.icon}
-                  iconColor={props.agent?.iconColor}
-                  size={20}
-                />
+                <AgentAvatar icon={props.agent?.icon} iconColor={props.agent?.iconColor} size={20} />
               </div>
               <div class="flex items-center">
                 <span class="text-xs text-gray-400">Working on it...</span>
@@ -1010,5 +835,5 @@ export function DemoPreview(props: DemoPreviewProps) {
         </div>
       </div>
     </div>
-  );
+  )
 }

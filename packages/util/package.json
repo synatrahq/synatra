@@ -1,6 +1,7 @@
 {
   "name": "@synatra/util",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "test": "vitest run",
@@ -23,9 +24,5 @@
   },
   "devDependencies": {
     "vitest": "^4.0.15"
-  },
-  "prettier": {
-    "semi": false,
-    "printWidth": 120
   }
 }

@@ -1,6 +1,7 @@
 {
   "name": "@synatra/core",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "build": "bun build src/predeploy.ts --target=node --outfile=dist/predeploy.js",
@@ -34,9 +35,5 @@
     "@types/pg": "8.11.10",
     "drizzle-kit": "0.30.5",
     "vitest": "^4.0.15"
-  },
-  "prettier": {
-    "semi": false,
-    "printWidth": 120
   }
 }

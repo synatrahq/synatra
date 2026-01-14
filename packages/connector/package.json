@@ -1,6 +1,7 @@
 {
   "name": "@synatra/connector",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
@@ -18,9 +19,5 @@
   "devDependencies": {
     "@types/bun": "^1.1.0",
     "@types/pg": "^8.11.10"
-  },
-  "prettier": {
-    "semi": false,
-    "printWidth": 120
   }
 }

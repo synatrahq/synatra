@@ -1,36 +1,36 @@
-import { createSignal, createEffect, Show, onCleanup } from "solid-js";
-import { Portal } from "solid-js/web";
-import { X } from "phosphor-solid-js";
-import { DemoPreview } from "./demo-preview";
-import type { DemoScenario } from "@synatra/core/types";
+import { createSignal, createEffect, Show, onCleanup } from "solid-js"
+import { Portal } from "solid-js/web"
+import { X } from "phosphor-solid-js"
+import { DemoPreview } from "./demo-preview"
+import type { DemoScenario } from "@synatra/core/types"
 
 type DemoModalProps = {
-  scenario: DemoScenario;
-  agent: { icon: string; iconColor: string; name: string };
-  description: string;
-  category: string;
-  categoryColor: string;
-};
+  scenario: DemoScenario
+  agent: { icon: string; iconColor: string; name: string }
+  description: string
+  category: string
+  categoryColor: string
+}
 
 export function DemoModal(props: DemoModalProps) {
-  const [isOpen, setIsOpen] = createSignal(false);
-  let dialogRef: HTMLDivElement | undefined;
+  const [isOpen, setIsOpen] = createSignal(false)
+  let dialogRef: HTMLDivElement | undefined
 
-  const open = () => setIsOpen(true);
-  const close = () => setIsOpen(false);
+  const open = () => setIsOpen(true)
+  const close = () => setIsOpen(false)
 
   const handleClickOutside = (e: MouseEvent) => {
-    if (dialogRef && !dialogRef.contains(e.target as Node)) close();
-  };
+    if (dialogRef && !dialogRef.contains(e.target as Node)) close()
+  }
 
   createEffect(() => {
-    if (!isOpen()) return;
+    if (!isOpen()) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    document.addEventListener("keydown", onKey);
-    onCleanup(() => document.removeEventListener("keydown", onKey));
-  });
+      if (e.key === "Escape") close()
+    }
+    document.addEventListener("keydown", onKey)
+    onCleanup(() => document.removeEventListener("keydown", onKey))
+  })
 
   return (
     <>
@@ -46,13 +46,9 @@ export function DemoModal(props: DemoModalProps) {
             >
               {props.category}
             </span>
-            <span class="text-[10px] text-gray-500 group-hover:text-gray-400 transition-colors">
-              Click to preview
-            </span>
+            <span class="text-[10px] text-gray-500 group-hover:text-gray-400 transition-colors">Click to preview</span>
           </div>
-          <h3 class="text-base font-medium text-white mb-1">
-            {props.agent.name}
-          </h3>
+          <h3 class="text-base font-medium text-white mb-1">{props.agent.name}</h3>
           <p class="text-xs text-gray-400 line-clamp-2">{props.description}</p>
         </div>
         <div class="border-t border-gray-800 bg-gray-950/50 px-4 py-3">
@@ -82,9 +78,7 @@ export function DemoModal(props: DemoModalProps) {
                   >
                     {props.category}
                   </span>
-                  <h2 class="text-sm font-medium text-white">
-                    {props.agent.name}
-                  </h2>
+                  <h2 class="text-sm font-medium text-white">{props.agent.name}</h2>
                 </div>
                 <button
                   type="button"
@@ -102,14 +96,12 @@ export function DemoModal(props: DemoModalProps) {
                 class="h-[480px] border-0 rounded-none"
               />
               <div class="border-t border-gray-800 px-4 py-2.5">
-                <p class="text-xs text-gray-400 line-clamp-2">
-                  {props.description}
-                </p>
+                <p class="text-xs text-gray-400 line-clamp-2">{props.description}</p>
               </div>
             </div>
           </div>
         </Portal>
       </Show>
     </>
-  );
+  )
 }
