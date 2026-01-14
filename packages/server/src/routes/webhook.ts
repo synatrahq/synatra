@@ -12,7 +12,7 @@ export const webhook = new Hono().post("/:orgSlug/:envSlug/:triggerSlug", async 
 
   const trigger = await findTriggerByWebhookPath({ orgSlug, envSlug, triggerSlug })
   if (!trigger) throw createError("NotFoundError", { type: "Trigger" })
-  if (!trigger.is_active) throw createError("ForbiddenError", { message: "Trigger is disabled" })
+  if (!trigger.active) throw createError("ForbiddenError", { message: "Trigger is disabled" })
 
   const configCheck = await validateTriggerPromptConfig({
     mode: trigger.mode,

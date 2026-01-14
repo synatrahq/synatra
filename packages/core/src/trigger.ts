@@ -974,7 +974,7 @@ export async function findTriggerByWebhookPath(input: z.input<typeof FindTrigger
     slug: string
     webhook_secret: string | null
     debug_secret: string | null
-    is_active: boolean
+    active: boolean
     agent_slug: string
     organization_id: string
   }
@@ -987,7 +987,7 @@ export async function findTriggerByWebhookPath(input: z.input<typeof FindTrigger
         tr.prompt_id, tr.prompt_release_id, tr.prompt_version_mode,
         tr.mode, tr.template, tr.script, tr.payload_schema,
         te.environment_id, te.channel_id, t.slug,
-        te.webhook_secret, te.debug_secret, te.is_active,
+        te.webhook_secret, te.debug_secret, te.active,
         a.slug as agent_slug, t.organization_id
       FROM trigger t
       INNER JOIN trigger_release tr ON t.current_release_id = tr.id
