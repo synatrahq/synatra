@@ -2,6 +2,10 @@
   "name": "synatra",
   "private": true,
   "packageManager": "pnpm@10.24.0",
+  "prettier": {
+    "semi": false,
+    "printWidth": 120
+  },
   "engines": {
     "node": ">=22"
   },

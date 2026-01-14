@@ -1,11 +1,11 @@
-import sharp from "sharp";
-import path from "path";
-import { fileURLToPath } from "url";
+import sharp from "sharp"
+import path from "path"
+import { fileURLToPath } from "url"
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const width = 1200;
-const height = 630;
+const width = 1200
+const height = 630
 
 const colors = {
   bg: "#111111",
@@ -23,7 +23,7 @@ const colors = {
   warningSoft: "rgba(234, 179, 8, 0.15)",
   blue: "#3b82f6",
   blueSoft: "rgba(59, 130, 246, 0.2)",
-};
+}
 
 const svg = `
 <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
@@ -89,25 +89,25 @@ const svg = `
     <text x="40" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="600" fill="${colors.text}" letter-spacing="-0.02em">Synatra</text>
   </g>
 </svg>
-`;
+`
 
 async function generate() {
-  const outputPath = path.join(__dirname, "../public/og-image.png");
-  const bgPath = path.join(__dirname, "../src/assets/hero_background.webp");
+  const outputPath = path.join(__dirname, "../public/og-image.png")
+  const bgPath = path.join(__dirname, "../src/assets/hero_background.webp")
 
   const bg = await sharp(bgPath)
     .resize(width, height, { fit: "cover", position: "top" })
     .modulate({ brightness: 0.4 })
-    .toBuffer();
+    .toBuffer()
 
-  const overlay = await sharp(Buffer.from(svg)).png().toBuffer();
+  const overlay = await sharp(Buffer.from(svg)).png().toBuffer()
 
   await sharp(bg)
     .composite([{ input: overlay, blend: "over" }])
     .png()
-    .toFile(outputPath);
+    .toFile(outputPath)
 
-  console.log("Generated og-image.png");
+  console.log("Generated og-image.png")
 }
 
-generate().catch(console.error);
+generate().catch(console.error)

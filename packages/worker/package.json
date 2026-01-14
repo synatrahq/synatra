@@ -1,6 +1,7 @@
 {
   "name": "@synatra/worker",
   "version": "0.0.0",
+  "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -37,12 +38,5 @@
     "tsx": "4.19.4",
     "typescript": "5.9.3",
     "vitest": "^4.0.15"
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "prettier": {
-    "semi": false,
-    "printWidth": 120
   }
 }

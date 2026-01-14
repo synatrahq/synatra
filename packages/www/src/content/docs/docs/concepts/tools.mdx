@@ -46,22 +46,19 @@ Tool code runs in an isolated sandbox with:
 
 ```javascript
 // Input: { customerId: string }
-const { customerId } = params;
+const { customerId } = params
 
-const customer = await context.resources.stripe.request(
-  "GET",
-  `/v1/customers/${customerId}`,
-);
+const customer = await context.resources.stripe.request("GET", `/v1/customers/${customerId}`)
 const subscriptions = await context.resources.stripe.request(
   "GET",
   `/v1/subscriptions?customer=${customerId}&status=active`,
-);
+)
 
 return {
   customer: customer.email,
   plan: subscriptions.data[0]?.items.data[0]?.price.nickname,
   status: subscriptions.data[0]?.status,
-};
+}
 ```
 
 ## Tool Context

@@ -1,8 +1,8 @@
-import { defineConfig } from "astro/config";
-import starlight from "@astrojs/starlight";
-import sitemap from "@astrojs/sitemap";
-import tailwindcss from "@tailwindcss/vite";
-import solidJs from "@astrojs/solid-js";
+import { defineConfig } from "astro/config"
+import starlight from "@astrojs/starlight"
+import sitemap from "@astrojs/sitemap"
+import tailwindcss from "@tailwindcss/vite"
+import solidJs from "@astrojs/solid-js"
 
 export default defineConfig({
   site: "https://synatrahq.com",
@@ -47,4 +47,4 @@ export default defineConfig({
   vite: {
     plugins: [tailwindcss()],
   },
-});
+})

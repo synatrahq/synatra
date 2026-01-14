@@ -39,34 +39,19 @@ Resources are available in tool code via the `context.resources` object:
 
 ```javascript
 // PostgreSQL
-const result = await context.resources.db.query(
-  "SELECT * FROM users WHERE id = $1",
-  [userId],
-);
+const result = await context.resources.db.query("SELECT * FROM users WHERE id = $1", [userId])
 
 // MySQL
-const result = await context.resources.db.query(
-  "SELECT * FROM orders WHERE customer_id = ?",
-  [customerId],
-);
+const result = await context.resources.db.query("SELECT * FROM orders WHERE customer_id = ?", [customerId])
 
 // Stripe
-const customer = await context.resources.stripe.request(
-  "GET",
-  `/v1/customers/${customerId}`,
-);
+const customer = await context.resources.stripe.request("GET", `/v1/customers/${customerId}`)
 
 // GitHub
-const issues = await context.resources.github.request(
-  "GET",
-  "/repos/myorg/myrepo/issues?state=open",
-);
+const issues = await context.resources.github.request("GET", "/repos/myorg/myrepo/issues?state=open")
 
 // Intercom
-const conversations = await context.resources.intercom.request(
-  "GET",
-  "/conversations",
-);
+const conversations = await context.resources.intercom.request("GET", "/conversations")
 ```
 
 ## Connection Modes
