@@ -13,6 +13,11 @@ export const AGENT_TEMPLATES: SeedTemplate[] = [
     iconColor: "green",
     prompt: `Build an MRR Dashboard Agent that generates investor-ready revenue reports from Stripe data.
 
+## Tool Implementation Rules
+- External APIs return many properties. Extract only fields needed for the task.
+- Map API responses to minimal objects before returning to reduce context size.
+- Example: subscription → {id, status, amount, customerId, periodEnd} not full object.
+
 ## Resource Strategy
 - Stripe: Required. Use connected Stripe resource.
 - Database: Optional. If connected, use to enrich with customer metadata.
@@ -120,6 +125,11 @@ export const AGENT_TEMPLATES: SeedTemplate[] = [
     iconColor: "blue",
     prompt: `Build a Customer Support Agent that handles inquiries, looks up context, and processes resolutions with approval.
 
+## Tool Implementation Rules
+- External APIs return many properties. Extract only fields needed for the task.
+- Map API responses to minimal objects before returning to reduce context size.
+- Example: subscription → {id, status, amount, customerId, periodEnd} not full object.
+
 ## Resource Strategy
 - Intercom: Use for customer conversations
 - Stripe: Use for payment/order history
@@ -226,6 +236,11 @@ export const AGENT_TEMPLATES: SeedTemplate[] = [
     icon: "MagnifyingGlass",
     iconColor: "indigo",
     prompt: `Build a SQL Explorer Agent that answers data questions using natural language and can execute approved mutations.
+
+## Tool Implementation Rules
+- External APIs return many properties. Extract only fields needed for the task.
+- Map API responses to minimal objects before returning to reduce context size.
+- Example: subscription → {id, status, amount, customerId, periodEnd} not full object.
 
 ## Resource Strategy
 - Database: Required. Use connected database.
@@ -345,6 +360,11 @@ Common false positive traps to avoid:
     iconColor: "red",
     prompt: `Build a Churn Prevention Agent that identifies at-risk customers and executes retention interventions.
 
+## Tool Implementation Rules
+- External APIs return many properties. Extract only fields needed for the task.
+- Map API responses to minimal objects before returning to reduce context size.
+- Example: subscription → {id, status, amount, customerId, periodEnd} not full object.
+
 ## Resource Strategy
 - Stripe: Required for payment/subscription data
 - Database: Required for usage/activity data
@@ -460,6 +480,11 @@ Common false positive traps to avoid:
     icon: "Bug",
     iconColor: "red",
     prompt: `Build a Bug Investigation Agent that correlates GitHub issues, error logs, and customer impact.
+
+## Tool Implementation Rules
+- External APIs return many properties. Extract only fields needed for the task.
+- Map API responses to minimal objects before returning to reduce context size.
+- Example: subscription → {id, status, amount, customerId, periodEnd} not full object.
 
 ## Resource Strategy
 - GitHub: Required for issues and commits
@@ -583,6 +608,11 @@ Common false positive traps to avoid:
     iconColor: "green",
     prompt: `Build a User Activation Agent that tracks onboarding progress and nudges stuck users.
 
+## Tool Implementation Rules
+- External APIs return many properties. Extract only fields needed for the task.
+- Map API responses to minimal objects before returning to reduce context size.
+- Example: subscription → {id, status, amount, customerId, periodEnd} not full object.
+
 ## Resource Strategy
 - Database: Required for user activity/funnel data
 - Intercom: Required for sending nudges
@@ -703,6 +733,11 @@ Common false positive traps to avoid:
     iconColor: "green",
     prompt: `Build a Billing Ops Agent that monitors failed payments and executes recovery actions.
 
+## Tool Implementation Rules
+- External APIs return many properties. Extract only fields needed for the task.
+- Map API responses to minimal objects before returning to reduce context size.
+- Example: subscription → {id, status, amount, customerId, periodEnd} not full object.
+
 ## Resource Strategy
 - Stripe: Required for payment data and retries
 
@@ -803,6 +838,11 @@ Common false positive traps to avoid:
     icon: "ShoppingCart",
     iconColor: "blue",
     prompt: `Build an Order Management Agent that reviews orders, handles issues, and processes returns.
+
+## Tool Implementation Rules
+- External APIs return many properties. Extract only fields needed for the task.
+- Map API responses to minimal objects before returning to reduce context size.
+- Example: subscription → {id, status, amount, customerId, periodEnd} not full object.
 
 ## Resource Strategy
 - Database: Required for order data
@@ -925,6 +965,11 @@ Common false positive traps to avoid:
     iconColor: "yellow",
     prompt: `Build an Inventory Alert Agent that monitors stock levels and creates purchase orders.
 
+## Tool Implementation Rules
+- External APIs return many properties. Extract only fields needed for the task.
+- Map API responses to minimal objects before returning to reduce context size.
+- Example: subscription → {id, status, amount, customerId, periodEnd} not full object.
+
 ## Resource Strategy
 - Database: Required for inventory data
 
@@ -1029,6 +1074,11 @@ Common false positive traps to avoid:
     icon: "Heartbeat",
     iconColor: "plum",
     prompt: `Build a Customer Health Monitor that calculates engagement scores and prioritizes outreach.
+
+## Tool Implementation Rules
+- External APIs return many properties. Extract only fields needed for the task.
+- Map API responses to minimal objects before returning to reduce context size.
+- Example: subscription → {id, status, amount, customerId, periodEnd} not full object.
 
 ## Resource Strategy
 - Database: Required for usage data
@@ -1145,6 +1195,11 @@ Common false positive traps to avoid:
     iconColor: "gray",
     prompt: `Build a Support Ticket Summarizer that analyzes trends and surfaces critical tickets.
 
+## Tool Implementation Rules
+- External APIs return many properties. Extract only fields needed for the task.
+- Map API responses to minimal objects before returning to reduce context size.
+- Example: subscription → {id, status, amount, customerId, periodEnd} not full object.
+
 ## Resource Strategy
 - Intercom: Required for ticket data
 - Database: Optional for customer tier enrichment
@@ -1252,6 +1307,11 @@ Common false positive traps to avoid:
     icon: "Calendar",
     iconColor: "indigo",
     prompt: `Build a Scheduled Report Agent that generates and distributes product metrics on schedule.
+
+## Tool Implementation Rules
+- External APIs return many properties. Extract only fields needed for the task.
+- Map API responses to minimal objects before returning to reduce context size.
+- Example: subscription → {id, status, amount, customerId, periodEnd} not full object.
 
 ## Resource Strategy
 - Database: Required for metrics data
