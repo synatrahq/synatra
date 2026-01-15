@@ -12,6 +12,11 @@ import "../styles/global.css"
     <meta name="color-scheme" content="dark" />
     <title>Synatra</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>
+    a:visited {
+      color: inherit;
+    }
+  </style>
   </head>
   <body class="min-h-screen bg-surface-bg antialiased">
 
@@ -83,10 +88,11 @@ import "../styles/global.css"
       </section>
 
       <footer class="py-8 border-t border-surface-border-muted flex items-center justify-between text-xs text-text-disabled">
-        <a href="https://github.com/synatrahq/synatra" class="hover:text-text-muted transition-colors">
-          Open source
-        </a>
-        <span>For those who believe</span>
+        <a href="https://github.com/synatrahq/synatra" class="hover:text-text-muted transition-colors">Open source</a>
+        <div class="flex items-center gap-4">
+          <a href="/docs" class="hover:text-text-muted transition-colors">Docs</a>
+          <a href="https://twitter.com/synatrahq" class="hover:text-text-muted transition-colors">X</a>
+        </div>
       </footer>
 
     </main>
