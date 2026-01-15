@@ -337,6 +337,7 @@ export function DateTimePicker(props: DateTimePickerProps) {
         onFocus={() => !props.disabled && setTimeOpen(true)}
         onClick={() => !props.disabled && setTimeOpen(true)}
         onBlur={handleTimeInputBlur}
+        autocomplete="off"
         disabled={props.disabled}
         data-datetime-time
       />

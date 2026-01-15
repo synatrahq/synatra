@@ -290,6 +290,7 @@ export function IconPicker(props: IconPickerProps) {
           placeholder="Search icons..."
           value={search()}
           onInput={(e) => setSearch(e.currentTarget.value)}
+          autocomplete="off"
           class="h-7 w-full rounded border border-border bg-surface-elevated pl-7 pr-2 text-xs text-text placeholder:text-text-muted focus:border-accent focus:outline-none focus:shadow-[0_0_0_1px_var(--color-accent)]"
         />
       </div>

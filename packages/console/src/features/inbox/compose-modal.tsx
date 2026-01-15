@@ -394,6 +394,7 @@ export function ComposeModal(props: ComposeModalProps) {
                   onFocus={() => setShowDropdown(true)}
                   onKeyDown={handleInputKeyDown}
                   placeholder={placeholder()}
+                  autocomplete="off"
                   class="min-w-[120px] flex-1 bg-transparent text-xs text-text placeholder:text-text-muted focus:outline-none"
                 />
               </Show>
