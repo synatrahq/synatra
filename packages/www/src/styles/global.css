@@ -71,6 +71,10 @@
     text-decoration: none;
   }
 
+  a:visited {
+    color: inherit;
+  }
+
   body {
     margin: 0;
     font-family:
