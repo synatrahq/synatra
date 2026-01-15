@@ -30,15 +30,17 @@ const chapters = [
         </video>
       </div>
 
-      <nav id="chapter-nav" class="mt-4 flex gap-1" aria-label="Video chapters">
+      <nav id="chapter-nav" class="relative mt-4 hidden sm:flex" aria-label="Video chapters">
+        <div id="chapter-indicator" class="chapter-indicator"></div>
         {chapters.map((ch, i) => (
           <button
             type="button"
-            class="chapter-btn flex-1 rounded-md bg-transparent py-2 text-center text-xs text-gray-500 transition-colors"
+            class="chapter-btn relative z-10 flex flex-1 items-center justify-center gap-2 py-2.5"
             data-time={ch.time}
             data-index={i}
           >
-            {ch.label}
+            <span class="chapter-num flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-medium">{i + 1}</span>
+            <span class="chapter-label text-xs">{ch.label}</span>
           </button>
         ))}
       </nav>
@@ -47,66 +49,111 @@ const chapters = [
 </section>
 
 <style>
+  .chapter-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: rgb(255 255 255 / 0.05);
+    border-radius: 0.375rem;
+    opacity: 0;
+    transition: transform 0.3s ease-out, width 0.2s, opacity 0.2s;
+  }
+
+  .chapter-indicator.visible {
+    opacity: 1;
+  }
+
   .chapter-btn {
-    position: relative;
     background: transparent;
     border: none;
   }
 
-  .chapter-btn::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: transparent;
-    border-radius: 1px;
-    transition: background 0.2s;
+  .chapter-num {
+    background: rgb(55 65 81);
+    color: rgb(107 114 128);
+    transition: background 0.2s, color 0.2s, transform 0.2s;
   }
 
-  .chapter-btn:hover {
+  .chapter-label {
+    color: rgb(107 114 128);
+    transition: color 0.2s;
+  }
+
+  .chapter-btn:hover .chapter-label {
     color: rgb(156 163 175);
   }
 
-  .chapter-btn.active {
+  .chapter-btn.active .chapter-num {
+    background: white;
+    color: rgb(17 17 17);
+    transform: scale(1.1);
+  }
+
+  .chapter-btn.active .chapter-label {
     color: white;
   }
 
-  .chapter-btn.active::after {
-    background: white;
+  .chapter-btn.completed .chapter-num {
+    background: rgb(16 185 129 / 0.2);
+    color: rgb(52 211 153);
   }
 
-  .chapter-btn.completed {
-    color: rgb(107 114 128);
+  .chapter-btn.completed .chapter-label {
+    color: rgb(75 85 99);
   }
 
-  .chapter-btn.completed::after {
-    background: rgb(55 65 81);
+  @media (prefers-reduced-motion: reduce) {
+    .chapter-indicator,
+    .chapter-num {
+      transition: none;
+    }
   }
 </style>
 
 <script>
   const video = document.getElementById("demo-video") as HTMLVideoElement
-  const buttons = document.querySelectorAll(".chapter-btn")
+  const nav = document.getElementById("chapter-nav") as HTMLElement
+  const indicator = document.getElementById("chapter-indicator") as HTMLElement
+  const buttons = nav.querySelectorAll(".chapter-btn")
   const times = [0, 14, 35, 43]
+
+  function moveIndicator(btn: Element | null) {
+    if (!btn) {
+      indicator.classList.remove("visible")
+      return
+    }
+    const navRect = nav.getBoundingClientRect()
+    const btnRect = btn.getBoundingClientRect()
+    indicator.style.width = `${btnRect.width}px`
+    indicator.style.transform = `translateX(${btnRect.left - navRect.left}px)`
+    indicator.classList.add("visible")
+  }
 
   function update() {
     const t = video.currentTime
     const d = video.duration || 60
+    let active: Element | null = null
 
     buttons.forEach((btn, i) => {
       const start = times[i]
       const end = times[i + 1] ?? d
 
       btn.classList.remove("active", "completed")
-      if (t >= start && t < end) btn.classList.add("active")
-      else if (t >= end) btn.classList.add("completed")
+      if (t >= start && t < end) {
+        btn.classList.add("active")
+        active = btn
+      } else if (t >= end) {
+        btn.classList.add("completed")
+      }
     })
+
+    moveIndicator(active)
   }
 
   video.addEventListener("timeupdate", update)
   video.addEventListener("loadedmetadata", update)
+  window.addEventListener("resize", update)
 
   buttons.forEach((btn) => {
     btn.addEventListener("click", () => {
