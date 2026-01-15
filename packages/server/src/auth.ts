@@ -78,11 +78,13 @@ async function sendMagicLinkEmail(email: string, url: string) {
     return
   }
   const html = `
-    <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
-      <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 16px 0;">Sign in to Synatra</h1>
-      <p style="color: #475569; margin: 0 0 24px 0;">Click the button below to sign in to your account.</p>
-      <a href="${url}" style="display: inline-block; padding: 12px 24px; background-color: #0f172a; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 500;">Sign in</a>
-      <p style="color: #94a3b8; font-size: 14px; margin: 24px 0 0 0;">If you didn't request this email, you can safely ignore it.</p>
+    <div style="padding: 48px 24px;">
+      <div style="max-width: 400px; margin: 0 auto;">
+        <p style="font-family: system-ui, -apple-system, sans-serif; font-size: 15px; font-weight: 600; color: #111; margin: 0 0 32px 0; letter-spacing: -0.02em;">Synatra</p>
+        <p style="font-family: Georgia, serif; font-size: 15px; color: #111; margin: 0 0 6px 0; line-height: 1.6;">Your agents are waiting. Let's get started.</p>
+        <p style="font-family: Georgia, serif; font-size: 14px; color: #666; margin: 0 0 20px 0;">Sign in to your account</p>
+        <a href="${url}" style="font-family: system-ui, sans-serif; font-size: 13px; color: #111; text-decoration: underline;">Sign in &rarr;</a>
+      </div>
     </div>
   `
   await sendEmail(email, "Sign in to Synatra", html)
@@ -105,11 +107,13 @@ async function sendInvitationEmail(data: {
   const orgName = escapeHtml(data.organization.name)
   const inviterName = escapeHtml(data.inviter.user.name || data.inviter.user.email)
   const html = `
-    <div style="font-family: system-ui, sans-serif; max-width: 480px; margin: 0 auto; padding: 40px 20px;">
-      <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 16px 0;">You're invited to join ${orgName}</h1>
-      <p style="color: #475569; margin: 0 0 24px 0;">${inviterName} has invited you to join ${orgName} on Synatra.</p>
-      <a href="${url}" style="display: inline-block; padding: 12px 24px; background-color: #0f172a; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 500;">Accept Invitation</a>
-      <p style="color: #94a3b8; font-size: 14px; margin: 24px 0 0 0;">If you didn't expect this email, you can safely ignore it.</p>
+    <div style="padding: 48px 24px;">
+      <div style="max-width: 400px; margin: 0 auto;">
+        <p style="font-family: system-ui, -apple-system, sans-serif; font-size: 15px; font-weight: 600; color: #111; margin: 0 0 32px 0; letter-spacing: -0.02em;">Synatra</p>
+        <p style="font-family: Georgia, serif; font-size: 15px; color: #111; margin: 0 0 6px 0; line-height: 1.6;">Your agents are waiting. Let's get started.</p>
+        <p style="font-family: Georgia, serif; font-size: 14px; color: #666; margin: 0 0 20px 0;">${inviterName} invited you to ${orgName}.</p>
+        <a href="${url}" style="font-family: system-ui, sans-serif; font-size: 13px; color: #111; text-decoration: underline;">Accept &rarr;</a>
+      </div>
     </div>
   `
   await sendEmail(data.email, `Join ${orgName} on Synatra`, html)
