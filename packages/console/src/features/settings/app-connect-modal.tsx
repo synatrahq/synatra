@@ -11,7 +11,7 @@ type AppConnectModalProps = {
 }
 
 const APP_OPTIONS = [
-  { id: "intercom", name: "Intercom" },
+  { id: "intercom", name: "Intercom", comingSoon: true },
   { id: "github", name: "GitHub" },
 ]
 
@@ -62,11 +62,22 @@ export function AppConnectModal(props: AppConnectModalProps) {
                 {(app) => (
                   <button
                     type="button"
-                    class="flex w-full items-center gap-3 rounded-md border border-border px-3 py-2.5 text-left transition-colors hover:border-border-strong hover:bg-surface-muted"
+                    class="flex w-full items-center gap-3 rounded-md border border-border px-3 py-2.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                    classList={{
+                      "hover:border-border-strong hover:bg-surface-muted": !app.comingSoon,
+                    }}
                     onClick={() => setSelectedAppId(app.id)}
+                    disabled={app.comingSoon}
                   >
                     <AppIcon appId={app.id} class="h-5 w-5" />
-                    <div class="text-xs font-medium text-text">{app.name}</div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-medium text-text">{app.name}</span>
+                      <Show when={app.comingSoon}>
+                        <span class="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
+                          Coming soon
+                        </span>
+                      </Show>
+                    </div>
                   </button>
                 )}
               </For>

@@ -24,10 +24,11 @@ type AppAccountListProps = {
 
 const gridCols = "grid-cols-[minmax(120px,2fr)_1fr_2fr_40px]"
 
-const APP_INFO: Record<string, { name: string; description: string }> = {
+const APP_INFO: Record<string, { name: string; description: string; comingSoon?: boolean }> = {
   intercom: {
     name: "Intercom",
     description: "Trigger agents on customer messages",
+    comingSoon: true,
   },
   github: {
     name: "GitHub",
@@ -68,13 +69,29 @@ function EmptyState(props: { onConnectClick: (appId: string) => void }) {
                   <AppIcon appId={appId} class="h-4 w-4" />
                 </div>
                 <div>
-                  <p class="text-xs font-medium text-text">{info.name}</p>
+                  <div class="flex items-center gap-1.5">
+                    <p class="text-xs font-medium text-text">{info.name}</p>
+                    <Show when={info.comingSoon}>
+                      <span class="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
+                        Coming soon
+                      </span>
+                    </Show>
+                  </div>
                   <p class="text-2xs text-text-muted">{info.description}</p>
                 </div>
               </div>
-              <Button variant="default" size="sm" onClick={() => props.onConnectClick(appId)}>
-                Connect
-              </Button>
+              <Show
+                when={info.comingSoon}
+                fallback={
+                  <Button variant="default" size="sm" onClick={() => props.onConnectClick(appId)}>
+                    Connect
+                  </Button>
+                }
+              >
+                <Button variant="default" size="sm" disabled>
+                  Connect
+                </Button>
+              </Show>
             </div>
           )}
         </For>
@@ -89,12 +106,14 @@ export function AppAccountList(props: AppAccountListProps) {
       <div class="flex items-center justify-between px-3 py-2">
         <h1 class="text-xs font-medium text-text">Apps</h1>
         <DropdownMenu
-          items={Object.entries(APP_INFO).map(([appId, info]) => ({
-            type: "item" as const,
-            label: info.name,
-            icon: <AppIcon appId={appId} class="h-3.5 w-3.5" />,
-            onClick: () => props.onConnectClick(appId),
-          }))}
+          items={Object.entries(APP_INFO)
+            .filter(([, info]) => !info.comingSoon)
+            .map(([appId, info]) => ({
+              type: "item" as const,
+              label: info.name,
+              icon: <AppIcon appId={appId} class="h-3.5 w-3.5" />,
+              onClick: () => props.onConnectClick(appId),
+            }))}
           trigger={
             <Button variant="default" size="sm">
               <Plus class="h-3 w-3" />

@@ -55,13 +55,13 @@ export function ResourceCreateModal(props: ResourceCreateModalProps) {
   const [error, setError] = createSignal<string | null>(null)
   const [slugManuallyEdited, setSlugManuallyEdited] = createSignal(false)
 
-  const resourceTypes: { type: ResourceType; available: boolean }[] = [
+  const resourceTypes: { type: ResourceType; available: boolean; comingSoon?: boolean }[] = [
     { type: "postgres", available: true },
     { type: "mysql", available: true },
+    { type: "restapi", available: true },
     { type: "stripe", available: true },
     { type: "github", available: true },
-    { type: "intercom", available: true },
-    { type: "restapi", available: true },
+    { type: "intercom", available: false, comingSoon: true },
   ]
 
   const githubAccounts = () => props.appAccounts?.filter((a) => a.appId === "github") ?? []
@@ -178,10 +178,15 @@ export function ResourceCreateModal(props: ResourceCreateModalProps) {
                   return (
                     <button
                       type="button"
-                      class="flex flex-col items-center gap-2 rounded-lg border border-border bg-surface-elevated p-4 text-center transition-colors hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50"
+                      class="relative flex flex-col items-center gap-2 rounded-lg border border-border bg-surface-elevated p-4 text-center transition-colors hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50"
                       onClick={() => handleTypeSelect(rt.type)}
                       disabled={!rt.available}
                     >
+                      <Show when={rt.comingSoon}>
+                        <span class="absolute right-1.5 top-1.5 rounded bg-surface-muted px-1 py-0.5 text-[9px] font-medium text-text-muted">
+                          Soon
+                        </span>
+                      </Show>
                       <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-muted">
                         <ResourceIcon type={rt.type} class="h-6 w-6" />
                       </div>
