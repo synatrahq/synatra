@@ -138,7 +138,7 @@ projects:
               - key: API_URL
                 value: https://synatra-staging-server.onrender.com
               - key: CONSOLE_URL
-                value: https://synatra-staging-server.onrender.com/console
+                value: https://synatra-staging-server.onrender.com
               - key: BETTER_AUTH_SECRET
                 generateValue: true
 
@@ -348,7 +348,7 @@ projects:
               - fromGroup: synatra-production-github
               - fromGroup: synatra-production-stripe
               - key: VITE_GATEWAY_URL
-                value: wss://synatra-production-resource-gateway.onrender.com
+                value: wss://gateway.synatrahq.com
               - key: NODE_ENV
                 value: production
               - key: PORT
@@ -369,9 +369,9 @@ projects:
               - key: THREAD_STREAM_MODE
                 value: redis
               - key: API_URL
-                value: https://synatra-production-server.onrender.com
+                value: https://synatrahq.com
               - key: CONSOLE_URL
-                value: https://synatra-production-server.onrender.com/console
+                value: https://synatrahq.com
               - key: BETTER_AUTH_SECRET
                 generateValue: true
 
