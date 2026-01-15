@@ -11,17 +11,31 @@ export const AGENT_TEMPLATES: SeedTemplate[] = [
     category: "analytics",
     icon: "ChartLineUp",
     iconColor: "green",
-    prompt: `I want to build an MRR Dashboard Agent that:
+    prompt: `Build an MRR Dashboard Agent that generates investor-ready revenue reports from Stripe data.
 
-- Connects to Stripe to pull subscription and revenue data
-- Calculates MRR, growth rate, churn rate, and customer counts
-- Generates charts and tables for board meetings
-- Identifies top customers by revenue
+## Resource Strategy
+- Stripe: Required. Use connected Stripe resource.
+- Database: Optional. If connected, use to enrich with customer metadata.
 
-The agent should:
-- Present clear, investor-ready metrics
-- Highlight trends and changes from previous periods
-- Provide actionable insights on revenue health`,
+## Default Behavior (don't ask, just do)
+- Calculate: MRR, growth rate, churn rate, customer count
+- Period: Monthly with previous month comparison
+- Display: Key metrics → trend chart (4 months) → top customers table → summary insight
+- Format: Currency as $X,XXX, percentages as X.X%
+
+## Ask Only If
+- Multiple databases connected: "Which database has customer data?"
+- User mentions specific needs: Custom metrics, different time periods, specific segments
+
+## Tools to Create
+- fetch_stripe_subscriptions: Get active subscriptions (no approval needed)
+- calculate_mrr_metrics: Compute MRR, growth, churn from subscription data
+
+## Agent Behavior
+- Lead with key insight ("MRR grew 12% driven by enterprise expansion")
+- Always show period-over-period comparison
+- Highlight anomalies (>20% change) without being asked
+- End with actionable recommendation`,
     suggestedResources: ["stripe", "postgres"],
     demoScenarios: [
       {
@@ -104,18 +118,39 @@ The agent should:
     category: "support",
     icon: "Headphones",
     iconColor: "blue",
-    prompt: `I want to build a Customer Support Agent that:
+    prompt: `Build a Customer Support Agent that handles inquiries, looks up context, and processes resolutions with approval.
 
-- Responds to customer inquiries from Intercom
-- Looks up customer information and order history
-- Can process refunds with human approval
-- Escalates complex issues when needed
+## Resource Strategy
+- Intercom: Use for customer conversations
+- Stripe: Use for payment/order history
+- Database: Use for additional customer data if connected
 
-The agent should:
-- Be polite and professional
-- Always verify customer context before taking actions
-- Require human approval for any financial operations
-- Summarize actions taken after completing a request`,
+## Default Behavior (don't ask, just do)
+- Always fetch customer context before any action
+- Show customer profile (name, plan, LTV, tenure) + recent orders
+- Present resolution options based on situation
+- Require approval for all financial operations
+
+## Ask Only If
+- Multiple databases: "Which database has order data?"
+- Unclear refund policy: "What's your refund policy?" (then remember it)
+
+## Resolution Framework (build into agent)
+- Defective product → Full refund (approval required)
+- Within 24h of purchase → Full refund (approval required)
+- High LTV customer (>$500) → Prioritize retention, offer credit
+- Repeat refund requester → Flag for review
+
+## Tools to Create
+- get_customer_context: Fetch from Intercom + Stripe + DB (no approval)
+- get_order_history: Recent orders for customer (no approval)
+- process_refund: Stripe refund (requires approval, owner_only)
+- send_response: Reply via Intercom (requires approval)
+
+## Agent Behavior
+- Be concise - support staff are busy
+- Show context first, then ask what to do
+- Never process refund without showing the order details first`,
     suggestedResources: ["intercom", "stripe", "postgres"],
     demoScenarios: [
       {
@@ -190,18 +225,52 @@ The agent should:
     category: "analytics",
     icon: "MagnifyingGlass",
     iconColor: "indigo",
-    prompt: `I want to build a SQL Explorer Agent that:
+    prompt: `Build a SQL Explorer Agent that answers data questions using natural language and can execute approved mutations.
 
-- Connects to my database
-- Answers questions about data in natural language
-- Generates charts and tables for results
-- Can explain query logic when asked
+## Resource Strategy
+- Database: Required. Use connected database.
+- If multiple databases: Ask once at start "Which database to query?"
 
-The agent should:
-- Write efficient, safe SQL queries
-- Never modify data (read-only)
-- Format results clearly
-- Provide actionable insights alongside data`,
+## Default Behavior (don't ask, just do)
+- Auto-apply LIMIT 100 for SELECT (increase if user asks)
+- Discover schema automatically before first query
+- Choose visualization based on data type:
+  - Time series → Line chart
+  - Categories → Bar chart
+  - Rankings → Table with rank column
+  - Single values → Key-value display
+
+## Query Types & Approval
+- SELECT: No approval (read-only)
+- INSERT: Requires approval (any_member)
+- UPDATE: Requires approval (any_member)
+- DELETE: Requires approval (owner_only, no self-approval)
+- CREATE/DROP/ALTER: Requires approval (owner_only, no self-approval)
+
+## SQL Validation Rules (CRITICAL for tool code)
+Use word boundary matching to avoid false positives:
+- WRONG: /CREATE/i.test(sql) — matches "created_at"
+- CORRECT: /\\bCREATE\\b/i.test(sql) — word boundary prevents partial matches
+
+Common false positive traps to avoid:
+- created_at, create_date → matches CREATE without \\b
+- updated_at, update_time → matches UPDATE without \\b
+- deleted_at, delete_flag → matches DELETE without \\b
+
+## Ask Only If
+- Query is ambiguous: "When you say 'recent', do you mean last 7 days or 30 days?"
+- Mutation requested without specifics: "Which records should be updated?"
+
+## Tools to Create
+- get_schema: List tables and columns, cache for session (no approval)
+- run_select_query: Execute SELECT queries (no approval)
+- run_mutation_query: Execute INSERT/UPDATE/DELETE with word boundary validation (requires approval)
+
+## Agent Behavior
+- Restate the question before querying
+- For mutations: Show what WILL change before approval ("This will update 47 rows")
+- Show the insight, not just the data ("Alex leads with 847 actions, 36% more than #2")
+- Suggest follow-up questions`,
     suggestedResources: [...DatabaseResourceType],
     demoScenarios: [
       {
@@ -274,18 +343,37 @@ The agent should:
     category: "analytics",
     icon: "UserMinus",
     iconColor: "red",
-    prompt: `I want to build a Churn Prevention Agent that:
+    prompt: `Build a Churn Prevention Agent that identifies at-risk customers and executes retention interventions.
 
-- Analyzes customer usage patterns and payment history
-- Identifies customers showing churn signals
-- Calculates risk scores based on engagement metrics
-- Suggests and executes retention interventions
+## Resource Strategy
+- Stripe: Required for payment/subscription data
+- Database: Required for usage/activity data
+- Intercom: Optional for sending retention messages
 
-The agent should:
-- Proactively surface at-risk accounts
-- Provide context on why customers might churn
-- Offer multiple intervention options
-- Require approval for discounts or credits`,
+## Default Behavior (don't ask, just do)
+- Risk signals: No login >14 days, usage drop >50%, payment failures, downgrade inquiry
+- Risk score: 0-100 based on weighted signals
+- Priority: Focus on high MRR at-risk customers first
+- Default interventions by MRR tier:
+  - >$200/mo: Personal outreach
+  - $50-200/mo: Discount offer (20%)
+  - <$50/mo: Automated email
+
+## Ask Only If
+- Multiple databases: "Which database has user activity data?"
+- First time setting up: "What's your typical discount for retention?" (then remember)
+
+## Tools to Create
+- get_customer_activity: Usage data from database (no approval)
+- calculate_churn_risk: Score based on signals (no approval)
+- apply_discount: Stripe discount (requires approval, any_member)
+- send_retention_email: Via Intercom (requires approval, any_member)
+
+## Agent Behavior
+- Show total MRR at risk prominently
+- Explain WHY each customer is at risk (not just score)
+- Recommend specific intervention per customer
+- Track: "Last month we saved 3 customers worth $450 MRR"`,
     suggestedResources: ["stripe", "postgres", "intercom"],
     demoScenarios: [
       {
@@ -371,18 +459,37 @@ The agent should:
     category: "devops",
     icon: "Bug",
     iconColor: "red",
-    prompt: `I want to build a Bug Investigation Agent that:
+    prompt: `Build a Bug Investigation Agent that correlates GitHub issues, error logs, and customer impact.
 
-- Fetches GitHub issue details and related commits
-- Queries error logs and affected user data
-- Correlates symptoms across data sources
-- Identifies root cause and affected customers
+## Resource Strategy
+- GitHub: Required for issues and commits
+- Database: Required for error logs and affected users
+- Intercom: Optional for customer communication
 
-The agent should:
-- Present a clear timeline of events
-- Show which customers are impacted
-- Suggest remediation steps
-- Help communicate with affected users`,
+## Default Behavior (don't ask, just do)
+- Pull: Issue details → Recent commits → Error logs → Affected users
+- Correlate: Match error onset time with deployments
+- Classify severity automatically:
+  - Critical: >100 users OR enterprise customer OR data corruption
+  - High: 10-100 users
+  - Medium: 1-10 users
+  - Low: Potential issue, no confirmed impact
+
+## Ask Only If
+- Multiple repos: "Which repository?"
+- Unclear issue reference: "Which issue number?"
+
+## Tools to Create
+- get_github_issue: Fetch issue + related commits (no approval)
+- query_error_logs: Errors in time range from database (no approval)
+- get_affected_users: Users who hit this error (no approval)
+- add_issue_comment: Post findings to GitHub (requires approval, any_member)
+
+## Agent Behavior
+- Lead with impact: "47 users affected, including 2 enterprise accounts"
+- Show timeline: When it started, what changed
+- Identify root cause if possible (link to specific commit)
+- Recommend: Rollback vs hotfix vs monitor`,
     suggestedResources: ["github", "postgres"],
     demoScenarios: [
       {
@@ -474,18 +581,35 @@ The agent should:
     category: "analytics",
     icon: "RocketLaunch",
     iconColor: "green",
-    prompt: `I want to build a User Activation Agent that:
+    prompt: `Build a User Activation Agent that tracks onboarding progress and nudges stuck users.
 
-- Tracks new customer onboarding progress
-- Identifies users stuck at specific steps
-- Analyzes drop-off points in the activation funnel
-- Sends personalized help messages
+## Resource Strategy
+- Database: Required for user activity/funnel data
+- Intercom: Required for sending nudges
 
-The agent should:
-- Define clear onboarding milestones
-- Calculate conversion rates by step
-- Prioritize high-value stuck users
-- Provide context before sending messages`,
+## Default Behavior (don't ask, just do)
+- Funnel stages: Signed Up → Setup Complete → First Action → Activated (3+ sessions)
+- Stuck threshold: 3+ days at same stage
+- Priority: Pro/Trial users > Free users with high engagement > Others
+- Nudge timing:
+  - Day 3: Soft nudge
+  - Day 5: Specific help offer
+  - Day 7: Human touchpoint offer
+
+## Ask Only If
+- First setup: "What counts as 'First Action' for your product?" (e.g., created first X, completed Y)
+- Custom funnel: "Do you have specific onboarding milestones?"
+
+## Tools to Create
+- get_activation_funnel: Users by stage with counts (no approval)
+- get_stuck_users: Users stuck >3 days, sorted by value (no approval)
+- send_nudge: Personalized message via Intercom (requires approval, any_member)
+
+## Agent Behavior
+- Show funnel with conversion rates between stages
+- Identify biggest drop-off point
+- Personalize nudges based on stuck stage (don't send generic messages)
+- Track: "12 users nudged last week, 7 progressed"`,
     suggestedResources: ["postgres", "intercom"],
     demoScenarios: [
       {
@@ -577,18 +701,33 @@ The agent should:
     category: "finance",
     icon: "CreditCard",
     iconColor: "green",
-    prompt: `I want to build a Billing Ops Agent that:
+    prompt: `Build a Billing Ops Agent that monitors failed payments and executes recovery actions.
 
-- Monitors failed payments in Stripe
-- Identifies patterns in payment failures
-- Executes recovery actions (retry, remind, update card)
-- Tracks recovery success rates
+## Resource Strategy
+- Stripe: Required for payment data and retries
 
-The agent should:
-- Surface critical billing issues quickly
-- Provide context on failure reasons
-- Suggest appropriate recovery actions
-- Require approval before retrying payments`,
+## Default Behavior (don't ask, just do)
+- Check failed payments daily
+- Group by failure reason: Card declined, expired, insufficient funds
+- Recovery strategy by reason:
+  - Expired card → Send update link immediately
+  - Insufficient funds → Wait 3 days, then retry
+  - Generic decline → Retry immediately, then email
+- Never retry fraud-flagged payments
+
+## Ask Only If
+- First setup: "Do you want automatic retries or manual approval for each?"
+
+## Tools to Create
+- get_failed_payments: Failed payments with reason and attempt count (no approval)
+- retry_payment: Attempt charge again (requires approval, any_member)
+- send_payment_reminder: Email customer (requires approval, any_member)
+
+## Agent Behavior
+- Show total revenue at risk
+- Group by recovery likelihood (expired cards = 60% recovery rate)
+- Recommend batch actions: "Retry all 'insufficient funds' from 3+ days ago"
+- Report: "Recovered $448 of $497 at risk"`,
     suggestedResources: ["stripe", "postgres"],
     demoScenarios: [
       {
@@ -663,18 +802,36 @@ The agent should:
     category: "workflow",
     icon: "ShoppingCart",
     iconColor: "blue",
-    prompt: `I want to build an Order Management Agent that:
+    prompt: `Build an Order Management Agent that reviews orders, handles issues, and processes returns.
 
-- Queries order status and fulfillment data
-- Identifies orders with issues (payment, address, returns)
-- Processes order actions with approval
-- Updates customers on order status
+## Resource Strategy
+- Database: Required for order data
+- Stripe: Required for payment processing
 
-The agent should:
-- Surface problematic orders quickly
-- Provide order context before actions
-- Require approval for refunds and cancellations
-- Keep customers informed`,
+## Default Behavior (don't ask, just do)
+- Daily summary: Orders today, revenue, issues count
+- Issue types: Payment pending, invalid address, refund requested, stock issue
+- Auto-prioritize by: Age + customer value + issue severity
+- Standard actions:
+  - Payment pending >24h → Retry or contact
+  - Invalid address → Hold + contact customer
+  - Refund requested → Show order details + confirm
+
+## Ask Only If
+- Multiple databases: "Which database has orders?"
+- First setup: "What's your standard refund policy?"
+
+## Tools to Create
+- get_orders_summary: Today's orders with issues flagged (no approval)
+- get_order_details: Single order with customer + payment info (no approval)
+- retry_payment: Stripe retry (requires approval, any_member)
+- process_refund: Stripe refund (requires approval, owner_only)
+- update_order_status: Change status in DB (requires approval, any_member)
+
+## Agent Behavior
+- Surface issues proactively
+- Always show order details before any action
+- Batch similar issues: "3 orders with payment pending - retry all?"`,
     suggestedResources: ["postgres", "stripe"],
     demoScenarios: [
       {
@@ -766,18 +923,32 @@ The agent should:
     category: "workflow",
     icon: "Package",
     iconColor: "yellow",
-    prompt: `I want to build an Inventory Alert Agent that:
+    prompt: `Build an Inventory Alert Agent that monitors stock levels and creates purchase orders.
 
-- Monitors inventory levels against thresholds
-- Calculates days until stockout based on velocity
-- Groups reorders by supplier
-- Creates purchase orders for approval
+## Resource Strategy
+- Database: Required for inventory data
 
-The agent should:
-- Run daily to check stock levels
-- Prioritize by urgency (days to stockout)
-- Calculate reorder quantities
-- Require approval for purchase orders`,
+## Default Behavior (don't ask, just do)
+- Check: Current stock vs minimum threshold
+- Calculate: Days to stockout = Current / Daily sales velocity
+- Priority: Out of stock > 1-3 days > 4-7 days
+- Reorder quantity: (30 days of stock) - current stock
+- Group by supplier for efficient ordering
+
+## Ask Only If
+- First setup: "What's your target days of stock?" (default: 30)
+- Multiple suppliers for same SKU: "Which supplier to order from?"
+
+## Tools to Create
+- get_low_stock_items: Items below threshold with velocity (no approval)
+- calculate_reorder: Suggested quantities (no approval)
+- create_purchase_order: PO in database (requires approval, any_member)
+
+## Agent Behavior
+- Lead with urgency: "3 items out of stock, 5 critical (<3 days)"
+- Show projected stockout dates
+- Batch orders by supplier
+- Track: "Last PO arrived in 4 days average"`,
     suggestedResources: ["postgres"],
     demoScenarios: [
       {
@@ -857,18 +1028,36 @@ The agent should:
     category: "support",
     icon: "Heartbeat",
     iconColor: "plum",
-    prompt: `I want to build a Customer Health Monitor that:
+    prompt: `Build a Customer Health Monitor that calculates engagement scores and prioritizes outreach.
 
-- Calculates health scores from usage, support, and payment data
-- Identifies accounts with declining engagement
-- Segments customers by health status
-- Recommends proactive outreach
+## Resource Strategy
+- Database: Required for usage data
+- Stripe: Required for payment health
+- Intercom: Optional for support ticket data
 
-The agent should:
-- Provide clear health score methodology
-- Show trends over time
-- Highlight specific warning signs
-- Suggest concrete next steps`,
+## Default Behavior (don't ask, just do)
+- Health score (0-100) based on:
+  - Product usage: 30%
+  - Engagement trend: 20%
+  - Support sentiment: 15%
+  - Payment health: 15%
+  - Relationship recency: 20%
+- Status: Healthy (80+), Stable (60-79), At Risk (40-59), Critical (<40)
+- Focus on: Declining trend + high MRR
+
+## Ask Only If
+- First setup: "What activity indicates healthy usage for your product?"
+
+## Tools to Create
+- calculate_health_scores: All customers with scores (no approval)
+- get_customer_health_details: Single customer deep dive (no approval)
+- schedule_outreach: Create task for CS team (requires approval, any_member)
+
+## Agent Behavior
+- Show distribution: "12 healthy, 5 at risk, 2 critical"
+- Explain score drivers: "CloudBase critical: No login 30 days, support ticket escalated"
+- Prioritize by: (100 - health score) × MRR
+- Renewal awareness: Flag customers approaching renewal with low score`,
     suggestedResources: ["postgres", "stripe", "intercom"],
     demoScenarios: [
       {
@@ -954,18 +1143,30 @@ The agent should:
     category: "support",
     icon: "ListChecks",
     iconColor: "gray",
-    prompt: `I want to build a Support Ticket Summarizer that:
+    prompt: `Build a Support Ticket Summarizer that analyzes trends and surfaces critical tickets.
 
-- Pulls conversations from Intercom
-- Categorizes tickets by topic
-- Identifies trending issues
-- Surfaces unresolved critical tickets
+## Resource Strategy
+- Intercom: Required for ticket data
+- Database: Optional for customer tier enrichment
 
-The agent should:
-- Provide clear ticket metrics
-- Highlight patterns and trends
-- Prioritize by urgency and customer tier
-- Suggest process improvements`,
+## Default Behavior (don't ask, just do)
+- Categorize tickets: Auth, Billing, Bugs, How-To, Feature Requests
+- Priority score based on: Customer tier + age + sentiment + mentions of churn
+- Trend detection: Compare this week vs last week by category
+- Critical = Enterprise waiting >4h OR mentions cancellation OR 3+ back-and-forth
+
+## Ask Only If
+- First setup: "Any categories specific to your product?" (then add to defaults)
+
+## Tools to Create
+- get_ticket_summary: Counts by category with trends (no approval)
+- get_critical_tickets: High priority unresolved (no approval)
+- get_category_breakdown: Details for specific category (no approval)
+
+## Agent Behavior
+- Lead with actionable: "2 critical tickets need attention"
+- Highlight trends: "Auth issues up 40% - investigate SSO"
+- Suggest process improvements: "15 tickets about same feature - add to docs?"`,
     suggestedResources: ["intercom", "postgres"],
     demoScenarios: [
       {
@@ -1050,18 +1251,31 @@ The agent should:
     category: "workflow",
     icon: "Calendar",
     iconColor: "indigo",
-    prompt: `I want to build a Scheduled Report Agent that:
+    prompt: `Build a Scheduled Report Agent that generates and distributes product metrics on schedule.
 
-- Queries key product metrics from the database
-- Generates charts and summaries
-- Formats reports for team distribution
-- Sends to configured channels
+## Resource Strategy
+- Database: Required for metrics data
 
-The agent should:
-- Present clear, scannable metrics
-- Highlight week-over-week changes
-- Include actionable insights
-- Support multiple output destinations`,
+## Default Behavior (don't ask, just do)
+- Core metrics: DAU, WAU, new signups, activation rate, retention
+- Comparison: Always show vs previous period
+- Format: Executive summary (2-3 bullets) → metrics → trend chart → watch items
+- Anomaly threshold: Flag >30% changes
+
+## Ask Only If
+- First setup: "Where should reports be sent?" (Slack channel, email)
+- First setup: "What are your key metrics?" (then use as defaults)
+
+## Tools to Create
+- get_product_metrics: Core metrics with comparisons (no approval)
+- get_metric_trend: Time series for specific metric (no approval)
+- format_report: Compile into distributable format (no approval)
+
+## Agent Behavior
+- Lead with changes: "DAU up 12%, driven by new onboarding flow"
+- Don't repeat what's in the charts
+- Include one "watch item" if relevant
+- Keep it scannable - executives won't read paragraphs`,
     suggestedResources: [...DatabaseResourceType],
     demoScenarios: [
       {

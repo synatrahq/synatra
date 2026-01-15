@@ -1,16 +1,233 @@
 ---
+import postgresIcon from "../../assets/postgres.svg"
+import mysqlIcon from "../../assets/mysql.svg"
+import stripeIcon from "../../assets/stripe.svg"
+
+const steps = [
+  {
+    time: 0,
+    number: 1,
+    color: "blue",
+    title: "Connect Data Sources",
+    detail: "PostgreSQL, MySQL, Stripe, REST API",
+  },
+  {
+    time: 6,
+    number: 2,
+    color: "purple",
+    title: "Vibe Code with Agent",
+    detail: "Build your agent in plain English",
+  },
+  {
+    time: 41,
+    number: 3,
+    color: "amber",
+    title: "Add to Channel",
+    detail: "Deploy to Slack, email, or web",
+  },
+  {
+    time: 49,
+    number: 4,
+    color: "emerald",
+    title: "Work Together",
+    detail: "Agent handles tasks, you approve",
+  },
+]
 ---
 
-<section class="border-t border-surface-border-muted px-4 py-16 sm:px-6 lg:px-8">
-  <div class="mx-auto max-w-7xl">
-    <div class="overflow-hidden rounded-xl border border-surface-border-muted bg-surface-bg-muted shadow-2xl">
+<section id="demo" class="border-t border-surface-border-muted px-6 py-24 grid-dots">
+  <div class="mx-auto max-w-6xl">
+    <div class="text-center">
+      <p class="text-xs font-medium text-gray-500">See it in action</p>
+      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-white md:text-3xl">
+        From data to deployment in minutes
+      </h2>
+      <p class="mt-4 mx-auto max-w-2xl text-sm text-gray-400">
+        Connect your data sources, build agents with natural language, and deploy them where your team works.
+      </p>
+    </div>
+
+    <div class="mt-12 overflow-hidden rounded-2xl border border-surface-border-muted bg-surface-bg-muted shadow-2xl shadow-black/20">
+      <div class="flex items-center gap-2 border-b border-surface-border-muted px-4 py-3">
+        <div class="flex gap-1.5">
+          <div class="h-3 w-3 rounded-full bg-red-500/60"></div>
+          <div class="h-3 w-3 rounded-full bg-yellow-500/60"></div>
+          <div class="h-3 w-3 rounded-full bg-green-500/60"></div>
+        </div>
+        <span class="ml-3 text-xs text-gray-500">synatra.app</span>
+        <span id="video-status" class="ml-auto rounded-full bg-surface-border px-3 py-1 text-[10px] text-gray-400 transition-all duration-300">Ready</span>
+      </div>
       <video
+        id="demo-video"
+        class="w-full"
         controls
         playsinline
-        class="w-full"
+        preload="metadata"
       >
         <source src="/videos/demo.mp4" type="video/mp4" />
       </video>
     </div>
+
+    <div class="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {steps.map((step) => (
+        <button
+          type="button"
+          class="timeline-step group relative rounded-xl border border-surface-border bg-surface-bg-muted p-4 text-left transition-all duration-300 hover:border-surface-border hover:bg-surface-bg-elevated"
+          data-time={step.time}
+          data-index={step.number - 1}
+          data-color={step.color}
+        >
+          <div class="flex items-center gap-3">
+            <div class={`timeline-number flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
+              step.color === "blue" ? "bg-blue-500/10 border border-blue-500/20" :
+              step.color === "purple" ? "bg-purple-500/10 border border-purple-500/20" :
+              step.color === "amber" ? "bg-amber-500/10 border border-amber-500/20" :
+              "bg-emerald-500/10 border border-emerald-500/20"
+            }`}>
+              <span class={`text-xs font-bold transition-colors duration-300 ${
+                step.color === "blue" ? "text-blue-400" :
+                step.color === "purple" ? "text-purple-400" :
+                step.color === "amber" ? "text-amber-400" :
+                "text-emerald-400"
+              }`}>{step.number}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="timeline-title text-sm font-medium text-white transition-colors duration-300">{step.title}</p>
+              <p class="timeline-detail mt-0.5 text-xs text-gray-500 transition-colors duration-300">{step.detail}</p>
+            </div>
+          </div>
+          <div class={`timeline-progress absolute bottom-0 left-0 h-0.5 w-0 rounded-b-xl transition-all duration-300 ${
+            step.color === "blue" ? "bg-blue-500" :
+            step.color === "purple" ? "bg-purple-500" :
+            step.color === "amber" ? "bg-amber-500" :
+            "bg-emerald-500"
+          }`}></div>
+        </button>
+      ))}
+    </div>
+
+    <div class="mt-8 flex items-center justify-center gap-4 text-xs text-gray-500">
+      <span>Supports</span>
+      <div class="flex items-center gap-3">
+        <img src={postgresIcon.src} alt="PostgreSQL" class="h-4 w-4 opacity-60" />
+        <img src={mysqlIcon.src} alt="MySQL" class="h-4 w-4 opacity-60" />
+        <img src={stripeIcon.src} alt="Stripe" class="h-4 w-4 opacity-60" />
+        <span class="text-gray-600">& more</span>
+      </div>
+    </div>
   </div>
 </section>
+
+<style>
+  .timeline-step.active[data-color="blue"] {
+    border-color: rgb(59 130 246 / 0.5);
+    background: rgb(59 130 246 / 0.08);
+  }
+
+  .timeline-step.active[data-color="purple"] {
+    border-color: rgb(168 85 247 / 0.5);
+    background: rgb(168 85 247 / 0.08);
+  }
+
+  .timeline-step.active[data-color="amber"] {
+    border-color: rgb(245 158 11 / 0.5);
+    background: rgb(245 158 11 / 0.08);
+  }
+
+  .timeline-step.active[data-color="emerald"] {
+    border-color: rgb(16 185 129 / 0.5);
+    background: rgb(16 185 129 / 0.08);
+  }
+
+  .timeline-step.active .timeline-progress {
+    width: 100%;
+  }
+
+  .timeline-step.active[data-color="blue"] .timeline-number {
+    background: rgb(59 130 246 / 0.2);
+    border-color: rgb(59 130 246 / 0.4);
+  }
+
+  .timeline-step.active[data-color="purple"] .timeline-number {
+    background: rgb(168 85 247 / 0.2);
+    border-color: rgb(168 85 247 / 0.4);
+  }
+
+  .timeline-step.active[data-color="amber"] .timeline-number {
+    background: rgb(245 158 11 / 0.2);
+    border-color: rgb(245 158 11 / 0.4);
+  }
+
+  .timeline-step.active[data-color="emerald"] .timeline-number {
+    background: rgb(16 185 129 / 0.2);
+    border-color: rgb(16 185 129 / 0.4);
+  }
+
+  .timeline-step.completed {
+    opacity: 0.6;
+  }
+
+  .timeline-step.completed .timeline-progress {
+    width: 100%;
+    opacity: 0.5;
+  }
+
+  #video-status.is-playing {
+    background: rgb(16 185 129 / 0.2);
+    color: rgb(52 211 153);
+  }
+</style>
+
+<script>
+  const video = document.getElementById("demo-video") as HTMLVideoElement
+  const status = document.getElementById("video-status") as HTMLElement
+  const steps = document.querySelectorAll(".timeline-step")
+  const timestamps = [0, 6, 41, 49]
+
+  function updateTimeline() {
+    const currentTime = video.currentTime
+    const duration = video.duration || 60
+
+    steps.forEach((step) => {
+      const i = parseInt(step.getAttribute("data-index") || "0", 10)
+      const stepTime = timestamps[i]
+      const nextTime = timestamps[i + 1] ?? duration
+
+      step.classList.remove("active", "completed")
+
+      if (currentTime >= stepTime && currentTime < nextTime) {
+        step.classList.add("active")
+      } else if (currentTime >= nextTime) {
+        step.classList.add("completed")
+      }
+    })
+  }
+
+  video.addEventListener("play", () => {
+    status.textContent = "Playing"
+    status.classList.add("is-playing")
+  })
+
+  video.addEventListener("pause", () => {
+    status.textContent = "Paused"
+    status.classList.remove("is-playing")
+  })
+
+  video.addEventListener("ended", () => {
+    status.textContent = "Ready"
+    status.classList.remove("is-playing")
+    video.currentTime = 0
+    updateTimeline()
+  })
+
+  video.addEventListener("timeupdate", updateTimeline)
+  video.addEventListener("loadedmetadata", updateTimeline)
+
+  steps.forEach((step) => {
+    step.addEventListener("click", () => {
+      const time = parseFloat(step.getAttribute("data-time") || "0")
+      video.currentTime = time
+      video.play()
+    })
+  })
+</script>
