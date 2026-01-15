@@ -1,4 +1,5 @@
 import { For, Show } from "solid-js"
+import { ComingSoonAppId } from "@synatra/core/types"
 import { Button, IconButton, DropdownMenu, type DropdownMenuItem } from "../../ui"
 import { AppIcon } from "../../components"
 import { Plus, DotsThree } from "phosphor-solid-js"
@@ -24,16 +25,19 @@ type AppAccountListProps = {
 
 const gridCols = "grid-cols-[minmax(120px,2fr)_1fr_2fr_40px]"
 
-const APP_INFO: Record<string, { name: string; description: string; comingSoon?: boolean }> = {
+const APP_INFO: Record<string, { name: string; description: string }> = {
   intercom: {
     name: "Intercom",
     description: "Trigger agents on customer messages",
-    comingSoon: true,
   },
   github: {
     name: "GitHub",
     description: "Access repositories, issues, and pull requests",
   },
+}
+
+function isComingSoon(appId: string): boolean {
+  return ComingSoonAppId.includes(appId as (typeof ComingSoonAppId)[number])
 }
 
 function ListSkeleton() {
@@ -71,7 +75,7 @@ function EmptyState(props: { onConnectClick: (appId: string) => void }) {
                 <div>
                   <div class="flex items-center gap-1.5">
                     <p class="text-xs font-medium text-text">{info.name}</p>
-                    <Show when={info.comingSoon}>
+                    <Show when={isComingSoon(appId)}>
                       <span class="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
                         Coming soon
                       </span>
@@ -81,7 +85,7 @@ function EmptyState(props: { onConnectClick: (appId: string) => void }) {
                 </div>
               </div>
               <Show
-                when={info.comingSoon}
+                when={isComingSoon(appId)}
                 fallback={
                   <Button variant="default" size="sm" onClick={() => props.onConnectClick(appId)}>
                     Connect
@@ -107,7 +111,7 @@ export function AppAccountList(props: AppAccountListProps) {
         <h1 class="text-xs font-medium text-text">Apps</h1>
         <DropdownMenu
           items={Object.entries(APP_INFO)
-            .filter(([, info]) => !info.comingSoon)
+            .filter(([appId]) => !isComingSoon(appId))
             .map(([appId, info]) => ({
               type: "item" as const,
               label: info.name,

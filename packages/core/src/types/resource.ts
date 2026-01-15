@@ -18,6 +18,9 @@ export type ConnectorSupportedResourceType = (typeof ConnectorSupportedResourceT
 export const ConnectionTestableResourceType = ["postgres", "mysql", "stripe"] as const
 export type ConnectionTestableResourceType = (typeof ConnectionTestableResourceType)[number]
 
+export const ComingSoonResourceType = ["intercom"] as const
+export type ComingSoonResourceType = (typeof ComingSoonResourceType)[number]
+
 export function isManagedResourceType(type: string): type is ManagedResourceType {
   return ManagedResourceType.includes(type as ManagedResourceType)
 }

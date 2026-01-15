@@ -2,6 +2,7 @@ import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
 import { z } from "zod"
 import { createAppAccount, principal } from "@synatra/core"
+import { ComingSoonAppId } from "@synatra/core/types"
 import { getApp } from "../../apps"
 import { config } from "../../config"
 import { signState, verifyState } from "../../util/signed-state"
@@ -123,6 +124,11 @@ export const oauthCallback = new Hono().get("/callback", async (c) => {
 
 export const oauth = new Hono().post("/oauth/start", zValidator("json", startSchema), async (c) => {
   const { appId, name, returnUrl } = c.req.valid("json")
+
+  if (ComingSoonAppId.includes(appId)) {
+    throw createError("BadRequestError", { message: "This app integration is coming soon" })
+  }
+
   const app = getApp(appId)
 
   if (!app || app.authType !== "oauth2" || !app.oauth) {
