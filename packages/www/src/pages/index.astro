@@ -1,79 +1,170 @@
 ---
 import "../styles/global.css"
-import Header from "../components/Header.astro"
-import Footer from "../components/Footer.astro"
-import Hero from "../components/sections/hero.astro"
-import Problem from "../components/sections/problem.astro"
-import Demo from "../components/sections/demo.astro"
-import ProactiveAI from "../components/sections/proactive-ai.astro"
-import HowItWorks from "../components/sections/how-it-works.astro"
-import OnDemandUI from "../components/sections/on-demand-ui.astro"
-import Platform from "../components/sections/platform.astro"
-import OpenSource from "../components/sections/open-source.astro"
-import CTA from "../components/sections/cta.astro"
 ---
 
 <!doctype html>
-<html lang="en" class="scroll-smooth">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="The workspace where AI agents work alongside you. They run tasks proactively, reach out when needed, and generate the perfect UI on demand." />
-    <meta property="og:title" content="Synatra | The AI Workspace" />
-    <meta property="og:description" content="Work alongside AI agents like colleagues. They handle tasks in the background, reach out proactively, and ask for your approval when it matters." />
+    <meta name="description" content="The workspace where humans and AI collaborate as colleagues." />
+    <meta property="og:title" content="Synatra" />
+    <meta property="og:description" content="The workspace where humans and AI collaborate as colleagues." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://synatrahq.com/og-image.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="https://synatrahq.com/og-image.png" />
-    <meta name="twitter:title" content="Synatra | The AI Workspace" />
-    <meta name="twitter:description" content="Work alongside AI agents like colleagues. They handle tasks in the background, reach out proactively, and ask for your approval when it matters." />
+    <meta name="twitter:title" content="Synatra" />
+    <meta name="twitter:description" content="The workspace where humans and AI collaborate as colleagues." />
     <meta property="og:url" content="https://synatrahq.com" />
     <link rel="canonical" href="https://synatrahq.com" />
     <meta name="theme-color" content="#111111" />
     <meta name="color-scheme" content="dark" />
-    <title>Synatra | The AI Workspace</title>
+    <title>Synatra</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600&display=swap" rel="stylesheet" />
-    <script is:inline type="application/ld+json" set:html={JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "SoftwareApplication",
-      "name": "Synatra",
-      "image": "https://synatrahq.com/og-image.png",
-      "description": "The workspace where AI agents work alongside you. They run tasks proactively, reach out when needed, and generate the perfect UI on demand.",
-      "url": "https://synatrahq.com",
-      "applicationCategory": "DeveloperApplication",
-      "operatingSystem": "Linux, macOS, Windows",
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      },
-      "author": {
-        "@type": "Organization",
-        "name": "Synatra",
-        "url": "https://synatrahq.com"
-      },
-      "codeRepository": "https://github.com/synatrahq/synatra"
-    })} />
+    <link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+      a:visited {
+        color: inherit;
+      }
+    </style>
   </head>
-  <body class="min-h-screen bg-surface-bg text-gray-100 antialiased">
-    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[60] focus:rounded-full focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-gray-950">
-      Skip to main content
-    </a>
-    <Header />
-    <main id="main">
-      <Hero />
-      <Problem />
-      <Demo />
-      <ProactiveAI />
-      <HowItWorks />
-      <OnDemandUI />
-      <Platform />
-      <OpenSource />
-      <CTA />
+  <body class="min-h-screen bg-surface-bg antialiased" style="font-family: 'Spectral', Georgia, serif;">
+
+    <main class="mx-auto max-w-2xl px-6">
+
+      <header class="pt-8 pb-12 md:pt-12 md:pb-16">
+        <a href="/" class="inline-block text-text-secondary text-lg font-semibold tracking-tight hover:text-text-primary transition-colors" style="font-family: 'Outfit', sans-serif;">
+          Synatra
+        </a>
+      </header>
+
+      <section class="pb-10 md:pb-12">
+        <h1 class="text-3xl md:text-4xl lg:text-5xl font-medium leading-[1.2] tracking-tight text-text-primary">
+          The best tools<br />disappear entirely.
+        </h1>
+        <p class="text-text-secondary text-lg md:text-xl leading-relaxed mt-6">
+          We stopped building dashboards.<br />
+          We stopped designing forms.<br />
+          We just say what we need.
+        </p>
+      </section>
+
+      <section class="pb-12 md:pb-16 border-t border-surface-border-muted pt-10">
+        <div class="space-y-8">
+          <article>
+            <h2 class="text-text-primary text-xl font-medium mb-2">Software should feel like a colleague.</h2>
+            <p class="text-text-muted text-base leading-relaxed">Not a tool you operate. Not a dashboard you check. A presence that works beside you, thinks with you, and speaks when it matters.</p>
+          </article>
+          <article>
+            <h2 class="text-text-primary text-xl font-medium mb-2">Building is the old way.</h2>
+            <p class="text-text-muted text-base leading-relaxed">Every form you build is debt. Every dashboard is maintenance. The interface should emerge from the conversation, exist for a moment, then dissolve.</p>
+          </article>
+          <article>
+            <h2 class="text-text-primary text-xl font-medium mb-2">Quiet until it counts.</h2>
+            <p class="text-text-muted text-base leading-relaxed">It won't interrupt you with noise. But when something matters, it finds you. That's the difference between assistant and colleague.</p>
+          </article>
+          <article>
+            <h2 class="text-text-primary text-xl font-medium mb-2">Built for developers, by developers.</h2>
+            <p class="text-text-muted text-base leading-relaxed">No unnecessary abstraction. No black boxes. Simple when you use it, transparent when you look inside. Every line of code is open source.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="py-10 md:py-12 border-t border-surface-border-muted">
+        <button id="video-trigger" class="group relative w-full overflow-hidden rounded-lg border border-surface-border-muted cursor-pointer hover:border-surface-border transition-colors bg-transparent p-0 block">
+          <video
+            class="w-full block pointer-events-none"
+            muted
+            playsinline
+            preload="metadata"
+          >
+            <source src="/videos/demo.mp4" type="video/mp4" />
+          </video>
+          <div class="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="w-16 h-16 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+        </button>
+      </section>
+
+    <div id="video-modal" class="fixed inset-0 z-50 hidden items-center justify-center" style="background: rgba(0,0,0,0.95);">
+      <button id="modal-close" class="absolute top-6 right-6 bg-transparent border-none p-2 text-white/60 hover:text-white transition-colors cursor-pointer">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+      <div class="w-full max-w-7xl px-6">
+        <video
+          id="modal-video"
+          class="w-full rounded-lg"
+          controls
+          playsinline
+          preload="metadata"
+        >
+          <source src="/videos/demo.mp4" type="video/mp4" />
+        </video>
+      </div>
+    </div>
+
+      <section class="py-10 md:py-12 border-t border-surface-border-muted">
+        <p class="text-text-secondary text-lg md:text-xl leading-relaxed mb-6">
+          This is not another tool.<br />
+          This is how work becomes.
+        </p>
+        <a
+          href="https://synatrahq.com/login"
+          class="inline-flex items-center gap-2 text-text-primary text-sm hover:text-text-secondary transition-colors group"
+        >
+          <span>Begin</span>
+          <span class="transition-transform group-hover:translate-x-1">&rarr;</span>
+        </a>
+      </section>
+
+      <footer class="py-8 border-t border-surface-border-muted flex items-center justify-between text-xs text-text-muted">
+        <a href="https://github.com/synatrahq/synatra" class="hover:text-text-secondary transition-colors">Open source</a>
+        <div class="flex items-center gap-4">
+          <a href="/docs" class="hover:text-text-secondary transition-colors">Docs</a>
+          <a href="https://twitter.com/synatrahq" class="hover:text-text-secondary transition-colors">X</a>
+        </div>
+      </footer>
+
     </main>
-    <Footer />
+
+    <script>
+      const trigger = document.getElementById("video-trigger")
+      const modal = document.getElementById("video-modal")
+      const modalVideo = document.getElementById("modal-video") as HTMLVideoElement
+      const closeBtn = document.getElementById("modal-close")
+
+      function openModal() {
+        modal?.classList.remove("hidden")
+        modal?.classList.add("flex")
+        modalVideo?.play()
+        document.body.style.overflow = "hidden"
+      }
+
+      function closeModal() {
+        modal?.classList.add("hidden")
+        modal?.classList.remove("flex")
+        modalVideo?.pause()
+        document.body.style.overflow = ""
+      }
+
+      trigger?.addEventListener("click", openModal)
+      closeBtn?.addEventListener("click", closeModal)
+      modal?.addEventListener("click", (e) => {
+        if (e.target === modal) closeModal()
+      })
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeModal()
+      })
+    </script>
   </body>
 </html>
