@@ -66,7 +66,7 @@ export function setupStatic(app: Hono) {
     }),
   )
 
-  const wwwPages = ["/pricing", "/about", "/use-cases"]
+  const wwwPages = ["/pricing", "/terms", "/privacy"]
   for (const page of wwwPages) {
     app.get(page, (c) => {
       const file = path.join(WWW_DIR, page, "index.html")
