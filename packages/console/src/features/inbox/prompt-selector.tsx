@@ -86,6 +86,7 @@ export function PromptSelector(props: PromptSelectorProps) {
           onInput={(e) => props.onQueryChange(e.currentTarget.value)}
           onKeyDown={handleKeyDown}
           placeholder="Search prompts..."
+          autocomplete="off"
           class="flex-1 bg-transparent text-xs text-text placeholder:text-text-muted focus:outline-none"
         />
       </div>

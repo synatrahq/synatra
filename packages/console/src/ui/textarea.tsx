@@ -17,6 +17,7 @@ export function Textarea(props: TextareaProps) {
       : "shadow-[inset_0_0_0_1px_var(--color-border)] focus-visible:shadow-[inset_0_0_0_1px_var(--color-accent),0_0_0_1px_var(--color-accent)]"
   return (
     <textarea
+      autocomplete="off"
       {...rest}
       rows={typeof local.rows === "number" && local.rows > 0 ? local.rows : 6}
       class={`${base()} ${border()}${local.class ? ` ${local.class}` : ""}`}

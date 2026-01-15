@@ -13,5 +13,5 @@ export function Input(props: InputProps) {
     local.hasError
       ? "border border-danger focus-visible:border-danger focus-visible:shadow-[0_0_0_1px_var(--color-danger)]"
       : "border border-border focus-visible:border-accent focus-visible:shadow-[0_0_0_1px_var(--color-accent)]"
-  return <input {...rest} class={`${base} ${border()}${local.class ? ` ${local.class}` : ""}`} />
+  return <input autocomplete="off" {...rest} class={`${base} ${border()}${local.class ? ` ${local.class}` : ""}`} />
 }

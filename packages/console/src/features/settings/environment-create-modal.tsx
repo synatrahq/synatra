@@ -107,6 +107,7 @@ export function EnvironmentCreateModal(props: EnvironmentCreateModalProps) {
                   value={color()}
                   onInput={(e) => setColor(e.currentTarget.value.toLowerCase())}
                   placeholder="#3366FF"
+                  autocomplete="off"
                   class="flex-1 border-none bg-transparent font-code text-xs leading-tight text-text outline-none"
                 />
               </div>

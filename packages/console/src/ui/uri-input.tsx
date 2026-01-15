@@ -27,6 +27,7 @@ export function UriInput(props: UriInputProps) {
       </span>
       <input
         type="url"
+        autocomplete="off"
         value={props.value ?? ""}
         onInput={(e) => props.onChange?.(e.currentTarget.value)}
         onBlur={() => props.onBlur?.()}

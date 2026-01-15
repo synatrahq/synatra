@@ -143,6 +143,7 @@ export function TimePicker(props: TimePickerProps) {
           onClick={() => !props.disabled && setOpen(true)}
           onBlur={handleInputBlur}
           disabled={props.disabled}
+          autocomplete="off"
           data-time-toggle
         />
         <button

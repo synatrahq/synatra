@@ -27,6 +27,7 @@ export function EmailInput(props: EmailInputProps) {
       </span>
       <input
         type="email"
+        autocomplete="off"
         value={props.value ?? ""}
         onInput={(e) => props.onChange?.(e.currentTarget.value)}
         onBlur={() => props.onBlur?.()}

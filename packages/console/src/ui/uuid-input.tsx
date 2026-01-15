@@ -35,6 +35,7 @@ export function UuidInput(props: UuidInputProps) {
     <div class="relative flex w-full">
       <input
         type="text"
+        autocomplete="off"
         value={props.value ?? ""}
         onInput={(e) => handleChange(e.currentTarget.value)}
         onBlur={() => props.onBlur?.()}

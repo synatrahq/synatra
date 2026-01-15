@@ -26,6 +26,7 @@ export function PasswordInput(props: PasswordInputProps) {
     <div class="relative flex w-full">
       <input
         type={visible() ? "text" : "password"}
+        autocomplete="off"
         value={props.value ?? ""}
         onInput={(e) => props.onChange?.(e.currentTarget.value)}
         onBlur={() => props.onBlur?.()}
