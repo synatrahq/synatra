@@ -1,5 +1,10 @@
 import { createSignal, createEffect, Show, For } from "solid-js"
-import type { ResourceType, GitHubMetadata, IntercomMetadata } from "@synatra/core/types"
+import {
+  ComingSoonResourceType,
+  type ResourceType,
+  type GitHubMetadata,
+  type IntercomMetadata,
+} from "@synatra/core/types"
 import { Plus } from "phosphor-solid-js"
 import {
   Modal,
@@ -55,14 +60,11 @@ export function ResourceCreateModal(props: ResourceCreateModalProps) {
   const [error, setError] = createSignal<string | null>(null)
   const [slugManuallyEdited, setSlugManuallyEdited] = createSignal(false)
 
-  const resourceTypes: { type: ResourceType; available: boolean }[] = [
-    { type: "postgres", available: true },
-    { type: "mysql", available: true },
-    { type: "stripe", available: true },
-    { type: "github", available: true },
-    { type: "intercom", available: true },
-    { type: "restapi", available: true },
-  ]
+  function isComingSoon(type: ResourceType): boolean {
+    return ComingSoonResourceType.includes(type as (typeof ComingSoonResourceType)[number])
+  }
+
+  const resourceTypes: ResourceType[] = ["postgres", "mysql", "restapi", "stripe", "github", "intercom"]
 
   const githubAccounts = () => props.appAccounts?.filter((a) => a.appId === "github") ?? []
   const intercomAccounts = () => props.appAccounts?.filter((a) => a.appId === "intercom") ?? []
@@ -173,19 +175,24 @@ export function ResourceCreateModal(props: ResourceCreateModalProps) {
           <ModalBody>
             <div class="grid grid-cols-3 gap-3">
               <For each={resourceTypes}>
-                {(rt) => {
-                  const meta = RESOURCE_TYPE_META[rt.type]
+                {(type) => {
+                  const meta = RESOURCE_TYPE_META[type]
                   return (
                     <button
                       type="button"
-                      class="flex flex-col items-center gap-2 rounded-lg border border-border bg-surface-elevated p-4 text-center transition-colors hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50"
-                      onClick={() => handleTypeSelect(rt.type)}
-                      disabled={!rt.available}
+                      class="relative flex flex-col items-center gap-2 rounded-lg border border-border bg-surface-elevated p-4 text-center transition-colors hover:border-border-strong disabled:cursor-not-allowed disabled:opacity-50"
+                      onClick={() => handleTypeSelect(type)}
+                      disabled={isComingSoon(type)}
                     >
+                      <Show when={isComingSoon(type)}>
+                        <span class="absolute right-1.5 top-1.5 rounded bg-surface-muted px-1 py-0.5 text-[9px] font-medium text-text-muted">
+                          Soon
+                        </span>
+                      </Show>
                       <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-muted">
-                        <ResourceIcon type={rt.type} class="h-6 w-6" />
+                        <ResourceIcon type={type} class="h-6 w-6" />
                       </div>
-                      <span class="text-xs font-medium text-text">{meta?.label ?? rt.type}</span>
+                      <span class="text-xs font-medium text-text">{meta?.label ?? type}</span>
                     </button>
                   )
                 }}

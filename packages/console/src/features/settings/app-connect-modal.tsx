@@ -1,4 +1,5 @@
 import { createSignal, createEffect, Show, For } from "solid-js"
+import { ComingSoonAppId } from "@synatra/core/types"
 import { Modal, ModalContainer, ModalHeader, ModalBody, ModalFooter, Button, Input, FormField, Spinner } from "../../ui"
 import { AppIcon } from "../../components"
 
@@ -14,6 +15,10 @@ const APP_OPTIONS = [
   { id: "intercom", name: "Intercom" },
   { id: "github", name: "GitHub" },
 ]
+
+function isComingSoon(appId: string): boolean {
+  return ComingSoonAppId.includes(appId as (typeof ComingSoonAppId)[number])
+}
 
 export function AppConnectModal(props: AppConnectModalProps) {
   const [selectedAppId, setSelectedAppId] = createSignal<string | null>(null)
@@ -62,11 +67,22 @@ export function AppConnectModal(props: AppConnectModalProps) {
                 {(app) => (
                   <button
                     type="button"
-                    class="flex w-full items-center gap-3 rounded-md border border-border px-3 py-2.5 text-left transition-colors hover:border-border-strong hover:bg-surface-muted"
+                    class="flex w-full items-center gap-3 rounded-md border border-border px-3 py-2.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                    classList={{
+                      "hover:border-border-strong hover:bg-surface-muted": !isComingSoon(app.id),
+                    }}
                     onClick={() => setSelectedAppId(app.id)}
+                    disabled={isComingSoon(app.id)}
                   >
                     <AppIcon appId={app.id} class="h-5 w-5" />
-                    <div class="text-xs font-medium text-text">{app.name}</div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-medium text-text">{app.name}</span>
+                      <Show when={isComingSoon(app.id)}>
+                        <span class="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
+                          Coming soon
+                        </span>
+                      </Show>
+                    </div>
                   </button>
                 )}
               </For>

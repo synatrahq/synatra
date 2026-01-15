@@ -3,6 +3,9 @@ import { z } from "zod"
 export const AppId = ["intercom", "github"] as const
 export type AppId = (typeof AppId)[number]
 
+export const ComingSoonAppId = ["intercom"] as const
+export type ComingSoonAppId = (typeof ComingSoonAppId)[number]
+
 export const IntercomEvent = [
   "conversation.user.created",
   "conversation.user.replied",
