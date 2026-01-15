@@ -27,7 +27,7 @@ compose-clean-images:
 	@docker compose down --rmi all --remove-orphans
 
 compose-clean-data:
-	@docker volume rm -f synatra_db_data
+	@docker volume rm -f synatra_db_data synatra_demo_db_data
 
 docker-prune:
 	@docker system prune -a --volumes
