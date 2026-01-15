@@ -74,17 +74,43 @@ import "../styles/global.css"
       </section>
 
       <section class="py-10 md:py-12 border-t border-surface-border-muted">
-        <div class="overflow-hidden rounded-lg border border-surface-border-muted">
+        <button id="video-trigger" class="group relative w-full overflow-hidden rounded-lg border border-surface-border-muted cursor-pointer hover:border-surface-border transition-colors bg-transparent p-0 block">
           <video
-            class="w-full"
-            controls
+            class="w-full block pointer-events-none"
+            muted
             playsinline
             preload="metadata"
           >
             <source src="/videos/demo.mp4" type="video/mp4" />
           </video>
-        </div>
+          <div class="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div class="w-16 h-16 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-sm">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+        </button>
       </section>
+
+    <div id="video-modal" class="fixed inset-0 z-50 hidden items-center justify-center" style="background: rgba(0,0,0,0.95);">
+      <button id="modal-close" class="absolute top-6 right-6 bg-transparent border-none p-2 text-white/60 hover:text-white transition-colors cursor-pointer">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+      <div class="w-full max-w-7xl px-6">
+        <video
+          id="modal-video"
+          class="w-full rounded-lg"
+          controls
+          playsinline
+          preload="metadata"
+        >
+          <source src="/videos/demo.mp4" type="video/mp4" />
+        </video>
+      </div>
+    </div>
 
       <section class="py-10 md:py-12 border-t border-surface-border-muted">
         <p class="text-text-secondary text-lg md:text-xl leading-relaxed mb-6">
@@ -110,5 +136,34 @@ import "../styles/global.css"
 
     </main>
 
+    <script>
+      const trigger = document.getElementById("video-trigger")
+      const modal = document.getElementById("video-modal")
+      const modalVideo = document.getElementById("modal-video") as HTMLVideoElement
+      const closeBtn = document.getElementById("modal-close")
+
+      function openModal() {
+        modal?.classList.remove("hidden")
+        modal?.classList.add("flex")
+        modalVideo?.play()
+        document.body.style.overflow = "hidden"
+      }
+
+      function closeModal() {
+        modal?.classList.add("hidden")
+        modal?.classList.remove("flex")
+        modalVideo?.pause()
+        document.body.style.overflow = ""
+      }
+
+      trigger?.addEventListener("click", openModal)
+      closeBtn?.addEventListener("click", closeModal)
+      modal?.addEventListener("click", (e) => {
+        if (e.target === modal) closeModal()
+      })
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeModal()
+      })
+    </script>
   </body>
 </html>
