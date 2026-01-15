@@ -1,66 +1,23 @@
 ---
-import postgresIcon from "../../assets/postgres.svg"
-import mysqlIcon from "../../assets/mysql.svg"
-import stripeIcon from "../../assets/stripe.svg"
-
 const steps = [
-  {
-    time: 0,
-    number: 1,
-    title: "Connect",
-    detail: "Add data sources",
-  },
-  {
-    time: 14,
-    number: 2,
-    title: "Build",
-    detail: "Vibe code with AI",
-  },
-  {
-    time: 35,
-    number: 3,
-    title: "Assign",
-    detail: "Add agent to channel",
-  },
-  {
-    time: 43,
-    number: 4,
-    title: "Collaborate",
-    detail: "Work together",
-  },
+  { time: 0, number: 1, title: "Connect", detail: "Add data sources" },
+  { time: 14, number: 2, title: "Build", detail: "Vibe code with AI" },
+  { time: 35, number: 3, title: "Assign", detail: "Add agent to channel" },
+  { time: 43, number: 4, title: "Collaborate", detail: "Work together" },
 ]
 ---
 
 <section id="demo" class="border-t border-surface-border-muted px-6 py-24">
-  <div class="mx-auto max-w-6xl">
-    <div class="text-center">
-      <p class="text-xs font-medium text-gray-500">See it in action</p>
-      <h2 class="mt-4 text-2xl font-semibold tracking-tight text-white md:text-3xl">
-        From data to deployment in minutes
-      </h2>
-      <p class="mt-4 mx-auto max-w-2xl text-sm text-gray-400">
-        Connect your data sources, build agents with natural language, and deploy them where your team works.
-      </p>
-    </div>
+  <div class="mx-auto max-w-5xl">
+    <p class="text-xs font-medium text-gray-500">See it in action</p>
+    <h2 class="mt-4 max-w-2xl text-2xl font-semibold tracking-tight text-white md:text-3xl">
+      From data to deployment in minutes
+    </h2>
+    <p class="mt-4 max-w-2xl text-sm text-gray-400">
+      Connect your data sources, build agents with natural language, and deploy them where your team works.
+    </p>
 
-    <div class="mt-10 flex items-center justify-center gap-1">
-      {steps.map((step, i) => (
-        <button
-          type="button"
-          class="timeline-pill group relative flex items-center gap-2 rounded-full px-4 py-2 text-left transition-all duration-300"
-          data-time={step.time}
-          data-index={i}
-        >
-          <span class="timeline-number flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-border text-[10px] font-bold text-gray-500 transition-all duration-300">
-            {step.number}
-          </span>
-          <span class="timeline-title text-xs font-medium text-gray-500 transition-colors duration-300">{step.title}</span>
-          <span class="timeline-detail hidden text-xs text-gray-600 sm:inline transition-colors duration-300">· {step.detail}</span>
-        </button>
-      ))}
-    </div>
-
-    <div class="mt-6 overflow-hidden rounded-xl border border-surface-border-muted bg-surface-bg-muted">
+    <div class="mt-12 overflow-hidden rounded-xl border border-surface-border-muted bg-surface-bg-muted">
       <video
         id="demo-video"
         class="w-full"
@@ -72,42 +29,71 @@ const steps = [
       </video>
     </div>
 
-    <div class="mt-8 flex items-center justify-center gap-4 text-xs text-gray-500">
-      <span>Supports</span>
-      <div class="flex items-center gap-3">
-        <img src={postgresIcon.src} alt="PostgreSQL" class="h-4 w-4 opacity-60" />
-        <img src={mysqlIcon.src} alt="MySQL" class="h-4 w-4 opacity-60" />
-        <img src={stripeIcon.src} alt="Stripe" class="h-4 w-4 opacity-60" />
-        <span class="text-gray-600">& more</span>
-      </div>
+    <div id="timeline-container" class="relative mt-6 flex items-center gap-1">
+      <div id="timeline-indicator" class="timeline-indicator"></div>
+      {steps.map((step, i) => (
+        <button
+          type="button"
+          class="timeline-pill relative z-10 flex items-center gap-2 rounded-full px-3 py-1.5"
+          data-time={step.time}
+          data-index={i}
+        >
+          <span class="timeline-number flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface-border text-[10px] font-bold text-gray-500">
+            {step.number}
+          </span>
+          <span class="timeline-title text-xs text-gray-500">{step.title}</span>
+        </button>
+      ))}
     </div>
   </div>
 </section>
 
 <style>
+  .timeline-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: rgb(255 255 255 / 0.06);
+    border-radius: 9999px;
+    pointer-events: none;
+    opacity: 0;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), width 0.3s, opacity 0.3s;
+  }
+
+  .timeline-indicator.is-visible {
+    opacity: 1;
+  }
+
   .timeline-pill {
     background: transparent;
+    transition: transform 0.2s;
   }
 
   .timeline-pill:hover {
     background: rgb(255 255 255 / 0.03);
   }
 
-  .timeline-pill.active {
-    background: rgb(255 255 255 / 0.06);
+  .timeline-pill:active {
+    transform: scale(0.96);
+  }
+
+  .timeline-pill .timeline-number {
+    transition: background 0.3s, color 0.3s, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .timeline-pill .timeline-title {
+    transition: color 0.3s;
   }
 
   .timeline-pill.active .timeline-number {
     background: rgb(255 255 255 / 0.15);
     color: white;
+    transform: scale(1.1);
   }
 
   .timeline-pill.active .timeline-title {
     color: white;
-  }
-
-  .timeline-pill.active .timeline-detail {
-    color: rgb(156 163 175);
   }
 
   .timeline-pill.completed .timeline-number {
@@ -116,18 +102,44 @@ const steps = [
   }
 
   .timeline-pill.completed .timeline-title {
-    color: rgb(156 163 175);
+    color: rgb(107 114 128);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .timeline-indicator,
+    .timeline-pill,
+    .timeline-pill .timeline-number {
+      transition: none;
+    }
   }
 </style>
 
 <script>
   const video = document.getElementById("demo-video") as HTMLVideoElement
-  const pills = document.querySelectorAll(".timeline-pill")
+  const container = document.getElementById("timeline-container") as HTMLElement
+  const indicator = document.getElementById("timeline-indicator") as HTMLElement
+  const pills = container.querySelectorAll(".timeline-pill")
   const timestamps = [0, 14, 35, 43]
+
+  function updateIndicator(activePill: Element | null) {
+    if (!activePill) {
+      indicator.classList.remove("is-visible")
+      return
+    }
+
+    const pill = activePill as HTMLElement
+    const containerRect = container.getBoundingClientRect()
+    const pillRect = pill.getBoundingClientRect()
+
+    indicator.style.width = `${pillRect.width}px`
+    indicator.style.transform = `translateX(${pillRect.left - containerRect.left}px)`
+    indicator.classList.add("is-visible")
+  }
 
   function updateTimeline() {
     const currentTime = video.currentTime
     const duration = video.duration || 60
+    let activePill: Element | null = null
 
     pills.forEach((pill) => {
       const i = parseInt(pill.getAttribute("data-index") || "0", 10)
@@ -138,14 +150,18 @@ const steps = [
 
       if (currentTime >= stepTime && currentTime < nextTime) {
         pill.classList.add("active")
+        activePill = pill
       } else if (currentTime >= nextTime) {
         pill.classList.add("completed")
       }
     })
+
+    updateIndicator(activePill)
   }
 
   video.addEventListener("timeupdate", updateTimeline)
   video.addEventListener("loadedmetadata", updateTimeline)
+  window.addEventListener("resize", updateTimeline)
 
   pills.forEach((pill) => {
     pill.addEventListener("click", () => {
