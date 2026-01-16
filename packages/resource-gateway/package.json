@@ -14,17 +14,17 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@synatra/core": "workspace:*",
-    "@synatra/util": "workspace:*",
-    "@synatra/service-call": "workspace:*",
     "@hono/node-server": "1.19.6",
     "@hono/zod-validator": "^0.7.5",
     "@octokit/auth-app": "^7.1.1",
-    "hono": "4.10.4",
+    "@synatra/core": "workspace:*",
+    "@synatra/service-call": "workspace:*",
+    "@synatra/util": "workspace:*",
+    "hono": "4.11.4",
     "mysql2": "^3.14.1",
     "pg": "^8.16.0",
     "redis": "^5.0.0",
-    "stripe": "^20.0.0",
+    "stripe": "^20.1.2",
     "ws": "^8.18.0",
     "zod": "4.1.13"
   },

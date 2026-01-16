@@ -14,12 +14,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@synatra/core": "workspace:*",
-    "@synatra/util": "workspace:*",
-    "@synatra/service-call": "workspace:*",
     "@hono/node-server": "1.19.6",
     "@hono/zod-validator": "^0.7.5",
-    "hono": "4.10.4",
+    "@synatra/core": "workspace:*",
+    "@synatra/service-call": "workspace:*",
+    "@synatra/util": "workspace:*",
+    "hono": "4.11.4",
     "isolated-vm": "^6.0.2",
     "zod": "4.1.13"
   },
