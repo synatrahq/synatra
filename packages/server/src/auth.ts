@@ -90,6 +90,29 @@ async function sendMagicLinkEmail(email: string, url: string) {
   await sendEmail(email, "Sign in to Synatra", html)
 }
 
+async function sendWelcomeEmail(email: string, name: string | null) {
+  if (isDevEmail()) {
+    console.log("\n" + "=".repeat(60))
+    console.log("📧 [DEV] Welcome Email")
+    console.log("=".repeat(60))
+    console.log(`To: ${email}`)
+    console.log("=".repeat(60) + "\n")
+    return
+  }
+  const userName = name ? escapeHtml(name) : "there"
+  const html = `
+    <div style="padding: 48px 24px;">
+      <div style="max-width: 400px; margin: 0 auto;">
+        <p style="font-family: system-ui, -apple-system, sans-serif; font-size: 15px; font-weight: 600; color: #111; margin: 0 0 32px 0; letter-spacing: -0.02em;">Synatra</p>
+        <p style="font-family: Georgia, serif; font-size: 15px; color: #111; margin: 0 0 6px 0; line-height: 1.6;">Hey ${userName}, welcome to Synatra!</p>
+        <p style="font-family: Georgia, serif; font-size: 14px; color: #666; margin: 0 0 20px 0; line-height: 1.6;">We're building something new and your feedback means everything. Got ideas, bugs, or just want to say hi?</p>
+        <a href="https://github.com/synatrahq/synatra/discussions" style="font-family: system-ui, sans-serif; font-size: 13px; color: #111; text-decoration: underline;">Join the discussion &rarr;</a>
+      </div>
+    </div>
+  `
+  await sendEmail(email, "Welcome to Synatra", html)
+}
+
 async function sendInvitationEmail(data: {
   id: string
   email: string
@@ -151,6 +174,15 @@ export const auth = betterAuth({
   trustedOrigins: config().app.origins,
   database: drizzleAdapter(db(), { schema, provider: "pg" }),
   socialProviders: googleConfig(),
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          await sendWelcomeEmail(user.email, user.name)
+        },
+      },
+    },
+  },
   plugins: [
     organization({
       ac,
