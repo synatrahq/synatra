@@ -39,6 +39,13 @@ ifndef CONNECTOR_TOKEN
 endif
 	@GATEWAY_URL=ws://localhost:3003/connector/ws CONNECTOR_TOKEN=$(CONNECTOR_TOKEN) bun run packages/connector/src/index.ts
 
+.PHONY: release
+release:
+ifndef VERSION
+	$(error VERSION is required. Usage: make release VERSION=0.1.0)
+endif
+	@./scripts/release.sh $(VERSION)
+
 .PHONY: typecheck test format build
 typecheck:
 	@pnpm turbo run typecheck
