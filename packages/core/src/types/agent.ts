@@ -77,6 +77,10 @@ export const AgentRuntimeConfigSchema = z
     humanRequestTimeoutMs: z.number().int().min(3600000).max(604800000).optional(),
   })
   .superRefine((config, ctx) => {
+    if (!config.model || !config.tools) {
+      return
+    }
+
     const provider = config.model.provider
 
     if (config.$defs) {
