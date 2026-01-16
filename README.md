@@ -81,6 +81,11 @@ Learn more about building with Synatra:
 - AES-encrypted credentials (decrypted only in resource-gateway)
 - Role-based access control on all endpoints
 
+## Community
+
+- [GitHub Discussions](https://github.com/synatrahq/synatra/discussions) - Questions, ideas, and feedback
+- [Report a bug](https://github.com/synatrahq/synatra/issues)
+
 ## Contributing
 
 1. Follow existing patterns in the codebase

@@ -14,6 +14,7 @@ import {
   Check,
   CaretUpDown,
   Keyboard,
+  ChatCircleDots,
 } from "phosphor-solid-js"
 import {
   user,
@@ -279,6 +280,15 @@ function UserMenu() {
                 Vim mode: {vimMode() ? "On" : "Off"}
               </button>
             </Show>
+            <a
+              href="https://github.com/synatrahq/synatra/discussions"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs text-text-secondary hover:bg-surface-muted hover:text-text"
+            >
+              <ChatCircleDots size={14} />
+              Feedback
+            </a>
             <div class="my-1 border-t border-border" />
             <button
               type="button"
