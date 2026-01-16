@@ -1,4 +1,5 @@
 import { createSignal, createEffect, Show, For } from "solid-js"
+import { generateSlug } from "@synatra/util/identifier"
 import { Modal, ModalContainer, ModalHeader, ModalBody, ModalFooter, Button, Input, Spinner, FormField } from "../../ui"
 import { EntityIcon } from "../../components"
 
@@ -16,13 +17,6 @@ type TriggerCreateModalProps = {
   onClose: () => void
   onSave: (data: { agentId: string; name: string; slug?: string }) => Promise<void>
   saving?: boolean
-}
-
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
 }
 
 export function TriggerCreateModal(props: TriggerCreateModalProps) {

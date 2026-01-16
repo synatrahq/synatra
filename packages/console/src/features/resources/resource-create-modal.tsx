@@ -5,6 +5,7 @@ import {
   type GitHubMetadata,
   type IntercomMetadata,
 } from "@synatra/core/types"
+import { generateSlug } from "@synatra/util/identifier"
 import { Plus } from "phosphor-solid-js"
 import {
   Modal,
@@ -37,15 +38,6 @@ type ResourceCreateModalProps = {
   appAccounts?: AppAccounts
   pendingAppAccountId?: string | null
   onAppConnect?: (appId: string) => void
-}
-
-function generateSlug(name: string): string {
-  return name
-    .replace(/[^a-zA-Z0-9]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .map((word, i) => (i === 0 ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()))
-    .join("")
 }
 
 const MAX_DESCRIPTION_LENGTH = 255

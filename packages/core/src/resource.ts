@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm"
 import { principal } from "./principal"
 import { withDb, first } from "./database"
 import { createError } from "@synatra/util/error"
-import { generateSlug } from "@synatra/util/identifier"
+import { generateSlug, generateRandomId } from "@synatra/util/identifier"
 import { ResourceTable, ResourceConfigTable } from "./schema/resource.sql"
 import { EnvironmentTable } from "./schema/environment.sql"
 import { ConnectorTable } from "./schema/connector.sql"
@@ -507,7 +507,7 @@ export async function createResource(input: z.input<typeof CreateResourceSchema>
   const data = CreateResourceSchema.parse(input)
   const organizationId = principal.orgId()
   const userId = principal.userId()
-  const slug = data.slug?.trim() || generateSlug(data.name)
+  const slug = data.slug?.trim() || generateSlug(data.name) || generateRandomId()
 
   const [resource] = await withDb((db) =>
     db

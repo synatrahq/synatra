@@ -3,7 +3,7 @@ import { eq, and, sql, desc, getTableColumns } from "drizzle-orm"
 import { randomBytes, createHash } from "crypto"
 import { principal } from "./principal"
 import { withDb, withTx, first } from "./database"
-import { generateSlug } from "@synatra/util/identifier"
+import { generateSlug, generateRandomId } from "@synatra/util/identifier"
 import {
   TriggerTable,
   TriggerReleaseTable,
@@ -316,7 +316,7 @@ export async function createTrigger(input: z.input<typeof CreateTriggerSchema>) 
   }
 
   const userId = principal.userId()
-  const slug = data.slug || generateSlug(data.name)
+  const slug = data.slug || generateSlug(data.name) || generateRandomId()
   const versionParsed = parseVersion(data.initialVersion ?? "0.0.1")
   const versionText = stringifyVersion(versionParsed)
 

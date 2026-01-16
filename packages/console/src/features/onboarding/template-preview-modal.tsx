@@ -1,6 +1,7 @@
 import { Show, createSignal, For } from "solid-js"
 import { useNavigate } from "@solidjs/router"
 import type { AgentTemplate } from "@synatra/core/types"
+import { generateSlug } from "@synatra/util/identifier"
 import { api } from "../../app"
 import { Modal, ModalContainer, ModalHeader, ModalBody, ModalFooter, Button, Spinner } from "../../ui"
 import { getIconComponent, ResourceIcon, ICON_COLORS } from "../../components"
@@ -17,13 +18,6 @@ const RESOURCE_LABELS: Record<string, string> = {
   stripe: "Stripe",
   github: "GitHub",
   intercom: "Intercom",
-}
-
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
 }
 
 type TemplatePreviewModalProps = {

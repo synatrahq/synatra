@@ -1,5 +1,6 @@
 import { createSignal, createEffect, createResource, Show, For } from "solid-js"
 import { UserConfigurableResourceType, isManagedResourceType } from "@synatra/core/types"
+import { generateSlug } from "@synatra/util/identifier"
 import { Button, Input, Textarea, Spinner, Label, FormField } from "../../../ui"
 import { ResourceIcon } from "../../../components"
 import { CheckCircle } from "phosphor-solid-js"
@@ -24,15 +25,6 @@ type ResourceConnectionWizardProps = {
   onConfirmationComplete?: (requestId: string, resourceId: string) => Promise<void>
   onCancel: () => void
   saving?: boolean
-}
-
-function generateSlug(name: string): string {
-  return name
-    .replace(/[^a-zA-Z0-9]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .map((word, i) => (i === 0 ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()))
-    .join("")
 }
 
 const MAX_DESCRIPTION_LENGTH = 255
