@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest"
-import { validatePayload } from "../validate"
+import { validatePayload, validateJsonSchema, validateJsonSchemaForProvider } from "../validate"
 
 describe("Validate", () => {
   describe("payload", () => {
@@ -439,6 +439,99 @@ describe("Validate", () => {
 
         expect(validatePayload({}, schema).valid).toBe(true)
       })
+    })
+  })
+
+  describe("jsonSchema", () => {
+    test("accepts valid schema", () => {
+      expect(validateJsonSchema({ type: "string" }).valid).toBe(true)
+    })
+
+    test("rejects invalid type", () => {
+      const result = validateJsonSchema({ type: "any" })
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.errors[0]).toContain("type")
+      }
+    })
+
+    test("rejects tuple-style items in 2020-12", () => {
+      const result = validateJsonSchema({ type: "array", items: [{ type: "string" }] })
+      expect(result.valid).toBe(false)
+    })
+
+    test("accepts prefixItems with items schema", () => {
+      const schema = { type: "array", prefixItems: [{ type: "string" }], items: { type: "string" } }
+      expect(validateJsonSchema(schema).valid).toBe(true)
+    })
+  })
+
+  describe("jsonSchemaProvider", () => {
+    test("rejects openai unsupported keyword", () => {
+      const result = validateJsonSchemaForProvider({ type: "array", prefixItems: [{ type: "string" }] }, "openai")
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.errors[0]).toContain("prefixItems")
+      }
+    })
+
+    test("rejects google unsupported keyword", () => {
+      const result = validateJsonSchemaForProvider({ type: "array", contains: { type: "string" } }, "google")
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.errors[0]).toContain("contains")
+      }
+    })
+
+    test("accepts google prefixItems", () => {
+      const result = validateJsonSchemaForProvider({ type: "array", prefixItems: [{ type: "string" }] }, "google")
+      expect(result.valid).toBe(true)
+    })
+
+    test("validates nested schemas in $defs", () => {
+      const schema = {
+        type: "object",
+        $defs: {
+          MyType: {
+            type: "object",
+            unevaluatedProperties: false,
+          },
+        },
+      }
+      const result = validateJsonSchemaForProvider(schema, "openai")
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.errors.some((e) => e.includes("$defs.MyType"))).toBe(true)
+        expect(result.errors.some((e) => e.includes("unevaluatedProperties"))).toBe(true)
+      }
+    })
+
+    test("validates nested schemas in properties", () => {
+      const schema = {
+        type: "object",
+        properties: {
+          nested: {
+            type: "object",
+            unevaluatedProperties: false,
+          },
+        },
+      }
+      const result = validateJsonSchemaForProvider(schema, "google")
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.errors.some((e) => e.includes("properties.nested"))).toBe(true)
+        expect(result.errors.some((e) => e.includes("unevaluatedProperties"))).toBe(true)
+      }
+    })
+
+    test("accepts anthropic with all keywords", () => {
+      const schema = {
+        type: "object",
+        unevaluatedProperties: false,
+        dependentSchemas: { foo: { type: "object" } },
+      }
+      const result = validateJsonSchemaForProvider(schema, "anthropic")
+      expect(result.valid).toBe(true)
     })
   })
 })

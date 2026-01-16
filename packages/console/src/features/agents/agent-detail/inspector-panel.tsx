@@ -35,6 +35,7 @@ import type {
   SubagentDefinition,
 } from "@synatra/core/types"
 import { getSystemTools, type SystemToolDefinition } from "@synatra/core/system-tools"
+import { ValidJsonSchemaTypes } from "@synatra/util/validate"
 import {
   Input,
   Select,
@@ -863,13 +864,22 @@ function TypeInspector(props: {
     ...(props.typeDef.type === "array" ? { items: props.typeDef.items } : {}),
   })
 
-  const typeDefFromSchema = (schema: Record<string, unknown>): TypeDef => ({
-    type: (schema.type as string) ?? "object",
-    properties:
-      schema.type === "object" ? (schema.properties as Record<string, Record<string, unknown>> | undefined) : undefined,
-    items: schema.type === "array" ? (schema.items as Record<string, unknown> | undefined) : undefined,
-    required: schema.type === "object" ? (schema.required as string[] | undefined) : undefined,
-  })
+  const typeDefFromSchema = (schema: Record<string, unknown>): TypeDef => {
+    const resolvedType =
+      typeof schema.type === "string" && ValidJsonSchemaTypes.includes(schema.type as TypeDef["type"])
+        ? (schema.type as TypeDef["type"])
+        : "object"
+
+    return {
+      type: resolvedType,
+      properties:
+        resolvedType === "object"
+          ? (schema.properties as Record<string, Record<string, unknown>> | undefined)
+          : undefined,
+      items: resolvedType === "array" ? (schema.items as Record<string, unknown> | undefined) : undefined,
+      required: resolvedType === "object" ? (schema.required as string[] | undefined) : undefined,
+    }
+  }
 
   return (
     <div class="space-y-0">
