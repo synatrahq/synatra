@@ -1,5 +1,6 @@
 import { createSignal, createEffect, createResource, createMemo, Show, For, onCleanup } from "solid-js"
 import type { AgentRuntimeConfig, AgentTemplate, TemplateCategory } from "@synatra/core/types"
+import { generateSlug } from "@synatra/util/identifier"
 import type { SubscriptionPlan } from "@synatra/core/types"
 import { api } from "../../app"
 import { Modal, ModalContainer, ModalHeader, ModalBody, ModalFooter, Button, Input, Textarea, Spinner } from "../../ui"
@@ -60,15 +61,6 @@ const CATEGORY_CONFIG: Record<CategoryOption, { label: string; icon: typeof Head
 }
 
 const CATEGORY_ORDER: CategoryOption[] = ["all", "support", "analytics", "devops", "finance", "compliance", "workflow"]
-
-function generateSlug(name: string): string {
-  return name
-    .replace(/[^a-zA-Z0-9]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .map((word, i) => (i === 0 ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()))
-    .join("")
-}
 
 const MAX_DESCRIPTION_LENGTH = 255
 

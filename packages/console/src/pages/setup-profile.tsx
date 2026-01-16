@@ -1,6 +1,7 @@
 import { createSignal, Show, createEffect } from "solid-js"
 import { useNavigate, useSearchParams } from "@solidjs/router"
 import { Sparkle, WarningCircle } from "phosphor-solid-js"
+import { generateSlug } from "@synatra/util/identifier"
 import { api, auth, AuthGuard, setUser, setNeedsProfile, user, orgStatus, needsProfile, activateOrg } from "../app"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
@@ -15,13 +16,6 @@ function decode(value: string | undefined): string | undefined {
   } catch {
     return value
   }
-}
-
-function generateSlug(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
 }
 
 export default function SetupProfile() {

@@ -1,4 +1,5 @@
 import { createSignal, createEffect } from "solid-js"
+import { generateSlug } from "@synatra/util/identifier"
 import { Modal, ModalContainer, ModalHeader, ModalBody, ModalFooter, Button, Input, Spinner, FormField } from "../../ui"
 
 type ChannelCreateModalProps = {
@@ -6,13 +7,6 @@ type ChannelCreateModalProps = {
   onClose: () => void
   onSave: (data: { name: string; slug?: string }) => Promise<void>
   saving?: boolean
-}
-
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
 }
 
 export function ChannelCreateModal(props: ChannelCreateModalProps) {

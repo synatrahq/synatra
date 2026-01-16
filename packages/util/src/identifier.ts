@@ -1,18 +1,18 @@
 export function generateSlug(name: string): string {
-  const slug = name
+  return name
     .replace(/[^a-zA-Z0-9]+/g, " ")
     .trim()
     .split(/\s+/)
     .map((word, i) => (i === 0 ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()))
     .join("")
+}
 
-  if (slug) return slug
-
+export function generateRandomId(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz"
   const alphanumeric = chars + "0123456789"
-  let fallback = chars[Math.floor(Math.random() * chars.length)]
+  let id = chars[Math.floor(Math.random() * chars.length)]
   for (let i = 0; i < 11; i++) {
-    fallback += alphanumeric[Math.floor(Math.random() * alphanumeric.length)]
+    id += alphanumeric[Math.floor(Math.random() * alphanumeric.length)]
   }
-  return fallback
+  return id
 }

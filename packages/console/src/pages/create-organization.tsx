@@ -1,6 +1,7 @@
 import { createSignal, Show } from "solid-js"
 import { useNavigate } from "@solidjs/router"
 import { Buildings, WarningCircle } from "phosphor-solid-js"
+import { generateSlug } from "@synatra/util/identifier"
 import { auth, AuthGuard, activateOrg } from "../app"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
@@ -14,13 +15,6 @@ export default function CreateOrganization() {
   const [slug, setSlug] = createSignal("")
   const [status, setStatus] = createSignal<Status>("idle")
   const [error, setError] = createSignal("")
-
-  const generateSlug = (value: string) => {
-    return value
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-  }
 
   const handleNameChange = (value: string) => {
     const prevSlug = generateSlug(name())

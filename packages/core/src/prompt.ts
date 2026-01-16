@@ -9,7 +9,7 @@ import { UserTable } from "./schema/user.sql"
 import { normalizeInputSchema, serializeConfig } from "@synatra/util/normalize"
 import type { PromptMode } from "./types"
 import { createError } from "@synatra/util/error"
-import { generateSlug } from "@synatra/util/identifier"
+import { generateSlug, generateRandomId } from "@synatra/util/identifier"
 import { parseVersion, stringifyVersion, bumpVersion } from "@synatra/util/version"
 
 function hashContent(mode: PromptMode, content: string, script: string | null, inputSchema: unknown): string {
@@ -210,7 +210,7 @@ export async function createPrompt(input: z.input<typeof CreatePromptSchema>) {
 
   const organizationId = principal.orgId()
   const userId = principal.userId()
-  const slug = data.slug?.trim() || generateSlug(data.name)
+  const slug = data.slug?.trim() || generateSlug(data.name) || generateRandomId()
   const versionParsed = parseVersion(data.initialVersion ?? "0.0.1")
   const versionText = stringifyVersion(versionParsed)
   const contentHashValue = hashContent(mode, content, script, data.inputSchema)

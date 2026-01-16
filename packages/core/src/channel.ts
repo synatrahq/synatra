@@ -3,7 +3,7 @@ import { eq, and, count, getTableColumns } from "drizzle-orm"
 import { principal } from "./principal"
 import { withDb, withTx, first } from "./database"
 import { createError } from "@synatra/util/error"
-import { generateSlug } from "@synatra/util/identifier"
+import { generateSlug, generateRandomId } from "@synatra/util/identifier"
 import { getCurrentChannelMember, isOrgAdminOrOwnerChannelMember } from "./channel-member"
 import { ChannelTable } from "./schema/channel.sql"
 import { ChannelMemberTable } from "./schema/channel-member.sql"
@@ -136,7 +136,7 @@ export async function createChannel(input: z.input<typeof CreateChannelSchema>) 
   const data = CreateChannelSchema.parse(input)
   const organizationId = principal.orgId()
   const userId = principal.userId()
-  const slug = data.slug?.trim() || generateSlug(data.name)
+  const slug = data.slug?.trim() || generateSlug(data.name) || generateRandomId()
 
   return withTx(async (tx) => {
     const [channel] = await tx
@@ -181,7 +181,7 @@ export async function createManyChannels(input: z.input<typeof CreateManyChannel
     const values = data.map((input) => ({
       organizationId: input.organizationId,
       name: input.name,
-      slug: input.slug?.trim() || generateSlug(input.name),
+      slug: input.slug?.trim() || generateSlug(input.name) || generateRandomId(),
       description: input.description ?? null,
       icon: input.icon ?? "Hash",
       iconColor: input.iconColor ?? "gray",

@@ -2,6 +2,7 @@ import { For, Show, createResource, createSignal, createMemo, createEffect, onMo
 import { useNavigate } from "@solidjs/router"
 import { Sparkle, ArrowRight } from "phosphor-solid-js"
 import type { AgentTemplate, TemplateCategory, LlmProvider } from "@synatra/core/types"
+import { generateSlug } from "@synatra/util/identifier"
 import { api, user, OrgGuard } from "../../app"
 import { Spinner, Button } from "../../ui"
 import { ResourceIcon, EntityIcon } from "../../components"
@@ -40,13 +41,6 @@ const ICON_COLOR_VALUES: Record<string, string> = {
   green: "#22C55E",
   plum: "#A855F7",
   indigo: "#6366F1",
-}
-
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
 }
 
 const GREETING_MESSAGES = ["Hey, I'm here to work for you.", "What's eating your time?"]

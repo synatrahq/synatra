@@ -1,4 +1,5 @@
 import { createSignal, createEffect, Show, For } from "solid-js"
+import { generateSlug } from "@synatra/util/identifier"
 import {
   Modal,
   ModalContainer,
@@ -26,13 +27,6 @@ type PromptCreateModalProps = {
     content: string
   }) => Promise<void>
   saving?: boolean
-}
-
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
 }
 
 const MAX_DESCRIPTION_LENGTH = 255

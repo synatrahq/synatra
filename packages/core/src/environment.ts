@@ -3,7 +3,7 @@ import { eq, and, notInArray } from "drizzle-orm"
 import { principal } from "./principal"
 import { withDb, first } from "./database"
 import { createError } from "@synatra/util/error"
-import { generateSlug } from "@synatra/util/identifier"
+import { generateSlug, generateRandomId } from "@synatra/util/identifier"
 import { EnvironmentTable } from "./schema/environment.sql"
 import { EnvironmentColorRegex, STAGING_ENV } from "./types"
 
@@ -53,7 +53,7 @@ function normalizeColor(color: string): string {
 }
 
 function prepareValues(input: { name: string; slug?: string; color?: string; protected?: boolean }) {
-  const slug = input.slug?.trim() || generateSlug(input.name)
+  const slug = input.slug?.trim() || generateSlug(input.name) || generateRandomId()
   return {
     name: input.name,
     slug,
