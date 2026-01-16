@@ -43,7 +43,7 @@ export const AgentToolSchema = z.object({
       /^[a-zA-Z_][a-zA-Z0-9_]*$/,
       "Tool name must start with a letter or underscore and contain only letters, numbers, and underscores",
     ),
-  description: z.string().min(1),
+  description: z.string(),
   params: JsonSchemaSchema,
   returns: JsonSchemaSchema,
   code: z.string(),
