@@ -1,4 +1,15 @@
 import { z } from "zod"
+import { validateJsonSchemaTypes, ValidJsonSchemaTypes } from "@synatra/util/validate"
+
+const JsonSchemaSchema = z.record(z.string(), z.unknown()).superRefine((schema, ctx) => {
+  const result = validateJsonSchemaTypes(schema)
+  if (!result.valid) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Invalid JSON Schema type "${result.invalidType}" at ${result.path}. Valid types are: ${ValidJsonSchemaTypes.join(", ")}`,
+    })
+  }
+})
 
 export const ModelProvider = ["openai", "anthropic", "google"] as const
 export type ModelProvider = (typeof ModelProvider)[number]
@@ -21,9 +32,9 @@ export const AgentModelConfigSchema = z.object({
 export type AgentModelConfig = z.infer<typeof AgentModelConfigSchema>
 
 export const TypeDefSchema = z.object({
-  type: z.string().min(1),
-  properties: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
-  items: z.record(z.string(), z.unknown()).optional(),
+  type: z.enum(ValidJsonSchemaTypes),
+  properties: z.record(z.string(), JsonSchemaSchema).optional(),
+  items: JsonSchemaSchema.optional(),
   required: z.array(z.string()).optional(),
 })
 export type TypeDef = z.infer<typeof TypeDefSchema>
@@ -41,8 +52,8 @@ export const AgentToolSchema = z.object({
       "Tool name must start with a letter or underscore and contain only letters, numbers, and underscores",
     ),
   description: z.string().min(1),
-  params: z.record(z.string(), z.unknown()),
-  returns: z.record(z.string(), z.unknown()),
+  params: JsonSchemaSchema,
+  returns: JsonSchemaSchema,
   code: z.string(),
   timeoutMs: z.number().int().min(100).max(60000).optional(),
   requiresReview: z.boolean().optional(),
