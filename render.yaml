@@ -116,6 +116,8 @@ projects:
               - fromGroup: synatra-staging-auth
               - key: VITE_GATEWAY_URL
                 value: wss://synatra-staging-resource-gateway.onrender.com
+              - key: VITE_API_URL
+                value: https://synatra-staging-server.onrender.com
               - key: NODE_ENV
                 value: production
               - key: PORT
@@ -349,6 +351,8 @@ projects:
               - fromGroup: synatra-production-stripe
               - key: VITE_GATEWAY_URL
                 value: wss://gateway.synatrahq.com
+              - key: VITE_API_URL
+                value: https://synatrahq.com
               - key: NODE_ENV
                 value: production
               - key: PORT

@@ -7,7 +7,9 @@ WORKDIR /app
 
 FROM base AS builder
 ARG VITE_GATEWAY_URL
+ARG VITE_API_URL
 ENV VITE_GATEWAY_URL=$VITE_GATEWAY_URL
+ENV VITE_API_URL=$VITE_API_URL
 COPY . .
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile
