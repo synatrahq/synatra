@@ -17,7 +17,7 @@
     "@phosphor-icons/core": "^2.1.1",
     "@synatra/core": "workspace:*",
     "@tailwindcss/vite": "^4.1.18",
-    "astro": "^5.16.6",
+    "astro": "^5.16.9",
     "phosphor-icons-astro": "2.1.1-17042025",
     "phosphor-solid-js": "^2.0.0",
     "sharp": "^0.34.2",
