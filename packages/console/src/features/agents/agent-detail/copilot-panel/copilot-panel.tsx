@@ -48,7 +48,7 @@ export function CopilotPanel(props: CopilotPanelProps) {
   const [triggerRequests, setTriggerRequests] = createSignal<CopilotTriggerRequest[]>([])
   const [questionRequest, setQuestionRequest] = createSignal<CopilotQuestionRequest | null>(null)
   const [questionSubmitting, setQuestionSubmitting] = createSignal(false)
-  let messagesEndRef: HTMLDivElement | undefined
+  let scrollRef: HTMLDivElement | undefined
   let eventSource: EventSource | null = null
   let connectedThreadId: string | null = null
   let retryTimer: number | null = null
@@ -93,13 +93,17 @@ export function CopilotPanel(props: CopilotPanelProps) {
   })
 
   const scrollToBottom = () => {
-    requestAnimationFrame(() => {
-      const container = messagesEndRef?.parentElement?.parentElement
-      if (container && container.classList.contains("overflow-y-auto")) {
-        container.scrollTop = container.scrollHeight
-      }
-    })
+    if (scrollRef) scrollRef.scrollTop = scrollRef.scrollHeight
   }
+
+  createEffect(
+    on(
+      () => [selectedThreadId(), messages().length, streamingText(), historyLoading()],
+      () => {
+        requestAnimationFrame(scrollToBottom)
+      },
+    ),
+  )
 
   const closeStream = () => {
     if (eventSource) {
@@ -1000,7 +1004,7 @@ export function CopilotPanel(props: CopilotPanelProps) {
         onDeleteThread={handleDeleteThread}
       />
 
-      <div class="flex-1 overflow-y-auto scrollbar-thin">
+      <div ref={scrollRef} class="flex-1 overflow-y-auto scrollbar-thin">
         <Show when={historyLoading()}>
           <div class="flex h-full items-center justify-center">
             <Spinner size="sm" />
@@ -1047,8 +1051,6 @@ export function CopilotPanel(props: CopilotPanelProps) {
                   />
                 )}
               </Show>
-
-              <div ref={messagesEndRef} />
             </div>
           </Show>
         </Show>
