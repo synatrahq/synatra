@@ -108,7 +108,7 @@ function createDefaultAPIConfig(type: string): APIResourceConfig {
   }
   return {
     hasApiKey: false,
-    apiVersion: "2025-03-31.basil",
+    apiVersion: "2025-12-15.clover",
   } as APIStripeConfig
 }
 
@@ -156,7 +156,7 @@ function createDefaultInputConfig(type: string): InputResourceConfig {
   }
   return {
     apiKey: "",
-    apiVersion: "2025-03-31.basil",
+    apiVersion: "2025-12-15.clover",
   } as InputStripeConfig
 }
 
