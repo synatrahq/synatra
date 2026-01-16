@@ -67,11 +67,20 @@ fi
 
 echo ""
 green "[1/5] Updating version..."
-cd packages/connector && npm version "$VERSION" --no-git-tag-version && cd "$REPO_ROOT"
+CURRENT_VERSION=$(node -p "require('./packages/connector/package.json').version")
+if [ "$CURRENT_VERSION" = "$VERSION" ]; then
+  yellow "Version already set to $VERSION, skipping update"
+else
+  (cd packages/connector && npm version "$VERSION" --no-git-tag-version)
+fi
 
 green "[2/5] Creating commit and tag..."
 git add packages/connector/package.json
-git commit -m "release: v$VERSION"
+if git diff --cached --quiet; then
+  yellow "No changes to commit, creating tag only"
+else
+  git commit -m "release: v$VERSION"
+fi
 git tag "v$VERSION"
 
 green "[3/5] Pushing dev and tag..."
