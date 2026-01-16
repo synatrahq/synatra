@@ -39,6 +39,18 @@ ifndef CONNECTOR_TOKEN
 endif
 	@GATEWAY_URL=ws://localhost:3003/connector/ws CONNECTOR_TOKEN=$(CONNECTOR_TOKEN) bun run packages/connector/src/index.ts
 
+.PHONY: connector-release
+connector-release:
+ifndef VERSION
+	$(error VERSION is required. Usage: make connector-release VERSION=0.1.0)
+endif
+	@cd packages/connector && npm version $(VERSION) --no-git-tag-version
+	@git add packages/connector/package.json
+	@git commit -m "release: v$(VERSION)"
+	@git tag v$(VERSION)
+	@echo "Created tag v$(VERSION)"
+	@echo "Run 'git push origin dev && git push origin v$(VERSION)' to trigger release"
+
 .PHONY: typecheck test format build
 typecheck:
 	@pnpm turbo run typecheck
