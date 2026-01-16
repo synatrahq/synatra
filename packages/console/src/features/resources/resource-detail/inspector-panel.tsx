@@ -719,10 +719,7 @@ function SynatraAiConfigEditorContent(props: {
                     </Show>
                   </div>
                 </div>
-                <span
-                  class="h-4 w-4 text-text-muted transition-transform"
-                  classList={{ "rotate-90": isExpanded(), "rotate-180": !isExpanded() }}
-                >
+                <span class="h-4 w-4 text-text-muted transition-transform" classList={{ "rotate-90": isExpanded() }}>
                   <CaretRight class="h-4 w-4" />
                 </span>
               </button>
