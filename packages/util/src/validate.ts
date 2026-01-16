@@ -119,7 +119,8 @@ function collectProviderSchemaErrors(
         keyword === "properties" ||
         keyword === "$defs" ||
         keyword === "definitions" ||
-        keyword === "patternProperties"
+        keyword === "patternProperties" ||
+        keyword === "dependentSchemas"
       ) {
         for (const [key, nested] of Object.entries(value as Record<string, unknown>)) {
           collectProviderSchemaErrors(
