@@ -1,15 +1,7 @@
 import { z } from "zod"
-import { validateJsonSchemaTypes, ValidJsonSchemaTypes } from "@synatra/util/validate"
+import { validateJsonSchema, validateJsonSchemaForProvider, ValidJsonSchemaTypes } from "@synatra/util/validate"
 
-const JsonSchemaSchema = z.record(z.string(), z.unknown()).superRefine((schema, ctx) => {
-  const result = validateJsonSchemaTypes(schema)
-  if (!result.valid) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: `Invalid JSON Schema type "${result.invalidType}" at ${result.path}. Valid types are: ${ValidJsonSchemaTypes.join(", ")}`,
-    })
-  }
-})
+const JsonSchemaSchema = z.record(z.string(), z.unknown())
 
 export const ModelProvider = ["openai", "anthropic", "google"] as const
 export type ModelProvider = (typeof ModelProvider)[number]
@@ -72,17 +64,94 @@ export const SubagentDefinitionSchema = z.object({
 })
 export type SubagentDefinition = z.infer<typeof SubagentDefinitionSchema>
 
-export const AgentRuntimeConfigSchema = z.object({
-  model: AgentModelConfigSchema,
-  systemPrompt: z.string(),
-  $defs: z.record(z.string(), TypeDefSchema).optional(),
-  tools: z.array(AgentToolSchema),
-  subagents: z.array(SubagentDefinitionSchema).optional(),
-  maxIterations: z.number().int().positive().optional(),
-  maxToolCallsPerIteration: z.number().int().positive().optional(),
-  maxActiveTimeMs: z.number().int().min(30000).max(3600000).optional(),
-  humanRequestTimeoutMs: z.number().int().min(3600000).max(604800000).optional(),
-})
+export const AgentRuntimeConfigSchema = z
+  .object({
+    model: AgentModelConfigSchema,
+    systemPrompt: z.string(),
+    $defs: z.record(z.string(), TypeDefSchema).optional(),
+    tools: z.array(AgentToolSchema),
+    subagents: z.array(SubagentDefinitionSchema).optional(),
+    maxIterations: z.number().int().positive().optional(),
+    maxToolCallsPerIteration: z.number().int().positive().optional(),
+    maxActiveTimeMs: z.number().int().min(30000).max(3600000).optional(),
+    humanRequestTimeoutMs: z.number().int().min(3600000).max(604800000).optional(),
+  })
+  .superRefine((config, ctx) => {
+    const provider = config.model.provider
+
+    if (config.$defs) {
+      for (const [key, schema] of Object.entries(config.$defs)) {
+        const result = validateJsonSchema(schema)
+        if (!result.valid) {
+          for (const error of result.errors) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["$defs", key],
+              message: `Invalid JSON Schema at $defs.${key}: ${error}`,
+            })
+          }
+        }
+
+        const providerResult = validateJsonSchemaForProvider(schema, provider)
+        if (!providerResult.valid) {
+          for (const error of providerResult.errors) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ["$defs", key],
+              message: `Unsupported JSON Schema for ${provider} at $defs.${key}: ${error}`,
+            })
+          }
+        }
+      }
+    }
+
+    for (let i = 0; i < config.tools.length; i++) {
+      const tool = config.tools[i]
+      const paramsResult = validateJsonSchema(tool.params)
+      if (!paramsResult.valid) {
+        for (const error of paramsResult.errors) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["tools", i, "params"],
+            message: `Invalid JSON Schema for tool "${tool.name}" params: ${error}`,
+          })
+        }
+      }
+
+      const returnsResult = validateJsonSchema(tool.returns)
+      if (!returnsResult.valid) {
+        for (const error of returnsResult.errors) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["tools", i, "returns"],
+            message: `Invalid JSON Schema for tool "${tool.name}" returns: ${error}`,
+          })
+        }
+      }
+
+      const paramsProviderResult = validateJsonSchemaForProvider(tool.params, provider)
+      if (!paramsProviderResult.valid) {
+        for (const error of paramsProviderResult.errors) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["tools", i, "params"],
+            message: `Unsupported JSON Schema for ${provider} tool "${tool.name}" params: ${error}`,
+          })
+        }
+      }
+
+      const returnsProviderResult = validateJsonSchemaForProvider(tool.returns, provider)
+      if (!returnsProviderResult.valid) {
+        for (const error of returnsProviderResult.errors) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["tools", i, "returns"],
+            message: `Unsupported JSON Schema for ${provider} tool "${tool.name}" returns: ${error}`,
+          })
+        }
+      }
+    }
+  })
 export type AgentRuntimeConfig = z.infer<typeof AgentRuntimeConfigSchema>
 
 export type ToolCallRecord = {

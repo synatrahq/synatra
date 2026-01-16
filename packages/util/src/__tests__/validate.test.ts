@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest"
-import { validatePayload, validateJsonSchemaTypes } from "../validate"
+import { validatePayload, validateJsonSchema, validateJsonSchemaForProvider } from "../validate"
 
 describe("Validate", () => {
   describe("payload", () => {
@@ -442,280 +442,50 @@ describe("Validate", () => {
     })
   })
 
-  describe("jsonSchemaTypes", () => {
-    describe("valid types", () => {
-      test("accepts valid primitive types", () => {
-        expect(validateJsonSchemaTypes({ type: "string" }).valid).toBe(true)
-        expect(validateJsonSchemaTypes({ type: "number" }).valid).toBe(true)
-        expect(validateJsonSchemaTypes({ type: "integer" }).valid).toBe(true)
-        expect(validateJsonSchemaTypes({ type: "boolean" }).valid).toBe(true)
-        expect(validateJsonSchemaTypes({ type: "null" }).valid).toBe(true)
-        expect(validateJsonSchemaTypes({ type: "object" }).valid).toBe(true)
-        expect(validateJsonSchemaTypes({ type: "array" }).valid).toBe(true)
-      })
-
-      test("accepts schema without type", () => {
-        expect(validateJsonSchemaTypes({}).valid).toBe(true)
-        expect(validateJsonSchemaTypes({ description: "any value" }).valid).toBe(true)
-      })
-
-      test("accepts empty items (any type in array)", () => {
-        expect(validateJsonSchemaTypes({ type: "array", items: {} }).valid).toBe(true)
-      })
+  describe("jsonSchema", () => {
+    test("accepts valid schema", () => {
+      expect(validateJsonSchema({ type: "string" }).valid).toBe(true)
     })
 
-    describe("invalid types", () => {
-      test("rejects type: any", () => {
-        const result = validateJsonSchemaTypes({ type: "any" })
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.invalidType).toBe("any")
-          expect(result.path).toBe("root")
-        }
-      })
-
-      test("rejects other invalid types", () => {
-        expect(validateJsonSchemaTypes({ type: "unknown" }).valid).toBe(false)
-        expect(validateJsonSchemaTypes({ type: "mixed" }).valid).toBe(false)
-        expect(validateJsonSchemaTypes({ type: "void" }).valid).toBe(false)
-      })
+    test("rejects invalid type", () => {
+      const result = validateJsonSchema({ type: "any" })
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.errors[0]).toContain("type")
+      }
     })
 
-    describe("nested validation", () => {
-      test("validates properties recursively", () => {
-        const schema = {
-          type: "object",
-          properties: {
-            name: { type: "string" },
-            data: { type: "any" },
-          },
-        }
-        const result = validateJsonSchemaTypes(schema)
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("properties.data")
-          expect(result.invalidType).toBe("any")
-        }
-      })
-
-      test("validates items recursively", () => {
-        const schema = {
-          type: "array",
-          items: { type: "any" },
-        }
-        const result = validateJsonSchemaTypes(schema)
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("items")
-          expect(result.invalidType).toBe("any")
-        }
-      })
-
-      test("validates deeply nested schemas", () => {
-        const schema = {
-          type: "object",
-          properties: {
-            users: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  tags: {
-                    type: "array",
-                    items: { type: "any" },
-                  },
-                },
-              },
-            },
-          },
-        }
-        const result = validateJsonSchemaTypes(schema)
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("properties.users.items.properties.tags.items")
-          expect(result.invalidType).toBe("any")
-        }
-      })
-
-      test("validates additionalProperties", () => {
-        const schema = {
-          type: "object",
-          additionalProperties: { type: "any" },
-        }
-        const result = validateJsonSchemaTypes(schema)
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("additionalProperties")
-        }
-      })
-
-      test("validates allOf recursively", () => {
-        const schema = {
-          allOf: [
-            { type: "object", properties: { a: { type: "string" } } },
-            { type: "object", properties: { b: { type: "any" } } },
-          ],
-        }
-        const result = validateJsonSchemaTypes(schema)
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("allOf[1].properties.b")
-          expect(result.invalidType).toBe("any")
-        }
-      })
-
-      test("validates anyOf recursively", () => {
-        const schema = {
-          anyOf: [{ type: "string" }, { type: "any" }],
-        }
-        const result = validateJsonSchemaTypes(schema)
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("anyOf[1]")
-        }
-      })
-
-      test("validates oneOf recursively", () => {
-        const schema = {
-          oneOf: [{ type: "number" }, { type: "any" }],
-        }
-        const result = validateJsonSchemaTypes(schema)
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("oneOf[1]")
-        }
-      })
-
-      test("validates $defs recursively", () => {
-        const schema = {
-          type: "object",
-          $defs: {
-            ValidType: { type: "string" },
-            InvalidType: { type: "any" },
-          },
-        }
-        const result = validateJsonSchemaTypes(schema)
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("$defs.InvalidType")
-        }
-      })
-
-      test("validates definitions recursively", () => {
-        const schema = {
-          type: "object",
-          definitions: {
-            MyType: { type: "any" },
-          },
-        }
-        const result = validateJsonSchemaTypes(schema)
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("definitions.MyType")
-        }
-      })
-
-      test("validates not recursively", () => {
-        const schema = {
-          not: { type: "any" },
-        }
-        const result = validateJsonSchemaTypes(schema)
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("not")
-        }
-      })
-
-      test("validates if/then/else recursively", () => {
-        const schema = {
-          if: { type: "object" },
-          then: { type: "any" },
-          else: { type: "string" },
-        }
-        const result = validateJsonSchemaTypes(schema)
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("then")
-        }
-      })
-
-      test("accepts valid allOf/anyOf/oneOf", () => {
-        const schema = {
-          allOf: [{ type: "object" }, { properties: { x: { type: "string" } } }],
-          anyOf: [{ type: "string" }, { type: "number" }],
-          oneOf: [{ type: "boolean" }, { type: "null" }],
-        }
-        expect(validateJsonSchemaTypes(schema).valid).toBe(true)
-      })
+    test("rejects tuple-style items in 2020-12", () => {
+      const result = validateJsonSchema({ type: "array", items: [{ type: "string" }] })
+      expect(result.valid).toBe(false)
     })
 
-    describe("edge cases", () => {
-      test("handles null schema", () => {
-        expect(validateJsonSchemaTypes(null).valid).toBe(true)
-      })
+    test("accepts prefixItems with items schema", () => {
+      const schema = { type: "array", prefixItems: [{ type: "string" }], items: { type: "string" } }
+      expect(validateJsonSchema(schema).valid).toBe(true)
+    })
+  })
 
-      test("handles undefined schema", () => {
-        expect(validateJsonSchemaTypes(undefined).valid).toBe(true)
-      })
+  describe("jsonSchemaProvider", () => {
+    test("rejects openai unsupported keyword", () => {
+      const result = validateJsonSchemaForProvider({ type: "array", prefixItems: [{ type: "string" }] }, "openai")
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.errors[0]).toContain("prefixItems")
+      }
+    })
 
-      test("validates tuple-style array schemas", () => {
-        expect(validateJsonSchemaTypes([{ type: "string" }]).valid).toBe(true)
-        expect(validateJsonSchemaTypes([{ type: "string" }, { type: "number" }]).valid).toBe(true)
-      })
+    test("rejects google unsupported keyword", () => {
+      const result = validateJsonSchemaForProvider({ type: "array", contains: { type: "string" } }, "google")
+      expect(result.valid).toBe(false)
+      if (!result.valid) {
+        expect(result.errors[0]).toContain("contains")
+      }
+    })
 
-      test("rejects invalid types in tuple-style array schemas", () => {
-        const result = validateJsonSchemaTypes([{ type: "string" }, { type: "any" }])
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("[1]")
-          expect(result.invalidType).toBe("any")
-        }
-      })
-
-      test("validates tuple items in nested schema", () => {
-        const schema = {
-          type: "array",
-          items: [{ type: "string" }, { type: "any" }],
-        }
-        const result = validateJsonSchemaTypes(schema)
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("items[1]")
-          expect(result.invalidType).toBe("any")
-        }
-      })
-
-      test("handles non-string type value", () => {
-        expect(validateJsonSchemaTypes({ type: 123 }).valid).toBe(true)
-      })
-
-      test("validates array-form types", () => {
-        expect(validateJsonSchemaTypes({ type: ["string", "null"] }).valid).toBe(true)
-        expect(validateJsonSchemaTypes({ type: ["string", "number", "boolean"] }).valid).toBe(true)
-      })
-
-      test("rejects invalid types in array form", () => {
-        const result = validateJsonSchemaTypes({ type: ["string", "any"] })
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.invalidType).toBe("any")
-        }
-      })
-
-      test("rejects invalid types in array form (nested)", () => {
-        const schema = {
-          type: "object",
-          properties: {
-            value: { type: ["string", "unknown"] },
-          },
-        }
-        const result = validateJsonSchemaTypes(schema)
-        expect(result.valid).toBe(false)
-        if (!result.valid) {
-          expect(result.path).toBe("properties.value")
-          expect(result.invalidType).toBe("unknown")
-        }
-      })
+    test("accepts google prefixItems", () => {
+      const result = validateJsonSchemaForProvider({ type: "array", prefixItems: [{ type: "string" }] }, "google")
+      expect(result.valid).toBe(true)
     })
   })
 })
