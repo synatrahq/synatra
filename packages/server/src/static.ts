@@ -45,7 +45,15 @@ export function setupStatic(app: Hono) {
     }),
   )
 
-  const wwwFiles = ["/favicon.svg", "/sitemap-index.xml", "/sitemap-0.xml", "/robots.txt"]
+  const wwwFiles = [
+    "/favicon.svg",
+    "/sitemap-index.xml",
+    "/sitemap-0.xml",
+    "/robots.txt",
+    "/og-image.png",
+    "/llms.txt",
+    "/llms-full.txt",
+  ]
   for (const file of wwwFiles) {
     app.get(
       file,
