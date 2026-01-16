@@ -85,7 +85,7 @@ export const AgentRuntimeConfigSchema = z
         if (!result.valid) {
           for (const error of result.errors) {
             ctx.addIssue({
-              code: z.ZodIssueCode.custom,
+              code: "custom",
               path: ["$defs", key],
               message: `Invalid JSON Schema at $defs.${key}: ${error}`,
             })
@@ -96,7 +96,7 @@ export const AgentRuntimeConfigSchema = z
         if (!providerResult.valid) {
           for (const error of providerResult.errors) {
             ctx.addIssue({
-              code: z.ZodIssueCode.custom,
+              code: "custom",
               path: ["$defs", key],
               message: `Unsupported JSON Schema for ${provider} at $defs.${key}: ${error}`,
             })
@@ -111,7 +111,7 @@ export const AgentRuntimeConfigSchema = z
       if (!paramsResult.valid) {
         for (const error of paramsResult.errors) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: ["tools", i, "params"],
             message: `Invalid JSON Schema for tool "${tool.name}" params: ${error}`,
           })
@@ -122,7 +122,7 @@ export const AgentRuntimeConfigSchema = z
       if (!returnsResult.valid) {
         for (const error of returnsResult.errors) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: ["tools", i, "returns"],
             message: `Invalid JSON Schema for tool "${tool.name}" returns: ${error}`,
           })
@@ -133,7 +133,7 @@ export const AgentRuntimeConfigSchema = z
       if (!paramsProviderResult.valid) {
         for (const error of paramsProviderResult.errors) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: ["tools", i, "params"],
             message: `Unsupported JSON Schema for ${provider} tool "${tool.name}" params: ${error}`,
           })
@@ -144,7 +144,7 @@ export const AgentRuntimeConfigSchema = z
       if (!returnsProviderResult.valid) {
         for (const error of returnsProviderResult.errors) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: ["tools", i, "returns"],
             message: `Unsupported JSON Schema for ${provider} tool "${tool.name}" returns: ${error}`,
           })
