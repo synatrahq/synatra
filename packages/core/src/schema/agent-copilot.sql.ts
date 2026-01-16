@@ -218,7 +218,7 @@ export const AgentCopilotTriggerRequestTable = pgTable(
       .notNull()
       .references(() => AgentCopilotMessageTable.id, { onDelete: "cascade" }),
     action: copilotTriggerRequestActionEnum("action").notNull(),
-    triggerId: uuid("trigger_id").references(() => TriggerTable.id, { onDelete: "cascade" }),
+    triggerId: uuid("trigger_id").references(() => TriggerTable.id, { onDelete: "set null" }),
     explanation: text("explanation").notNull(),
     config: jsonb("config").$type<CopilotTriggerConfig>().notNull(),
     status: copilotTriggerRequestStatusEnum("status").notNull().default("pending"),

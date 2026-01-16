@@ -1,5 +1,5 @@
 {
-  "id": "cbd041bc-80e0-4af4-a66d-4c53e4cae5b3",
+  "id": "fad75c82-5e74-4e49-9816-90697f5a11d7",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -899,7 +899,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -5586,12 +5586,6 @@
           "notNull": true,
           "default": "''"
         },
-        "agent_id": {
-          "name": "agent_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
         "agent_release_id": {
           "name": "agent_release_id",
           "type": "uuid",
@@ -5789,19 +5783,6 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "trigger_release_agent_id_agent_id_fk": {
-          "name": "trigger_release_agent_id_agent_id_fk",
-          "tableFrom": "trigger_release",
-          "tableTo": "agent",
-          "columnsFrom": [
-            "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
         "trigger_release_agent_release_id_agent_release_id_fk": {
           "name": "trigger_release_agent_release_id_agent_release_id_fk",
           "tableFrom": "trigger_release",
@@ -5887,6 +5868,12 @@
         },
         "organization_id": {
           "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "agent_id": {
+          "name": "agent_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -5988,6 +5975,19 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
+        "trigger_agent_id_agent_id_fk": {
+          "name": "trigger_agent_id_agent_id_fk",
+          "tableFrom": "trigger",
+          "tableTo": "agent",
+          "columnsFrom": [
+            "agent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
         "trigger_created_by_user_id_fk": {
           "name": "trigger_created_by_user_id_fk",
           "tableFrom": "trigger",
@@ -6029,12 +6029,6 @@
           "name": "trigger_id",
           "type": "uuid",
           "primaryKey": true,
-          "notNull": true
-        },
-        "agent_id": {
-          "name": "agent_id",
-          "type": "uuid",
-          "primaryKey": false,
           "notNull": true
         },
         "agent_release_id": {
@@ -6166,19 +6160,6 @@
           "tableTo": "trigger",
           "columnsFrom": [
             "trigger_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "trigger_working_copy_agent_id_agent_id_fk": {
-          "name": "trigger_working_copy_agent_id_agent_id_fk",
-          "tableFrom": "trigger_working_copy",
-          "tableTo": "agent",
-          "columnsFrom": [
-            "agent_id"
           ],
           "columnsTo": [
             "id"

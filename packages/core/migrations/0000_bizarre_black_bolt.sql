@@ -519,7 +519,6 @@ CREATE TABLE "trigger_release" (
 	"version_minor" integer NOT NULL,
 	"version_patch" integer NOT NULL,
 	"description" text DEFAULT '' NOT NULL,
-	"agent_id" uuid NOT NULL,
 	"agent_release_id" uuid,
 	"agent_version_mode" "version_mode" DEFAULT 'current' NOT NULL,
 	"prompt_id" uuid,
@@ -544,6 +543,7 @@ CREATE TABLE "trigger_release" (
 CREATE TABLE "trigger" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,
+	"agent_id" uuid NOT NULL,
 	"name" text NOT NULL,
 	"slug" text NOT NULL,
 	"current_release_id" uuid,
@@ -555,7 +555,6 @@ CREATE TABLE "trigger" (
 --> statement-breakpoint
 CREATE TABLE "trigger_working_copy" (
 	"trigger_id" uuid PRIMARY KEY NOT NULL,
-	"agent_id" uuid NOT NULL,
 	"agent_release_id" uuid,
 	"agent_version_mode" "version_mode" DEFAULT 'current' NOT NULL,
 	"prompt_id" uuid,
@@ -615,7 +614,7 @@ ALTER TABLE "agent_copilot_tool_log" ADD CONSTRAINT "agent_copilot_tool_log_thre
 ALTER TABLE "agent_copilot_tool_log" ADD CONSTRAINT "agent_copilot_tool_log_message_id_agent_copilot_message_id_fk" FOREIGN KEY ("message_id") REFERENCES "public"."agent_copilot_message"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_copilot_trigger_request" ADD CONSTRAINT "agent_copilot_trigger_request_thread_id_agent_copilot_thread_id_fk" FOREIGN KEY ("thread_id") REFERENCES "public"."agent_copilot_thread"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_copilot_trigger_request" ADD CONSTRAINT "agent_copilot_trigger_request_message_id_agent_copilot_message_id_fk" FOREIGN KEY ("message_id") REFERENCES "public"."agent_copilot_message"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "agent_copilot_trigger_request" ADD CONSTRAINT "agent_copilot_trigger_request_trigger_id_trigger_id_fk" FOREIGN KEY ("trigger_id") REFERENCES "public"."trigger"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "agent_copilot_trigger_request" ADD CONSTRAINT "agent_copilot_trigger_request_trigger_id_trigger_id_fk" FOREIGN KEY ("trigger_id") REFERENCES "public"."trigger"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_release" ADD CONSTRAINT "agent_release_agent_id_agent_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_release" ADD CONSTRAINT "agent_release_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent" ADD CONSTRAINT "agent_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -692,17 +691,16 @@ ALTER TABLE "trigger_environment" ADD CONSTRAINT "trigger_environment_trigger_id
 ALTER TABLE "trigger_environment" ADD CONSTRAINT "trigger_environment_environment_id_environment_id_fk" FOREIGN KEY ("environment_id") REFERENCES "public"."environment"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_environment" ADD CONSTRAINT "trigger_environment_channel_id_channel_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channel"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_release" ADD CONSTRAINT "trigger_release_trigger_id_trigger_id_fk" FOREIGN KEY ("trigger_id") REFERENCES "public"."trigger"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trigger_release" ADD CONSTRAINT "trigger_release_agent_id_agent_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_release" ADD CONSTRAINT "trigger_release_agent_release_id_agent_release_id_fk" FOREIGN KEY ("agent_release_id") REFERENCES "public"."agent_release"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_release" ADD CONSTRAINT "trigger_release_prompt_id_prompt_id_fk" FOREIGN KEY ("prompt_id") REFERENCES "public"."prompt"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_release" ADD CONSTRAINT "trigger_release_prompt_release_id_prompt_release_id_fk" FOREIGN KEY ("prompt_release_id") REFERENCES "public"."prompt_release"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_release" ADD CONSTRAINT "trigger_release_app_account_id_app_account_id_fk" FOREIGN KEY ("app_account_id") REFERENCES "public"."app_account"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_release" ADD CONSTRAINT "trigger_release_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger" ADD CONSTRAINT "trigger_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "trigger" ADD CONSTRAINT "trigger_agent_id_agent_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger" ADD CONSTRAINT "trigger_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger" ADD CONSTRAINT "trigger_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_trigger_id_trigger_id_fk" FOREIGN KEY ("trigger_id") REFERENCES "public"."trigger"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_agent_id_agent_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_agent_release_id_agent_release_id_fk" FOREIGN KEY ("agent_release_id") REFERENCES "public"."agent_release"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_prompt_id_prompt_id_fk" FOREIGN KEY ("prompt_id") REFERENCES "public"."prompt"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_prompt_release_id_prompt_release_id_fk" FOREIGN KEY ("prompt_release_id") REFERENCES "public"."prompt_release"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint

@@ -147,7 +147,6 @@ export type TriggerDetailData = {
 
 export type TriggerWorkingCopy = {
   triggerId: string
-  agentId: string | null
   agentReleaseId: string | null
   agentVersionMode: "current" | "fixed"
   promptId: string | null
