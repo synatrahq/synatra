@@ -228,7 +228,7 @@ export function AgentCreateModal(props: AgentCreateModalProps) {
         templateId: template.id,
         runtimeConfig: {
           model: { provider: "anthropic", model: "claude-sonnet-4-20250514", temperature: 0.7 },
-          systemPrompt: template.prompt ?? "",
+          systemPrompt: "",
           tools: [],
         },
       })
