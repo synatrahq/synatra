@@ -39,20 +39,12 @@ ifndef CONNECTOR_TOKEN
 endif
 	@GATEWAY_URL=ws://localhost:3003/connector/ws CONNECTOR_TOKEN=$(CONNECTOR_TOKEN) bun run packages/connector/src/index.ts
 
-.PHONY: connector-release
-connector-release:
+.PHONY: release
+release:
 ifndef VERSION
-	$(error VERSION is required. Usage: make connector-release VERSION=0.1.0)
+	$(error VERSION is required. Usage: make release VERSION=0.1.0)
 endif
-	@if [ -n "$$(git status --porcelain)" ]; then echo "Error: Working directory is not clean. Commit or stash changes first." && exit 1; fi
-	@if git rev-parse v$(VERSION) >/dev/null 2>&1; then echo "Error: Tag v$(VERSION) already exists." && exit 1; fi
-	@cd packages/connector && npm version $(VERSION) --no-git-tag-version
-	@git add packages/connector/package.json
-	@git commit -m "release: v$(VERSION)"
-	@git tag v$(VERSION)
-	@echo "Created tag v$(VERSION)"
-	@echo "Run 'git push origin dev && git push origin v$(VERSION)' to trigger release"
-	@echo "Then merge dev into main and push to deploy to production"
+	@./scripts/release.sh $(VERSION)
 
 .PHONY: typecheck test format build
 typecheck:
