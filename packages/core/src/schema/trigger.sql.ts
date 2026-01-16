@@ -33,6 +33,9 @@ export const TriggerTable = pgTable(
     organizationId: uuid("organization_id")
       .references(() => OrganizationTable.id, { onDelete: "cascade" })
       .notNull(),
+    agentId: uuid("agent_id")
+      .references(() => AgentTable.id, { onDelete: "cascade" })
+      .notNull(),
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     currentReleaseId: uuid("current_release_id"),
@@ -61,9 +64,6 @@ export const TriggerReleaseTable = pgTable(
     versionMinor: integer("version_minor").notNull(),
     versionPatch: integer("version_patch").notNull(),
     description: text("description").default("").notNull(),
-    agentId: uuid("agent_id")
-      .references(() => AgentTable.id, { onDelete: "cascade" })
-      .notNull(),
     agentReleaseId: uuid("agent_release_id").references(() => AgentReleaseTable.id, { onDelete: "set null" }),
     agentVersionMode: versionModeEnum("agent_version_mode").default("current").notNull(),
     promptId: uuid("prompt_id").references(() => PromptTable.id, { onDelete: "set null" }),
@@ -99,9 +99,6 @@ export const TriggerWorkingCopyTable = pgTable("trigger_working_copy", {
   triggerId: uuid("trigger_id")
     .references(() => TriggerTable.id, { onDelete: "cascade" })
     .primaryKey(),
-  agentId: uuid("agent_id")
-    .references(() => AgentTable.id, { onDelete: "cascade" })
-    .notNull(),
   agentReleaseId: uuid("agent_release_id").references(() => AgentReleaseTable.id, { onDelete: "set null" }),
   agentVersionMode: versionModeEnum("agent_version_mode").default("current").notNull(),
   promptId: uuid("prompt_id").references(() => PromptTable.id, { onDelete: "set null" }),

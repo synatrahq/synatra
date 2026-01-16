@@ -64,7 +64,6 @@ function hasContent(mode: string | null, content: string | null, script: string 
 
 const releaseColumns = {
   version: TriggerReleaseTable.version,
-  agentId: TriggerReleaseTable.agentId,
   agentReleaseId: TriggerReleaseTable.agentReleaseId,
   agentVersionMode: TriggerReleaseTable.agentVersionMode,
   promptId: TriggerReleaseTable.promptId,
@@ -128,7 +127,6 @@ export const UpdateTriggerSchema = z.object({
 
 export const SaveTriggerWorkingCopySchema = z.object({
   triggerId: z.string(),
-  agentId: z.string().optional(),
   agentReleaseId: z.string().nullable().optional(),
   agentVersionMode: z.enum(versionModeEnum.enumValues).optional(),
   promptId: z.string().nullable().optional(),
@@ -229,10 +227,10 @@ export async function listTriggers(input?: z.input<typeof ListTriggersSchema>) {
         name: TriggerTable.name,
         slug: TriggerTable.slug,
         currentReleaseId: TriggerTable.currentReleaseId,
+        agentId: TriggerTable.agentId,
         createdAt: TriggerTable.createdAt,
         updatedAt: TriggerTable.updatedAt,
         version: TriggerReleaseTable.version,
-        agentId: TriggerReleaseTable.agentId,
         agentReleaseId: TriggerReleaseTable.agentReleaseId,
         agentVersionMode: TriggerReleaseTable.agentVersionMode,
         promptId: TriggerReleaseTable.promptId,
@@ -260,7 +258,7 @@ export async function listTriggers(input?: z.input<typeof ListTriggersSchema>) {
       })
       .from(TriggerTable)
       .innerJoin(TriggerReleaseTable, eq(TriggerTable.currentReleaseId, TriggerReleaseTable.id))
-      .innerJoin(AgentTable, eq(TriggerReleaseTable.agentId, AgentTable.id))
+      .innerJoin(AgentTable, eq(TriggerTable.agentId, AgentTable.id))
       .leftJoin(AppAccountTable, eq(TriggerReleaseTable.appAccountId, AppAccountTable.id))
       .where(eq(TriggerTable.organizationId, organizationId)),
   )
@@ -347,6 +345,7 @@ export async function createTrigger(input: z.input<typeof CreateTriggerSchema>) 
       .insert(TriggerTable)
       .values({
         organizationId,
+        agentId: data.agentId,
         name: data.name,
         slug,
         createdBy: userId,
@@ -363,7 +362,6 @@ export async function createTrigger(input: z.input<typeof CreateTriggerSchema>) 
         versionMinor: versionParsed.minor,
         versionPatch: versionParsed.patch,
         description: data.description ?? "Initial release",
-        agentId: config.agentId,
         agentReleaseId: config.agentReleaseId,
         agentVersionMode: config.agentVersionMode,
         promptId: config.promptId,
@@ -387,7 +385,6 @@ export async function createTrigger(input: z.input<typeof CreateTriggerSchema>) 
 
     await db.insert(TriggerWorkingCopyTable).values({
       triggerId: trigger.id,
-      agentId: config.agentId,
       agentReleaseId: config.agentReleaseId,
       agentVersionMode: config.agentVersionMode,
       promptId: config.promptId,
@@ -446,12 +443,12 @@ export async function saveTriggerWorkingCopy(input: z.input<typeof SaveTriggerWo
 
   if (data.promptId) {
     const prompt = await getPromptById(data.promptId)
-    if (prompt?.agentId !== (data.agentId ?? existing?.agentId)) {
+    if (prompt?.agentId !== owned.agentId) {
       throw new Error("Prompt agent must match trigger agent")
     }
   }
 
-  const agentId = data.agentId ?? existing?.agentId ?? owned.agentId!
+  const agentId = owned.agentId
   const agentReleaseId = data.agentReleaseId ?? existing?.agentReleaseId ?? null
   const agentVersionMode = data.agentVersionMode ?? existing?.agentVersionMode ?? "current"
   const promptId = data.promptId ?? existing?.promptId ?? null
@@ -493,7 +490,6 @@ export async function saveTriggerWorkingCopy(input: z.input<typeof SaveTriggerWo
       .insert(TriggerWorkingCopyTable)
       .values({
         triggerId: data.triggerId,
-        agentId,
         agentReleaseId,
         agentVersionMode,
         promptId,
@@ -515,7 +511,6 @@ export async function saveTriggerWorkingCopy(input: z.input<typeof SaveTriggerWo
       .onConflictDoUpdate({
         target: TriggerWorkingCopyTable.triggerId,
         set: {
-          agentId,
           agentReleaseId,
           agentVersionMode,
           promptId,
@@ -593,7 +588,6 @@ export async function deployTrigger(input: z.input<typeof DeployTriggerSchema>) 
         versionMinor: target.minor,
         versionPatch: target.patch,
         description: data.description,
-        agentId: working.agentId,
         agentReleaseId: working.agentReleaseId,
         agentVersionMode: working.agentVersionMode,
         promptId: working.promptId,
@@ -653,7 +647,6 @@ export async function checkoutTrigger(input: z.input<typeof CheckoutTriggerSchem
       .insert(TriggerWorkingCopyTable)
       .values({
         triggerId: data.triggerId,
-        agentId: release.agentId,
         agentReleaseId: release.agentReleaseId,
         agentVersionMode: release.agentVersionMode,
         promptId: release.promptId,
@@ -675,7 +668,6 @@ export async function checkoutTrigger(input: z.input<typeof CheckoutTriggerSchem
       .onConflictDoUpdate({
         target: TriggerWorkingCopyTable.triggerId,
         set: {
-          agentId: release.agentId,
           agentReleaseId: release.agentReleaseId,
           agentVersionMode: release.agentVersionMode,
           promptId: release.promptId,
@@ -921,10 +913,10 @@ export async function listActiveTriggersByAppAccountAndEvent(
         name: TriggerTable.name,
         slug: TriggerTable.slug,
         currentReleaseId: TriggerTable.currentReleaseId,
+        agentId: TriggerTable.agentId,
         environmentId: TriggerEnvironmentTable.environmentId,
         channelId: TriggerEnvironmentTable.channelId,
         active: TriggerEnvironmentTable.active,
-        agentId: TriggerReleaseTable.agentId,
         agentReleaseId: TriggerReleaseTable.agentReleaseId,
         agentVersionMode: TriggerReleaseTable.agentVersionMode,
         promptId: TriggerReleaseTable.promptId,
@@ -983,7 +975,7 @@ export async function findTriggerByWebhookPath(input: z.input<typeof FindTrigger
     const rows = await db.execute<WebhookTrigger>(sql`
       SELECT
         t.id as trigger_id, t.current_release_id,
-        tr.agent_id, tr.agent_release_id, tr.agent_version_mode,
+        t.agent_id, tr.agent_release_id, tr.agent_version_mode,
         tr.prompt_id, tr.prompt_release_id, tr.prompt_version_mode,
         tr.mode, tr.template, tr.script, tr.payload_schema,
         te.environment_id, te.channel_id, t.slug,
@@ -993,7 +985,7 @@ export async function findTriggerByWebhookPath(input: z.input<typeof FindTrigger
       INNER JOIN trigger_release tr ON t.current_release_id = tr.id
       INNER JOIN trigger_environment te ON t.id = te.trigger_id
       INNER JOIN environment e ON te.environment_id = e.id
-      INNER JOIN agent a ON tr.agent_id = a.id
+      INNER JOIN agent a ON t.agent_id = a.id
       INNER JOIN organization o ON t.organization_id = o.id
       WHERE o.slug = ${data.orgSlug} AND e.slug = ${data.envSlug} AND t.slug = ${data.triggerSlug}
     `)
@@ -1033,7 +1025,7 @@ export async function findTriggerByRunPath(input: z.input<typeof FindTriggerByRu
       db.execute<RunTrigger>(sql`
         SELECT
           t.id as trigger_id, NULL as release_id,
-          wc.agent_id, wc.agent_release_id, wc.agent_version_mode,
+          t.agent_id, wc.agent_release_id, wc.agent_version_mode,
           wc.prompt_id, wc.prompt_release_id, wc.prompt_version_mode,
           wc.mode, wc.template, wc.script, wc.payload_schema,
           te.environment_id, te.channel_id, t.slug, te.debug_secret,
@@ -1042,7 +1034,7 @@ export async function findTriggerByRunPath(input: z.input<typeof FindTriggerByRu
         INNER JOIN trigger_working_copy wc ON t.id = wc.trigger_id
         INNER JOIN trigger_environment te ON t.id = te.trigger_id
         INNER JOIN environment e ON te.environment_id = e.id
-        INNER JOIN agent a ON wc.agent_id = a.id
+        INNER JOIN agent a ON t.agent_id = a.id
         INNER JOIN organization o ON t.organization_id = o.id
         WHERE o.slug = ${data.orgSlug} AND e.slug = ${data.envSlug} AND t.slug = ${data.triggerSlug}
       `),
@@ -1055,7 +1047,7 @@ export async function findTriggerByRunPath(input: z.input<typeof FindTriggerByRu
       db.execute<RunTrigger>(sql`
         SELECT
           t.id as trigger_id, t.current_release_id as release_id,
-          tr.agent_id, tr.agent_release_id, tr.agent_version_mode,
+          t.agent_id, tr.agent_release_id, tr.agent_version_mode,
           tr.prompt_id, tr.prompt_release_id, tr.prompt_version_mode,
           tr.mode, tr.template, tr.script, tr.payload_schema,
           te.environment_id, te.channel_id, t.slug, te.debug_secret,
@@ -1064,7 +1056,7 @@ export async function findTriggerByRunPath(input: z.input<typeof FindTriggerByRu
         INNER JOIN trigger_release tr ON t.current_release_id = tr.id
         INNER JOIN trigger_environment te ON t.id = te.trigger_id
         INNER JOIN environment e ON te.environment_id = e.id
-        INNER JOIN agent a ON tr.agent_id = a.id
+        INNER JOIN agent a ON t.agent_id = a.id
         INNER JOIN organization o ON t.organization_id = o.id
         WHERE o.slug = ${data.orgSlug} AND e.slug = ${data.envSlug} AND t.slug = ${data.triggerSlug}
       `),
@@ -1076,7 +1068,7 @@ export async function findTriggerByRunPath(input: z.input<typeof FindTriggerByRu
     db.execute<RunTrigger>(sql`
       SELECT
         t.id as trigger_id, tr.id as release_id,
-        tr.agent_id, tr.agent_release_id, tr.agent_version_mode,
+        t.agent_id, tr.agent_release_id, tr.agent_version_mode,
         tr.prompt_id, tr.prompt_release_id, tr.prompt_version_mode,
         tr.mode, tr.template, tr.script, tr.payload_schema,
         te.environment_id, te.channel_id, t.slug, te.debug_secret,
@@ -1085,7 +1077,7 @@ export async function findTriggerByRunPath(input: z.input<typeof FindTriggerByRu
       INNER JOIN trigger_release tr ON t.id = tr.trigger_id
       INNER JOIN trigger_environment te ON t.id = te.trigger_id
       INNER JOIN environment e ON te.environment_id = e.id
-      INNER JOIN agent a ON tr.agent_id = a.id
+      INNER JOIN agent a ON t.agent_id = a.id
       INNER JOIN organization o ON t.organization_id = o.id
       WHERE o.slug = ${data.orgSlug} AND e.slug = ${data.envSlug} AND t.slug = ${data.triggerSlug}
         AND tr.version = ${version}
