@@ -41,7 +41,7 @@ function kindToSchema(kind: SchemaKind): Record<string, unknown> {
     case "$ref":
       return { $ref: "" }
     case "allOf":
-      return { allOf: [] }
+      return { allOf: [{ type: "object", properties: {} }] }
   }
 }
 
