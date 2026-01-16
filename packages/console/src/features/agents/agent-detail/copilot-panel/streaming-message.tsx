@@ -81,7 +81,9 @@ function ReasoningSection(props: ReasoningSectionProps) {
         class="flex items-center gap-1.5 text-2xs text-text-muted hover:text-text transition-colors"
         onClick={props.onToggle}
       >
-        <CaretRight class="h-2.5 w-2.5 transition-transform" classList={{ "rotate-90": props.expanded }} />
+        <span class="h-2.5 w-2.5 transition-transform" classList={{ "rotate-90": props.expanded }}>
+          <CaretRight class="h-2.5 w-2.5" />
+        </span>
         <Brain class="h-3 w-3" weight="duotone" />
         <span>Thinking</span>
         <Show when={props.isActive}>
@@ -117,7 +119,9 @@ function ToolsSection(props: ToolsSectionProps) {
         class="flex items-center gap-1.5 text-2xs text-text-muted hover:text-text transition-colors"
         onClick={props.onToggle}
       >
-        <CaretRight class="h-2.5 w-2.5 transition-transform" classList={{ "rotate-90": props.expanded }} />
+        <span class="h-2.5 w-2.5 transition-transform" classList={{ "rotate-90": props.expanded }}>
+          <CaretRight class="h-2.5 w-2.5" />
+        </span>
         <Show when={allDone()} fallback={<Spinner size="xs" class="h-3 w-3" />}>
           <Wrench class="h-3 w-3 text-success" />
         </Show>

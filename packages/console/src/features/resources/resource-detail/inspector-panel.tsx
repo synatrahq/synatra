@@ -28,7 +28,7 @@ import {
   Desktop,
   Cloud,
   Trash,
-  CaretDown,
+  CaretRight,
 } from "phosphor-solid-js"
 import openaiLight from "../../../assets/images/openai_light.svg"
 import openaiDark from "../../../assets/images/openai_dark.svg"
@@ -719,10 +719,12 @@ function SynatraAiConfigEditorContent(props: {
                     </Show>
                   </div>
                 </div>
-                <CaretDown
+                <span
                   class="h-4 w-4 text-text-muted transition-transform"
-                  classList={{ "rotate-180": isExpanded() }}
-                />
+                  classList={{ "rotate-90": isExpanded(), "rotate-180": !isExpanded() }}
+                >
+                  <CaretRight class="h-4 w-4" />
+                </span>
               </button>
 
               <Show when={isExpanded()}>

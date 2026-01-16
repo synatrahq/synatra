@@ -161,7 +161,9 @@ export function InboxSidebar(props: InboxSidebarProps) {
               class="flex items-center gap-1 px-2 py-1 text-2xs font-medium text-text-muted hover:text-text"
               onClick={() => props.onChannelsExpandedChange(!props.channelsExpanded)}
             >
-              <CaretRight class="h-3 w-3 transition-transform" classList={{ "rotate-90": props.channelsExpanded }} />
+              <span class="h-3 w-3 transition-transform" classList={{ "rotate-90": props.channelsExpanded }}>
+                <CaretRight class="h-3 w-3" />
+              </span>
               <span>Channels</span>
             </button>
             <button
@@ -217,7 +219,9 @@ export function InboxSidebar(props: InboxSidebarProps) {
               class="flex items-center gap-1 px-2 py-1 text-2xs font-medium text-text-muted hover:text-text"
               onClick={() => props.onAgentsExpandedChange(!props.agentsExpanded)}
             >
-              <CaretRight class="h-3 w-3 transition-transform" classList={{ "rotate-90": props.agentsExpanded }} />
+              <span class="h-3 w-3 transition-transform" classList={{ "rotate-90": props.agentsExpanded }}>
+                <CaretRight class="h-3 w-3" />
+              </span>
               <span>Agents</span>
             </button>
             <Show when={props.agentsExpanded}>
