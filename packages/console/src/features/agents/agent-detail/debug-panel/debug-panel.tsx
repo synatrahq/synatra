@@ -488,7 +488,6 @@ export function DebugPanel(props: DebugPanelProps) {
     on(
       () => [props.agentId, props.environmentId] as const,
       ([agentId, environmentId], prev) => {
-        if (!agentId || !environmentId) return
         if (prev && agentId === prev[0] && environmentId === prev[1]) return
         closeStream()
         clearRetry()
@@ -502,7 +501,7 @@ export function DebugPanel(props: DebugPanelProps) {
         setInput("")
         setLoading(false)
         setLastSeq(null)
-        initSession()
+        if (agentId && environmentId) initSession()
       },
     ),
   )

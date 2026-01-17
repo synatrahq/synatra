@@ -629,7 +629,7 @@ export function CopilotPanel(props: CopilotPanelProps) {
     on(
       () => props.agentId,
       (agentId, prev) => {
-        if (!agentId || agentId === prev) return
+        if (agentId === prev) return
         closeStream()
         clearRetry()
         stopPolling()
@@ -643,8 +643,12 @@ export function CopilotPanel(props: CopilotPanelProps) {
         setReasoningText("")
         setToolCalls([])
         setLoading(false)
-        setHistoryLoading(true)
         setLastSeq(null)
+        if (!agentId) {
+          setHistoryLoading(false)
+          return
+        }
+        setHistoryLoading(true)
         fetchThreads()
         fetchModels()
       },
