@@ -247,6 +247,8 @@ export interface UpdateRunInput {
   error?: string
   completedAt?: Date
   durationMs?: number
+  inputTokens?: number
+  outputTokens?: number
 }
 
 export interface CompleteRunInput {
@@ -263,18 +265,24 @@ export interface FailRunInput {
   id: string
   error: string
   durationMs?: number
+  inputTokens?: number
+  outputTokens?: number
 }
 
 export interface CancelRunInput {
   organizationId: string
   id: string
   reason?: string
+  inputTokens?: number
+  outputTokens?: number
 }
 
 export interface RejectRunInput {
   organizationId: string
   id: string
   reason: string
+  inputTokens?: number
+  outputTokens?: number
 }
 
 export interface RecordRunMeterInput {

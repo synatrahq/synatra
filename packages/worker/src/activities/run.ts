@@ -69,6 +69,8 @@ export interface UpdateRunInput {
   error?: string
   completedAt?: Date
   durationMs?: number
+  inputTokens?: number
+  outputTokens?: number
 }
 
 export interface CompleteRunInput {
@@ -85,6 +87,8 @@ export interface FailRunInput {
   id: string
   error: string
   durationMs?: number
+  inputTokens?: number
+  outputTokens?: number
 }
 
 export async function createRun(input: CreateRunInput): Promise<{ runId: string; run: unknown }> {
@@ -186,6 +190,8 @@ export async function failRun(input: FailRunInput): Promise<void> {
       id: input.id,
       error: input.error,
       durationMs: calcDuration(existing, input.durationMs),
+      inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens,
     })
     if (!run) return
 
@@ -194,7 +200,13 @@ export async function failRun(input: FailRunInput): Promise<void> {
   })
 }
 
-export async function cancelRun(input: { organizationId: string; id: string; reason?: string }): Promise<void> {
+export async function cancelRun(input: {
+  organizationId: string
+  id: string
+  reason?: string
+  inputTokens?: number
+  outputTokens?: number
+}): Promise<void> {
   return principal.withSystem({ organizationId: input.organizationId }, async () => {
     const existing = await findRunById(input.id)
     const run = await updateRunCore({
@@ -203,6 +215,8 @@ export async function cancelRun(input: { organizationId: string; id: string; rea
       error: input.reason,
       completedAt: new Date(),
       durationMs: calcDuration(existing),
+      inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens,
     })
     if (!run) return
 
@@ -211,7 +225,13 @@ export async function cancelRun(input: { organizationId: string; id: string; rea
   })
 }
 
-export async function rejectRun(input: { organizationId: string; id: string; reason: string }): Promise<void> {
+export async function rejectRun(input: {
+  organizationId: string
+  id: string
+  reason: string
+  inputTokens?: number
+  outputTokens?: number
+}): Promise<void> {
   return principal.withSystem({ organizationId: input.organizationId }, async () => {
     const existing = await findRunById(input.id)
     const run = await updateRunCore({
@@ -220,6 +240,8 @@ export async function rejectRun(input: { organizationId: string; id: string; rea
       error: input.reason,
       completedAt: new Date(),
       durationMs: calcDuration(existing),
+      inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens,
     })
     if (!run) return
 

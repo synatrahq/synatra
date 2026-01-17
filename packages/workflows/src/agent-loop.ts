@@ -174,11 +174,29 @@ export interface AgentLoopPersistence {
     outputTokens?: number
   }): Promise<unknown>
 
-  failRun(input: { organizationId: string; id: string; error: string }): Promise<unknown>
+  failRun(input: {
+    organizationId: string
+    id: string
+    error: string
+    inputTokens?: number
+    outputTokens?: number
+  }): Promise<unknown>
 
-  cancelRun(input: { organizationId: string; id: string; reason?: string }): Promise<unknown>
+  cancelRun(input: {
+    organizationId: string
+    id: string
+    reason?: string
+    inputTokens?: number
+    outputTokens?: number
+  }): Promise<unknown>
 
-  rejectRun(input: { organizationId: string; id: string; reason: string }): Promise<unknown>
+  rejectRun(input: {
+    organizationId: string
+    id: string
+    reason: string
+    inputTokens?: number
+    outputTokens?: number
+  }): Promise<unknown>
 
   createHumanRequest(input: {
     organizationId: string
@@ -304,7 +322,13 @@ async function updateStatus(params: UpdateStatusParams): Promise<void> {
 
   if (runId) {
     if (status === "failed" && error) {
-      await persistence.failRun({ organizationId, id: runId, error })
+      await persistence.failRun({
+        organizationId,
+        id: runId,
+        error,
+        inputTokens: tokenUsage?.inputTokens,
+        outputTokens: tokenUsage?.outputTokens,
+      })
     } else if (status === "completed" && result !== undefined) {
       await persistence.completeRun({
         organizationId,
@@ -314,9 +338,21 @@ async function updateStatus(params: UpdateStatusParams): Promise<void> {
         outputTokens: tokenUsage?.outputTokens,
       })
     } else if (status === "cancelled") {
-      await persistence.cancelRun({ organizationId, id: runId, reason: error })
+      await persistence.cancelRun({
+        organizationId,
+        id: runId,
+        reason: error,
+        inputTokens: tokenUsage?.inputTokens,
+        outputTokens: tokenUsage?.outputTokens,
+      })
     } else if (status === "rejected") {
-      await persistence.rejectRun({ organizationId, id: runId, reason: error || "Rejected" })
+      await persistence.rejectRun({
+        organizationId,
+        id: runId,
+        reason: error || "Rejected",
+        inputTokens: tokenUsage?.inputTokens,
+        outputTokens: tokenUsage?.outputTokens,
+      })
     } else {
       await persistence.updateRun({ organizationId, id: runId, status: status as RunStatus, error })
     }
@@ -376,6 +412,7 @@ export async function executeAgentLoop(
 
   for (let iteration = 0; iteration < maxIterations; iteration++) {
     if (signals.isCancelled()) {
+      const tokenUsage = getTokenUsage(totalInputTokens, totalOutputTokens)
       await updateStatus({
         status: "cancelled",
         state,
@@ -384,12 +421,14 @@ export async function executeAgentLoop(
         context,
         statusAttr,
         runId: state.currentRunId,
+        tokenUsage,
       })
-      return { result: { status: "cancelled" }, state }
+      return { result: { status: "cancelled", tokenUsage }, state }
     }
 
     const remainingMs = maxActiveTimeMs - activeTimeMs
     if (remainingMs <= 0) {
+      const tokenUsage = getTokenUsage(totalInputTokens, totalOutputTokens)
       await updateStatus({
         status: "failed",
         state,
@@ -399,8 +438,9 @@ export async function executeAgentLoop(
         statusAttr,
         runId: state.currentRunId,
         error: "Active time limit exceeded",
+        tokenUsage,
       })
-      return { result: { status: "failed", error: "Active time limit exceeded" }, state }
+      return { result: { status: "failed", error: "Active time limit exceeded", tokenUsage }, state }
     }
 
     const llmTimeoutMs = Math.min(remainingMs, llmActivityTimeoutMs)
@@ -413,6 +453,7 @@ export async function executeAgentLoop(
 
     if (!llmConfig) {
       const error = `${agentConfig.model.provider} is not available. Configure it in Resources > Synatra AI.`
+      const tokenUsage = getTokenUsage(totalInputTokens, totalOutputTokens)
       await updateStatus({
         status: "failed",
         state,
@@ -422,8 +463,9 @@ export async function executeAgentLoop(
         statusAttr,
         runId: state.currentRunId,
         error,
+        tokenUsage,
       })
-      return { result: { status: "failed", error }, state }
+      return { result: { status: "failed", error, tokenUsage }, state }
     }
 
     const llmResult = await activities.callLLM({
@@ -442,6 +484,7 @@ export async function executeAgentLoop(
     }
 
     if (activeTimeMs >= maxActiveTimeMs) {
+      const tokenUsage = getTokenUsage(totalInputTokens, totalOutputTokens)
       await updateStatus({
         status: "failed",
         state,
@@ -451,11 +494,13 @@ export async function executeAgentLoop(
         statusAttr,
         runId: state.currentRunId,
         error: "Active time limit exceeded",
+        tokenUsage,
       })
-      return { result: { status: "failed", error: "Active time limit exceeded" }, state }
+      return { result: { status: "failed", error: "Active time limit exceeded", tokenUsage }, state }
     }
 
     if (llmResult.type === "error") {
+      const tokenUsage = getTokenUsage(totalInputTokens, totalOutputTokens)
       await updateStatus({
         status: "failed",
         state,
@@ -465,8 +510,9 @@ export async function executeAgentLoop(
         statusAttr,
         runId: state.currentRunId,
         error: llmResult.error,
+        tokenUsage,
       })
-      return { result: { status: "failed", error: llmResult.error }, state }
+      return { result: { status: "failed", error: llmResult.error, tokenUsage }, state }
     }
 
     if (llmResult.type === "text" && llmResult.content !== undefined) {
@@ -526,12 +572,14 @@ export async function executeAgentLoop(
         activeTimeMs,
         statusAttr,
         runId,
+        tokenUsage: getTokenUsage(totalInputTokens, totalOutputTokens),
       })
       if (toolResult.done) return toolResult.result!
       activeTimeMs = toolResult.activeTimeMs
     }
   }
 
+  const tokenUsage = getTokenUsage(totalInputTokens, totalOutputTokens)
   await updateStatus({
     status: "failed",
     state,
@@ -541,8 +589,9 @@ export async function executeAgentLoop(
     statusAttr,
     runId: state.currentRunId,
     error: "Max iterations reached",
+    tokenUsage,
   })
-  return { result: { status: "failed", error: "Max iterations reached" }, state }
+  return { result: { status: "failed", error: "Max iterations reached", tokenUsage }, state }
 }
 
 interface HandleSystemToolsParams {
@@ -627,6 +676,7 @@ async function handleSystemTools(
       skipped: [...normalCalls, ...humanCalls, ...outputCalls, ...completionCalls],
       statusAttr,
       runId,
+      tokenUsage,
     })
     return result
   }
@@ -643,6 +693,7 @@ async function handleSystemTools(
       skipped: [...normalCalls, ...outputCalls, ...completionCalls, ...delegationCalls],
       statusAttr,
       runId,
+      tokenUsage,
     })
     return result
   }
@@ -821,12 +872,25 @@ interface HandleHumanToolParams {
   skipped: ToolCallRecord[]
   statusAttr: string
   runId: string
+  tokenUsage: TokenUsage | undefined
 }
 
 async function handleHumanTool(
   params: HandleHumanToolParams,
 ): Promise<{ result: AgentLoopResult; state: AgentLoopState } | null> {
-  const { context, state, persistence, activities, signals, messages, primary, skipped, statusAttr, runId } = params
+  const {
+    context,
+    state,
+    persistence,
+    activities,
+    signals,
+    messages,
+    primary,
+    skipped,
+    statusAttr,
+    runId,
+    tokenUsage,
+  } = params
   const threadId = context.id
   const organizationId = context.organizationId
 
@@ -934,10 +998,11 @@ async function handleHumanTool(
       statusAttr,
       runId: state.currentRunId,
       error: "Human request timed out",
+      tokenUsage,
     })
     state.pendingHumanRequestId = null
     signals.setPendingHumanRequestId(null)
-    return { result: { status: "failed", error: "Human request timed out" }, state }
+    return { result: { status: "failed", error: "Human request timed out", tokenUsage }, state }
   }
 
   if (signals.isCancelled()) {
@@ -950,10 +1015,11 @@ async function handleHumanTool(
       context,
       statusAttr,
       runId: state.currentRunId,
+      tokenUsage,
     })
     state.pendingHumanRequestId = null
     signals.setPendingHumanRequestId(null)
-    return { result: { status: "cancelled" }, state }
+    return { result: { status: "cancelled", tokenUsage }, state }
   }
 
   if (signals.isUserMessageReceived()) {
@@ -1110,12 +1176,25 @@ interface HandleDelegationToolParams {
   skipped: ToolCallRecord[]
   statusAttr: string
   runId: string
+  tokenUsage: TokenUsage | undefined
 }
 
 async function handleDelegationTool(
   params: HandleDelegationToolParams,
 ): Promise<{ result: AgentLoopResult; state: AgentLoopState } | null> {
-  const { context, state, persistence, activities, signals, messages, primary, skipped, statusAttr, runId } = params
+  const {
+    context,
+    state,
+    persistence,
+    activities,
+    signals,
+    messages,
+    primary,
+    skipped,
+    statusAttr,
+    runId,
+    tokenUsage,
+  } = params
   const threadId = context.id
   const organizationId = context.organizationId
 
@@ -1304,11 +1383,17 @@ async function handleDelegationTool(
     if (!context.disableThreadUpdates) {
       upsertSearchAttributes({ [statusAttr]: ["cancelled"] })
     }
-    await persistence.cancelRun({ organizationId, id: runId, reason: "Parent workflow cancelled" })
+    await persistence.cancelRun({
+      organizationId,
+      id: runId,
+      reason: "Parent workflow cancelled",
+      inputTokens: tokenUsage?.inputTokens,
+      outputTokens: tokenUsage?.outputTokens,
+    })
     if (!context.disableThreadUpdates) {
       await persistence.updateThread({ organizationId, threadId, status: "cancelled" })
     }
-    return { result: { status: "cancelled" }, state }
+    return { result: { status: "cancelled", tokenUsage }, state }
   }
 
   return null
@@ -1327,6 +1412,7 @@ interface HandleNormalToolsParams {
   activeTimeMs: number
   statusAttr: string
   runId: string
+  tokenUsage: TokenUsage | undefined
 }
 
 interface HandleNormalToolsResult {
@@ -1348,6 +1434,7 @@ async function handleNormalTools(params: HandleNormalToolsParams): Promise<Handl
     maxActiveTimeMs,
     statusAttr,
     runId,
+    tokenUsage,
   } = params
   let { activeTimeMs } = params
   const threadId = context.id
@@ -1402,6 +1489,7 @@ async function handleNormalTools(params: HandleNormalToolsParams): Promise<Handl
       executableCalls,
       statusAttr,
       runId,
+      tokenUsage,
     })
     if (result.done) return { done: true, result: result.result, activeTimeMs }
   }
@@ -1437,10 +1525,11 @@ async function handleNormalTools(params: HandleNormalToolsParams): Promise<Handl
       statusAttr,
       runId: state.currentRunId,
       error: "Active time limit exceeded",
+      tokenUsage,
     })
     return {
       done: true,
-      result: { result: { status: "failed", error: "Active time limit exceeded" }, state },
+      result: { result: { status: "failed", error: "Active time limit exceeded", tokenUsage }, state },
       activeTimeMs,
     }
   }
@@ -1502,10 +1591,11 @@ async function handleNormalTools(params: HandleNormalToolsParams): Promise<Handl
       statusAttr,
       runId: state.currentRunId,
       error: "Active time limit exceeded",
+      tokenUsage,
     })
     return {
       done: true,
-      result: { result: { status: "failed", error: "Active time limit exceeded" }, state },
+      result: { result: { status: "failed", error: "Active time limit exceeded", tokenUsage }, state },
       activeTimeMs,
     }
   }
@@ -1528,6 +1618,7 @@ interface HandleApprovalFlowParams {
   executableCalls: Array<{ call: ToolCallRecord; params: Record<string, unknown> }>
   statusAttr: string
   runId: string
+  tokenUsage: TokenUsage | undefined
 }
 
 interface HandleApprovalFlowResult {
@@ -1547,6 +1638,7 @@ async function handleApprovalFlow(params: HandleApprovalFlowParams): Promise<Han
     executableCalls,
     statusAttr,
     runId,
+    tokenUsage,
   } = params
   const threadId = context.id
   const organizationId = context.organizationId
@@ -1612,6 +1704,8 @@ async function handleApprovalFlow(params: HandleApprovalFlowParams): Promise<Han
         organizationId,
         id: state.currentRunId,
         error: "Approval timeout",
+        inputTokens: tokenUsage?.inputTokens,
+        outputTokens: tokenUsage?.outputTokens,
       })
     }
     if (!context.disableThreadUpdates) {
@@ -1621,7 +1715,7 @@ async function handleApprovalFlow(params: HandleApprovalFlowParams): Promise<Han
     signals.setPendingHumanRequestId(null)
     state.pendingAction = null
     signals.setPendingAction(null)
-    return { done: true, result: { result: { status: "failed", error: "Approval timeout" }, state } }
+    return { done: true, result: { result: { status: "failed", error: "Approval timeout", tokenUsage }, state } }
   }
 
   if (signals.isCancelled()) {
@@ -1631,7 +1725,13 @@ async function handleApprovalFlow(params: HandleApprovalFlowParams): Promise<Han
     }
     await persistence.resolveHumanRequest({ organizationId, requestId, status: "cancelled" })
     if (state.currentRunId) {
-      await persistence.cancelRun({ organizationId, id: state.currentRunId, reason: "Cancelled during approval" })
+      await persistence.cancelRun({
+        organizationId,
+        id: state.currentRunId,
+        reason: "Cancelled during approval",
+        inputTokens: tokenUsage?.inputTokens,
+        outputTokens: tokenUsage?.outputTokens,
+      })
     }
     if (!context.disableThreadUpdates) {
       await persistence.updateThread({ organizationId, threadId, status: "cancelled" })
@@ -1640,7 +1740,7 @@ async function handleApprovalFlow(params: HandleApprovalFlowParams): Promise<Han
     signals.setPendingHumanRequestId(null)
     state.pendingAction = null
     signals.setPendingAction(null)
-    return { done: true, result: { result: { status: "cancelled" }, state } }
+    return { done: true, result: { result: { status: "cancelled", tokenUsage }, state } }
   }
 
   const response = signals.getHumanResponsePayload()!
@@ -1674,7 +1774,13 @@ async function handleApprovalFlow(params: HandleApprovalFlowParams): Promise<Han
       toolResult: { toolCallId: pending.call.id, result: { approved: false, reason: rejectReason } },
     })
     if (state.currentRunId) {
-      await persistence.rejectRun({ organizationId, id: state.currentRunId, reason: rejectReason })
+      await persistence.rejectRun({
+        organizationId,
+        id: state.currentRunId,
+        reason: rejectReason,
+        inputTokens: tokenUsage?.inputTokens,
+        outputTokens: tokenUsage?.outputTokens,
+      })
     }
     if (!context.disableThreadUpdates) {
       await persistence.updateThread({ organizationId, threadId, status: "rejected", error: rejectReason })
@@ -1683,7 +1789,7 @@ async function handleApprovalFlow(params: HandleApprovalFlowParams): Promise<Han
     signals.setPendingHumanRequestId(null)
     state.pendingAction = null
     signals.setPendingAction(null)
-    return { done: true, result: { result: { status: "rejected", error: rejectReason }, state } }
+    return { done: true, result: { result: { status: "rejected", error: rejectReason, tokenUsage }, state } }
   }
 
   let processedParams = pending.actualParams
@@ -1715,7 +1821,13 @@ async function handleApprovalFlow(params: HandleApprovalFlowParams): Promise<Han
           toolResult: { toolCallId: pending.call.id, result: null, error: errorMsg },
         })
         if (state.currentRunId) {
-          await persistence.failRun({ organizationId, id: state.currentRunId, error: errorMsg })
+          await persistence.failRun({
+            organizationId,
+            id: state.currentRunId,
+            error: errorMsg,
+            inputTokens: tokenUsage?.inputTokens,
+            outputTokens: tokenUsage?.outputTokens,
+          })
         }
         if (!context.disableThreadUpdates) {
           await persistence.updateThread({ organizationId, threadId, status: "failed", error: errorMsg })
@@ -1724,7 +1836,7 @@ async function handleApprovalFlow(params: HandleApprovalFlowParams): Promise<Han
         signals.setPendingHumanRequestId(null)
         state.pendingAction = null
         signals.setPendingAction(null)
-        return { done: true, result: { result: { status: "failed", error: errorMsg }, state } }
+        return { done: true, result: { result: { status: "failed", error: errorMsg, tokenUsage }, state } }
       }
     }
     processedParams = modifiedParams
