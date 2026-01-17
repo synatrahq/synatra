@@ -12,21 +12,14 @@ export const MessageTable = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-
     threadId: uuid("thread_id")
       .notNull()
       .references(() => ThreadTable.id, { onDelete: "cascade" }),
-
     runId: uuid("run_id").references(() => RunTable.id, { onDelete: "set null" }),
-
     type: messageTypeEnum("type").notNull(),
-
     content: text("content"),
-
     toolCall: jsonb("tool_call").$type<ToolCallData>(),
-
     toolResult: jsonb("tool_result").$type<ToolResultData>(),
-
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [

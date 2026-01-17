@@ -12,37 +12,25 @@ export const RunTable = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-
     threadId: uuid("thread_id")
       .notNull()
       .references(() => ThreadTable.id, { onDelete: "cascade" }),
-
     parentRunId: uuid("parent_run_id").references((): any => RunTable.id, { onDelete: "cascade" }),
-
     depth: integer("depth").notNull().default(0),
-
     agentId: uuid("agent_id")
       .notNull()
       .references(() => AgentTable.id, { onDelete: "cascade" }),
-
     agentReleaseId: uuid("agent_release_id").references(() => AgentReleaseTable.id, { onDelete: "set null" }),
-
     status: runStatusEnum("status").notNull().default("running"),
-
     input: jsonb("input").$type<Record<string, unknown>>().notNull().default({}),
-
     output: jsonb("output").$type<unknown>(),
-
     error: text("error"),
-
     durationMs: integer("duration_ms"),
-
+    inputTokens: integer("input_tokens"),
+    outputTokens: integer("output_tokens"),
     startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
-
     completedAt: timestamp("completed_at", { withTimezone: true }),
-
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [

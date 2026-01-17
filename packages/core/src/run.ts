@@ -27,6 +27,8 @@ export const CompleteRunSchema = z.object({
   id: z.string(),
   output: z.unknown().optional(),
   durationMs: z.number().optional(),
+  inputTokens: z.number().int().optional(),
+  outputTokens: z.number().int().optional(),
 })
 
 export const FailRunSchema = z.object({
@@ -130,6 +132,8 @@ export async function completeRun(raw: z.input<typeof CompleteRunSchema>) {
   }
   if (input.output !== undefined) updateData.output = input.output
   if (input.durationMs !== undefined) updateData.durationMs = input.durationMs
+  if (input.inputTokens !== undefined) updateData.inputTokens = input.inputTokens
+  if (input.outputTokens !== undefined) updateData.outputTokens = input.outputTokens
 
   const [updated] = await withDb((db) =>
     db.update(RunTable).set(updateData).where(eq(RunTable.id, input.id)).returning(),

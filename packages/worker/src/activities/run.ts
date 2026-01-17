@@ -76,6 +76,8 @@ export interface CompleteRunInput {
   id: string
   output?: unknown
   durationMs?: number
+  inputTokens?: number
+  outputTokens?: number
 }
 
 export interface FailRunInput {
@@ -167,6 +169,8 @@ export async function completeRun(input: CompleteRunInput): Promise<void> {
       id: input.id,
       output: input.output,
       durationMs: calcDuration(existing, input.durationMs),
+      inputTokens: input.inputTokens,
+      outputTokens: input.outputTokens,
     })
     if (!run) return
 

@@ -74,8 +74,20 @@ export interface CallLLMInput {
 }
 
 export type CallLLMResult =
-  | { type: "text"; content: string; rawResponse: unknown; durationMs: number }
-  | { type: "tool_calls"; toolCalls: ToolCallRecord[]; rawResponse: unknown; durationMs: number }
+  | {
+      type: "text"
+      content: string
+      rawResponse: unknown
+      durationMs: number
+      usage?: { inputTokens: number; outputTokens: number }
+    }
+  | {
+      type: "tool_calls"
+      toolCalls: ToolCallRecord[]
+      rawResponse: unknown
+      durationMs: number
+      usage?: { inputTokens: number; outputTokens: number }
+    }
   | { type: "error"; reason: "timeout" | "abort"; error: string; durationMs: number }
 
 export interface EvaluateToolRulesInput {
@@ -242,6 +254,8 @@ export interface CompleteRunInput {
   id: string
   output?: unknown
   durationMs?: number
+  inputTokens?: number
+  outputTokens?: number
 }
 
 export interface FailRunInput {

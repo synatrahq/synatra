@@ -42,6 +42,7 @@ export interface AgentLoopResult {
   status: ThreadStatus
   result?: unknown
   error?: string
+  tokenUsage?: { inputTokens: number; outputTokens: number }
 }
 
 export interface CallLLMResult {
@@ -51,6 +52,7 @@ export interface CallLLMResult {
   error?: string
   reason?: "timeout" | "abort"
   durationMs: number
+  usage?: { inputTokens: number; outputTokens: number }
 }
 
 export interface EvaluateToolRulesResult {
@@ -164,7 +166,13 @@ export interface AgentLoopPersistence {
 
   updateRun(input: { organizationId: string; id: string; status: RunStatus; error?: string }): Promise<unknown>
 
-  completeRun(input: { organizationId: string; id: string; output: unknown }): Promise<unknown>
+  completeRun(input: {
+    organizationId: string
+    id: string
+    output: unknown
+    inputTokens?: number
+    outputTokens?: number
+  }): Promise<unknown>
 
   failRun(input: { organizationId: string; id: string; error: string }): Promise<unknown>
 
@@ -259,6 +267,15 @@ function normalizeMaxActiveTime(raw: unknown): number {
   return 600000
 }
 
+type TokenUsage = { inputTokens: number; outputTokens: number }
+
+function getTokenUsage(inputTokens: number, outputTokens: number): TokenUsage | undefined {
+  if (inputTokens > 0 || outputTokens > 0) {
+    return { inputTokens, outputTokens }
+  }
+  return undefined
+}
+
 interface UpdateStatusParams {
   status: ThreadStatus
   state: AgentLoopState
@@ -270,10 +287,12 @@ interface UpdateStatusParams {
   error?: string
   result?: unknown
   skipReason?: string
+  tokenUsage?: TokenUsage
 }
 
 async function updateStatus(params: UpdateStatusParams): Promise<void> {
-  const { status, state, signals, persistence, context, statusAttr, runId, error, result, skipReason } = params
+  const { status, state, signals, persistence, context, statusAttr, runId, error, result, skipReason, tokenUsage } =
+    params
   const { organizationId, id: threadId, disableThreadUpdates } = context
 
   state.status = status
@@ -287,7 +306,13 @@ async function updateStatus(params: UpdateStatusParams): Promise<void> {
     if (status === "failed" && error) {
       await persistence.failRun({ organizationId, id: runId, error })
     } else if (status === "completed" && result !== undefined) {
-      await persistence.completeRun({ organizationId, id: runId, output: result })
+      await persistence.completeRun({
+        organizationId,
+        id: runId,
+        output: result,
+        inputTokens: tokenUsage?.inputTokens,
+        outputTokens: tokenUsage?.outputTokens,
+      })
     } else if (status === "cancelled") {
       await persistence.cancelRun({ organizationId, id: runId, reason: error })
     } else if (status === "rejected") {
@@ -320,6 +345,9 @@ export async function executeAgentLoop(
   const { agentConfig, agentId, agentReleaseId, organizationId, environmentId, kind, id: threadId } = context
   const depth = context.depth ?? 0
   const statusAttr = kind === "playground" ? "PlaygroundStatus" : "ThreadStatus"
+
+  let totalInputTokens = 0
+  let totalOutputTokens = 0
 
   let runId: string
   if (context.existingRunId) {
@@ -408,6 +436,11 @@ export async function executeAgentLoop(
     })
     activeTimeMs += llmResult.durationMs
 
+    if (llmResult.usage) {
+      totalInputTokens += llmResult.usage.inputTokens
+      totalOutputTokens += llmResult.usage.outputTokens
+    }
+
     if (activeTimeMs >= maxActiveTimeMs) {
       await updateStatus({
         status: "failed",
@@ -439,6 +472,7 @@ export async function executeAgentLoop(
     if (llmResult.type === "text" && llmResult.content !== undefined) {
       messages.push({ role: "assistant", content: llmResult.content })
       await persistence.addMessage({ organizationId, threadId, runId, type: "assistant", content: llmResult.content })
+      const tokenUsage = getTokenUsage(totalInputTokens, totalOutputTokens)
       await updateStatus({
         status: "completed",
         state,
@@ -448,8 +482,9 @@ export async function executeAgentLoop(
         statusAttr,
         runId: state.currentRunId,
         result: llmResult.content,
+        tokenUsage,
       })
-      return { result: { status: "completed", result: llmResult.content }, state }
+      return { result: { status: "completed", result: llmResult.content, tokenUsage }, state }
     }
 
     if (llmResult.type === "tool_calls" && llmResult.toolCalls) {
@@ -472,6 +507,7 @@ export async function executeAgentLoop(
           normalCalls,
           statusAttr,
           runId,
+          tokenUsage: getTokenUsage(totalInputTokens, totalOutputTokens),
         })
         if (result) return result
         continue
@@ -520,13 +556,25 @@ interface HandleSystemToolsParams {
   normalCalls: ToolCallRecord[]
   statusAttr: string
   runId: string
+  tokenUsage: TokenUsage | undefined
 }
 
 async function handleSystemTools(
   params: HandleSystemToolsParams,
 ): Promise<{ result: AgentLoopResult; state: AgentLoopState } | null> {
-  const { context, state, persistence, activities, signals, messages, systemCalls, normalCalls, statusAttr, runId } =
-    params
+  const {
+    context,
+    state,
+    persistence,
+    activities,
+    signals,
+    messages,
+    systemCalls,
+    normalCalls,
+    statusAttr,
+    runId,
+    tokenUsage,
+  } = params
   const threadId = context.id
 
   const humanCalls = systemCalls.filter((tc) => isHumanTool(tc.name))
@@ -680,13 +728,19 @@ async function handleSystemTools(
       })
 
       if (state.currentRunId) {
-        await persistence.completeRun({ organizationId, id: state.currentRunId, output: callParams.summary })
+        await persistence.completeRun({
+          organizationId,
+          id: state.currentRunId,
+          output: callParams.summary,
+          inputTokens: tokenUsage?.inputTokens,
+          outputTokens: tokenUsage?.outputTokens,
+        })
       }
       if (!context.disableThreadUpdates) {
         await persistence.updateThread({ organizationId, threadId, status: "completed", result: callParams.summary })
       }
 
-      return { result: { status: "completed", result: callParams.summary }, state }
+      return { result: { status: "completed", result: callParams.summary, tokenUsage }, state }
     }
 
     if (call.name === "return_to_parent") {
@@ -703,10 +757,16 @@ async function handleSystemTools(
       })
 
       if (state.currentRunId) {
-        await persistence.completeRun({ organizationId, id: state.currentRunId, output: callParams.result })
+        await persistence.completeRun({
+          organizationId,
+          id: state.currentRunId,
+          output: callParams.result,
+          inputTokens: tokenUsage?.inputTokens,
+          outputTokens: tokenUsage?.outputTokens,
+        })
       }
 
-      return { result: { status: "completed", result: callParams.result }, state }
+      return { result: { status: "completed", result: callParams.result, tokenUsage }, state }
     }
 
     if (isOutputTool(call.name)) {

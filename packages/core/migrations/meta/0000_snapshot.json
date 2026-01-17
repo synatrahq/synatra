@@ -1,5 +1,5 @@
 {
-  "id": "93f99ee1-03b6-4720-85f1-e26e90494736",
+  "id": "c4d15d52-bfa9-46fa-a8da-0e7438f218e9",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -4088,6 +4088,18 @@
         },
         "duration_ms": {
           "name": "duration_ms",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "input_tokens": {
+          "name": "input_tokens",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "output_tokens": {
+          "name": "output_tokens",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
