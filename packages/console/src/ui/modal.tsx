@@ -49,7 +49,7 @@ export function Modal(props: ModalProps) {
 // Modal Container - standard modal wrapper with border, bg, shadow
 type ModalContainerProps = {
   children: JSX.Element
-  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl"
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl" | "6xl"
 }
 
 export function ModalContainer(props: ModalContainerProps) {
@@ -67,6 +67,10 @@ export function ModalContainer(props: ModalContainerProps) {
         return "max-w-3xl"
       case "4xl":
         return "max-w-4xl"
+      case "5xl":
+        return "max-w-5xl"
+      case "6xl":
+        return "max-w-6xl"
       default:
         return "max-w-md"
     }

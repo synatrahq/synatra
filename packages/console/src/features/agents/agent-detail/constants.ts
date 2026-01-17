@@ -38,6 +38,7 @@ export type SubagentSelection = { type: "subagent"; index: number }
 export type DiffSelection = { type: "diff" }
 export type ConnectResourceSelection = { type: "connect_resource"; requestId: string }
 export type TriggerRequestSelection = { type: "trigger_request"; requestId: string }
+export type OnboardingVideoSelection = { type: "onboarding_video" }
 export type Selection =
   | ToolSelection
   | TypeSelection
@@ -48,6 +49,7 @@ export type Selection =
   | DiffSelection
   | ConnectResourceSelection
   | TriggerRequestSelection
+  | OnboardingVideoSelection
 
 export type TabItem = Selection
 
@@ -59,6 +61,7 @@ export function getTabKey(tab: TabItem): string {
   if (tab.type === "diff") return "diff"
   if (tab.type === "connect_resource") return `connect_resource-${tab.requestId}`
   if (tab.type === "trigger_request") return `trigger_request-${tab.requestId}`
+  if (tab.type === "onboarding_video") return "onboarding_video"
   return tab.type
 }
 
@@ -80,5 +83,6 @@ export function getTabLabel(tab: TabItem, config: AgentRuntimeConfig | null, age
   if (tab.type === "diff") return "Changes"
   if (tab.type === "connect_resource") return "Connect Resource"
   if (tab.type === "trigger_request") return "Trigger Request"
+  if (tab.type === "onboarding_video") return "Welcome"
   return "Unknown"
 }
