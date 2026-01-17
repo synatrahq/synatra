@@ -129,8 +129,7 @@ export function DebugPanel(props: DebugPanelProps) {
 
   const initSession = async () => {
     if (!props.agentId || !props.environmentId || !props.runtimeConfig) return
-    const hasExistingData = session() !== null || messages().length > 0
-    if (!hasExistingData) setHistoryLoading(true)
+    setHistoryLoading(true)
     try {
       const res = await api.api.agents[":id"].playground.session.$post({
         param: { id: props.agentId },
@@ -518,10 +517,8 @@ export function DebugPanel(props: DebugPanelProps) {
   createEffect(
     on(
       () => props.runtimeConfig,
-      (config, prevConfig) => {
-        if (!prevConfig && config && !session()) {
-          initSession()
-        }
+      (config, prev) => {
+        if (!prev && config && !session()) initSession()
       },
     ),
   )
