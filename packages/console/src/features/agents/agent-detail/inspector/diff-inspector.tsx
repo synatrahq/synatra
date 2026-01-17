@@ -1,4 +1,5 @@
 import { Show, For, createMemo, createSignal, type JSX } from "solid-js"
+import { diffLines } from "diff"
 import { Button } from "../../../../ui"
 import { Check, X, Plus, Minus, PencilSimple, CaretDown, CaretRight } from "phosphor-solid-js"
 import type { AgentRuntimeConfig, AgentTool, SubagentDefinition } from "@synatra/core/types"
@@ -229,36 +230,36 @@ function DiffLine(props: { type: "added" | "removed" | "unchanged"; content: str
 }
 
 function computeLineDiff(before: string | undefined, after: string | undefined): JSX.Element {
-  const beforeLines = (before ?? "").split("\n")
-  const afterLines = (after ?? "").split("\n")
+  const beforeText = before ?? ""
+  const afterText = after ?? ""
 
   if (before === undefined) {
-    return <For each={afterLines}>{(line, i) => <DiffLine type="added" content={line} lineNumber={i() + 1} />}</For>
+    const lines = afterText.split("\n")
+    return <For each={lines}>{(line, i) => <DiffLine type="added" content={line} lineNumber={i() + 1} />}</For>
   }
   if (after === undefined) {
-    return <For each={beforeLines}>{(line, i) => <DiffLine type="removed" content={line} lineNumber={i() + 1} />}</For>
+    const lines = beforeText.split("\n")
+    return <For each={lines}>{(line, i) => <DiffLine type="removed" content={line} lineNumber={i() + 1} />}</For>
   }
 
+  const changes = diffLines(beforeText, afterText)
   const result: JSX.Element[] = []
-  let i = 0
-  let j = 0
-  while (i < beforeLines.length || j < afterLines.length) {
-    if (i >= beforeLines.length) {
-      result.push(<DiffLine type="added" content={afterLines[j]} lineNumber={j + 1} />)
-      j++
-    } else if (j >= afterLines.length) {
-      result.push(<DiffLine type="removed" content={beforeLines[i]} lineNumber={i + 1} />)
-      i++
-    } else if (beforeLines[i] === afterLines[j]) {
-      result.push(<DiffLine type="unchanged" content={beforeLines[i]} lineNumber={i + 1} />)
-      i++
-      j++
-    } else {
-      result.push(<DiffLine type="removed" content={beforeLines[i]} lineNumber={i + 1} />)
-      i++
-      if (j < afterLines.length) {
-        result.push(<DiffLine type="added" content={afterLines[j]} lineNumber={j + 1} />)
-        j++
+  let beforeLine = 1
+  let afterLine = 1
+
+  for (const change of changes) {
+    const lines = change.value.replace(/\n$/, "").split("\n")
+    const type = change.added ? "added" : change.removed ? "removed" : "unchanged"
+    for (const line of lines) {
+      const lineNumber = change.added ? afterLine : beforeLine
+      result.push(<DiffLine type={type} content={line} lineNumber={lineNumber} />)
+      if (change.removed) {
+        beforeLine++
+      } else if (change.added) {
+        afterLine++
+      } else {
+        beforeLine++
+        afterLine++
       }
     }
   }
