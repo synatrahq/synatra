@@ -15,6 +15,7 @@ import {
   type CopilotTriggerRequest,
 } from "./copilot-panel"
 import { GenerateToolsModal } from "./generate-tools-modal"
+import { OnboardingVideoModal } from "./inspector/onboarding-video-modal"
 import { VersionControl } from "./version-control"
 import { DeployDropdown } from "./deploy-dropdown"
 import { stableId } from "./utils"
@@ -102,7 +103,23 @@ export function AgentDetail(props: AgentDetailProps) {
   const [approvingTriggerRequest, setApprovingTriggerRequest] = createSignal(false)
   const [cancellingTriggerRequest, setCancellingTriggerRequest] = createSignal(false)
   const [copilotHighlightVisible, setCopilotHighlightVisible] = createSignal(false)
+  const [showOnboardingVideoModal, setShowOnboardingVideoModal] = createSignal(false)
+  const [videoCurrentTime, setVideoCurrentTime] = createSignal(0)
   const approveHandlerRef = { current: null as (() => void) | null }
+
+  const getWelcomeTabKey = (agentId: string) => `agent-welcome-tab-${agentId}`
+  const shouldShowWelcomeTab = (agentId: string) => {
+    if (typeof window === "undefined") return false
+    return localStorage.getItem(getWelcomeTabKey(agentId)) === "true"
+  }
+  const setWelcomeTabShown = (agentId: string, shown: boolean) => {
+    if (typeof window === "undefined") return
+    if (shown) {
+      localStorage.setItem(getWelcomeTabKey(agentId), "true")
+    } else {
+      localStorage.removeItem(getWelcomeTabKey(agentId))
+    }
+  }
   const rejectHandlerRef = { current: null as (() => void) | null }
   const [debugPanelOpen, setDebugPanelOpen, initDebugPanelOpen] = createPersistedSignal(
     "agent-debug-panel-open",
@@ -272,6 +289,9 @@ export function AgentDetail(props: AgentDetailProps) {
     const tabs = openTabs()
     const idx = tabs.findIndex((t) => getTabKey(t) === key)
     if (idx === -1) return
+    if (key === "onboarding_video" && props.agent) {
+      setWelcomeTabShown(props.agent.id, false)
+    }
     const newTabs = tabs.filter((t) => getTabKey(t) !== key)
     setOpenTabs(newTabs)
     if (activeTabKey() === key && newTabs.length > 0) {
@@ -302,6 +322,8 @@ export function AgentDetail(props: AgentDetailProps) {
       const connectTab = openTabs().find((t) => t.type === "connect_resource")
       if (!connectTab) {
         handleSelectItem({ type: "connect_resource", requestId: request?.id ?? confirmation?.requestId ?? "" })
+      } else {
+        setActiveTabKey(getTabKey(connectTab))
       }
     } else {
       const connectTab = openTabs().find((t) => t.type === "connect_resource")
@@ -317,6 +339,8 @@ export function AgentDetail(props: AgentDetailProps) {
       const triggerTab = openTabs().find((t) => t.type === "trigger_request")
       if (!triggerTab) {
         handleSelectItem({ type: "trigger_request", requestId: request.id })
+      } else {
+        setActiveTabKey(getTabKey(triggerTab))
       }
     } else {
       const triggerTab = openTabs().find((t) => t.type === "trigger_request")
@@ -341,6 +365,12 @@ export function AgentDetail(props: AgentDetailProps) {
           setSaveStatus("idle")
           setOpenTabs([])
           setActiveTabKey("")
+          const showWelcome = props.startCopilot || shouldShowWelcomeTab(agent.id)
+          if (showWelcome) {
+            setWelcomeTabShown(agent.id, true)
+            setOpenTabs([{ type: "onboarding_video" }])
+            setActiveTabKey("onboarding_video")
+          }
           return
         }
         if (agent && wc && agentId === wcAgentId && !editedConfig()) {
@@ -369,8 +399,14 @@ export function AgentDetail(props: AgentDetailProps) {
         setLastSavedHash(newSerialized)
         setIsDirty(false)
         setSaveStatus("idle")
-        setOpenTabs([])
-        setActiveTabKey("")
+        const onboardingTab = openTabs().find((t) => t.type === "onboarding_video")
+        if (onboardingTab) {
+          setOpenTabs([onboardingTab])
+          setActiveTabKey("onboarding_video")
+        } else {
+          setOpenTabs([])
+          setActiveTabKey("")
+        }
       },
     ),
   )
@@ -878,6 +914,7 @@ export function AgentDetail(props: AgentDetailProps) {
                         onTriggerRequestCancel={handleTriggerRequestCancel}
                         approvingTriggerRequest={approvingTriggerRequest()}
                         cancellingTriggerRequest={cancellingTriggerRequest()}
+                        onOpenVideoModal={() => setShowOnboardingVideoModal(true)}
                       />
                     </div>
                     <Show when={debugPanelOpen()}>
@@ -980,6 +1017,13 @@ export function AgentDetail(props: AgentDetailProps) {
         open={showGenerateModal()}
         onClose={() => setShowGenerateModal(false)}
         onGenerate={handleGenerateTools}
+      />
+
+      <OnboardingVideoModal
+        open={showOnboardingVideoModal()}
+        onClose={() => setShowOnboardingVideoModal(false)}
+        currentTime={videoCurrentTime()}
+        onTimeUpdate={setVideoCurrentTime}
       />
     </div>
   )
