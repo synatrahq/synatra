@@ -467,6 +467,7 @@ CREATE TABLE "subscription" (
 	"stripe_schedule_id" text,
 	"scheduled_plan" text,
 	"scheduled_at" timestamp with time zone,
+	"cancel_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );

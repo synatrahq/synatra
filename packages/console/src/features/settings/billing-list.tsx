@@ -109,6 +109,14 @@ function CurrentSubscriptionBadge(props: {
       year: "numeric",
     })
 
+  const cancelDate = () =>
+    props.subscription.cancelAt &&
+    new Date(props.subscription.cancelAt).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })
+
   return (
     <div class="flex flex-col gap-3 rounded-lg border border-border bg-surface-elevated px-3 py-3">
       <div class="flex items-start justify-between gap-3">
@@ -171,6 +179,18 @@ function CurrentSubscriptionBadge(props: {
           </button>
         </div>
       </Show>
+
+      <Show when={cancelDate()}>
+        <div class="flex items-center gap-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5">
+          <div class="flex items-start gap-2 flex-1">
+            <Calendar class="h-3.5 w-3.5 shrink-0 text-danger" weight="duotone" />
+            <p class="text-2xs text-danger leading-relaxed">
+              Subscription will be cancelled on <span class="font-semibold">{cancelDate()}</span>. Visit billing portal
+              to undo.
+            </p>
+          </div>
+        </div>
+      </Show>
     </div>
   )
 }
@@ -208,17 +228,36 @@ type PlanCardProps = {
   onChangePlan: () => void
   changingPlan: boolean
   hasSchedule: boolean
+  hasCancelScheduled: boolean
   isCancelled: boolean
+  onManageBilling: () => void
+  managingBilling: boolean
 }
 
 function PlanCard(props: PlanCardProps) {
   const isUpgrade = () => PLAN_HIERARCHY[props.config.id] > PLAN_HIERARCHY[props.currentPlanId as SubscriptionPlan]
+  const isFreeDowngrade = () => props.config.id === "free" && props.currentPlanId !== "free"
   const features = () => getPlanFeatures(props.config)
 
   function label(): string {
     if (props.current) return "Current plan"
+    if (isFreeDowngrade()) return "Cancel subscription"
     if (isUpgrade()) return "Upgrade"
     return "Downgrade"
+  }
+
+  function handleClick() {
+    if (isFreeDowngrade()) {
+      props.onManageBilling()
+    } else {
+      props.onChangePlan()
+    }
+  }
+
+  function isDisabled(): boolean {
+    if (props.current || props.isCancelled || props.hasSchedule || props.hasCancelScheduled) return true
+    if (isFreeDowngrade()) return props.managingBilling
+    return props.changingPlan
   }
 
   return (
@@ -244,10 +283,8 @@ function PlanCard(props: PlanCardProps) {
       </div>
       <p class="text-2xs text-text-secondary">{props.config.targetAudience}</p>
       <button
-        onClick={props.onChangePlan}
-        disabled={
-          props.current || props.changingPlan || props.hasSchedule || props.isCancelled || props.config.id === "free"
-        }
+        onClick={handleClick}
+        disabled={isDisabled()}
         class="flex h-7 items-center justify-center gap-1.5 rounded-md px-3 text-xs font-medium transition-all disabled:cursor-not-allowed disabled:opacity-50"
         classList={{
           "bg-accent text-white hover:bg-accent/90": !props.current && isUpgrade(),
@@ -255,10 +292,10 @@ function PlanCard(props: PlanCardProps) {
           "bg-surface-muted text-text-muted": props.current,
         }}
       >
-        <Show when={props.changingPlan}>
+        <Show when={props.changingPlan && !isFreeDowngrade()}>
           <Lightning class="h-3 w-3 animate-pulse" weight="duotone" />
         </Show>
-        {label()}
+        {props.managingBilling && isFreeDowngrade() ? "Opening..." : label()}
       </button>
       <div class="flex flex-col gap-1.5 border-t border-border pt-3">
         <For each={features()}>
@@ -313,7 +350,10 @@ export function BillingList(props: BillingListProps) {
                         onChangePlan={() => props.onPlanChangeRequest(config.id)}
                         changingPlan={props.changingPlan || false}
                         hasSchedule={!!sub().scheduledPlan}
+                        hasCancelScheduled={!!sub().cancelAt}
                         isCancelled={sub().status === "cancelled"}
+                        onManageBilling={props.onManageBilling}
+                        managingBilling={props.managingBilling || false}
                       />
                     )}
                   </For>

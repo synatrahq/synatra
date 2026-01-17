@@ -94,6 +94,7 @@ export const UpdateStripeInfoSubscriptionSchema = z.object({
   currentPeriodEnd: z.date().optional(),
   scheduledPlan: z.enum(SubscriptionPlan).optional().nullable(),
   scheduledAt: z.date().optional().nullable(),
+  cancelAt: z.date().optional().nullable(),
 })
 
 export const UpdatePlanSubscriptionSchema = z.object({ plan: z.enum(SubscriptionPlan) })
@@ -132,6 +133,7 @@ export async function updateStripeInfoSubscription(raw: z.input<typeof UpdateStr
   if (input.currentPeriodEnd) updates.currentPeriodEnd = input.currentPeriodEnd
   if (input.scheduledPlan !== undefined) updates.scheduledPlan = input.scheduledPlan
   if (input.scheduledAt !== undefined) updates.scheduledAt = input.scheduledAt
+  if (input.cancelAt !== undefined) updates.cancelAt = input.cancelAt
 
   await withDb((db) =>
     db.update(SubscriptionTable).set(updates).where(eq(SubscriptionTable.organizationId, principal.orgId())),
@@ -158,6 +160,7 @@ export async function updateSubscription(raw: z.input<typeof UpdateSubscriptionS
   if (input.currentPeriodEnd) updates.currentPeriodEnd = input.currentPeriodEnd
   if (input.scheduledPlan !== undefined) updates.scheduledPlan = input.scheduledPlan
   if (input.scheduledAt !== undefined) updates.scheduledAt = input.scheduledAt
+  if (input.cancelAt !== undefined) updates.cancelAt = input.cancelAt
 
   await withDb((db) =>
     db.update(SubscriptionTable).set(updates).where(eq(SubscriptionTable.organizationId, principal.orgId())),

@@ -23,6 +23,7 @@ export const SubscriptionTable = pgTable(
     stripeScheduleId: text("stripe_schedule_id"),
     scheduledPlan: text("scheduled_plan"),
     scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+    cancelAt: timestamp("cancel_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
