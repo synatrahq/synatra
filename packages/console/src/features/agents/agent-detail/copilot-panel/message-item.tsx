@@ -58,7 +58,9 @@ function ToolCallList(props: ToolCallListProps) {
         class="mb-1.5 flex items-center gap-1.5 text-2xs text-text-muted hover:text-text transition-colors"
         onClick={() => setExpanded((prev) => !prev)}
       >
-        <CaretRight class="h-2.5 w-2.5 transition-transform" classList={{ "rotate-90": expanded() }} />
+        <span class="h-2.5 w-2.5 transition-transform" classList={{ "rotate-90": expanded() }}>
+          <CaretRight class="h-2.5 w-2.5" />
+        </span>
         <Show when={hasError()} fallback={<Wrench class="h-3 w-3 text-success" />}>
           <Warning class="h-3 w-3 text-danger" weight="fill" />
         </Show>

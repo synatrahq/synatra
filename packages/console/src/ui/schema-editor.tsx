@@ -41,7 +41,7 @@ function kindToSchema(kind: SchemaKind): Record<string, unknown> {
     case "$ref":
       return { $ref: "" }
     case "allOf":
-      return { allOf: [] }
+      return { allOf: [{ type: "object", properties: {} }] }
   }
 }
 
@@ -311,10 +311,9 @@ function SchemaRow(props: SchemaRowProps) {
             class="flex h-4 w-4 shrink-0 items-center justify-center rounded text-text-muted transition-colors hover:text-text"
             onClick={props.onToggle}
           >
-            <CaretDown
-              class="h-3 w-3 transition-transform duration-150"
-              classList={{ "-rotate-90": !props.expanded }}
-            />
+            <span class="flex h-3 w-3 transition-transform duration-150" classList={{ "-rotate-90": !props.expanded }}>
+              <CaretDown class="h-3 w-3" />
+            </span>
           </button>
         </Show>
 
@@ -759,7 +758,9 @@ export function SchemaEditor(props: SchemaEditorProps) {
             class="flex h-4 w-4 shrink-0 items-center justify-center rounded text-text-muted transition-colors hover:text-text"
             onClick={() => toggle(rootPath)}
           >
-            <CaretDown class="h-3 w-3 transition-transform duration-150" classList={{ "-rotate-90": !isExpanded() }} />
+            <span class="flex h-3 w-3 transition-transform duration-150" classList={{ "-rotate-90": !isExpanded() }}>
+              <CaretDown class="h-3 w-3" />
+            </span>
           </button>
         </Show>
 

@@ -70,7 +70,9 @@ export function PopoverSelect<T = string>(props: PopoverSelectProps<T>) {
       >
         <Show when={color()}>{(c) => <span class="h-2 w-2 shrink-0 rounded-full" style={{ background: c() }} />}</Show>
         <span>{label()}</span>
-        <CaretDown class="h-3 w-3 shrink-0 transition-transform" classList={{ "rotate-180": open() }} />
+        <span class="h-3 w-3 shrink-0 transition-transform" classList={{ "rotate-180": open() }}>
+          <CaretDown class="h-3 w-3" />
+        </span>
       </button>
       <Show when={open()}>
         <Portal>
