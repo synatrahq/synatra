@@ -148,6 +148,7 @@ services:
     env_file:
       - .env
     environment:
+      NODE_ENV: development
       DATABASE_URL: postgres://postgres:postgres@db:5432/synatra_dev
       TEMPORAL_ADDRESS: temporal:7233
       TEMPORAL_TASK_QUEUE: agent

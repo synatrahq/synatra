@@ -13,7 +13,7 @@ db-migrations-generate:
 db-migrations-push:
 	@DATABASE_URL="$(DATABASE_URL)" pnpm --filter @synatra/core migrations:push
 
-.PHONY: compose-up compose-down compose-logs compose-clean-images compose-clean-data docker-prune
+.PHONY: compose-up compose-down compose-logs compose-restart compose-clean-images compose-clean-data docker-prune worker-prebuild
 compose-up:
 	@docker compose up -d
 
@@ -22,6 +22,17 @@ compose-down:
 
 compose-logs:
 	@docker compose logs -f
+
+compose-restart:
+	@docker compose restart worker
+
+compose-dev:
+	@docker compose down
+	@docker compose up -d
+	@docker compose logs -f
+
+worker-prebuild:
+	@pnpm --filter @synatra/worker prebuild
 
 compose-clean-images:
 	@docker compose down --rmi all --remove-orphans

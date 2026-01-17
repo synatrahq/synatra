@@ -12,21 +12,14 @@ export const OutputItemTable = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-
     threadId: uuid("thread_id")
       .notNull()
       .references(() => ThreadTable.id, { onDelete: "cascade" }),
-
     runId: uuid("run_id").references(() => RunTable.id, { onDelete: "set null" }),
-
     toolCallId: text("tool_call_id"),
-
     kind: outputKindEnum("kind").notNull(),
-
     name: text("name"),
-
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
-
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [

@@ -20,6 +20,7 @@ let callLLMQueue: Array<{
   toolCalls?: Array<{ id: string; name: string; params: Record<string, unknown> }>
   rawResponse: unknown
   durationMs: number
+  usage?: { inputTokens: number; outputTokens: number }
 }>
 let callLLMInputs: Array<{
   timeoutMs?: number
@@ -38,6 +39,8 @@ let executeScriptQueue: Array<{
   durationMs: number
 }>
 let applyPromptInputs: Array<{ prompt: string; payload: Record<string, unknown> }>
+let completeRunInputs: Array<{ inputTokens?: number; outputTokens?: number }>
+let failRunInputs: Array<{ error: string; inputTokens?: number; outputTokens?: number }>
 
 const activities = {
   loadAgentConfig: async (input: {
@@ -56,8 +59,12 @@ const activities = {
   ensureThread: async (input: { threadId?: string }) => ({ threadId: input.threadId ?? "thread-1" }),
   createRun: async () => ({ runId: "run-1", run: { id: "run-1" } }),
   updateRun: async () => {},
-  completeRun: async () => {},
-  failRun: async () => {},
+  completeRun: async (input: { inputTokens?: number; outputTokens?: number }) => {
+    completeRunInputs.push({ inputTokens: input.inputTokens, outputTokens: input.outputTokens })
+  },
+  failRun: async (input: { error: string; inputTokens?: number; outputTokens?: number }) => {
+    failRunInputs.push({ error: input.error, inputTokens: input.inputTokens, outputTokens: input.outputTokens })
+  },
   loadThreadMessages: async () => loadThreadMessagesQueue.shift() ?? { messages: [] },
   applyPrompt: async (input: { prompt: string; payload: Record<string, unknown> }) => {
     applyPromptInputs.push(input)
@@ -129,6 +136,8 @@ function resetState() {
   loadThreadMessagesQueue = []
   executeScriptQueue = []
   applyPromptInputs = []
+  completeRunInputs = []
+  failRunInputs = []
   agentConfig = {
     model: { provider: "openai", model: "gpt-4o-mini", temperature: 0 },
     systemPrompt: "",
@@ -583,4 +592,100 @@ test("fails when promptRef has no template or script", async () => {
 
   expect(res.status).toBe("failed")
   expect(res.error).toBe("Prompt has no content (template or script is missing)")
+})
+
+test("accumulates token usage across LLM calls and passes to completeRun", async () => {
+  resetState()
+
+  callLLMQueue.push({
+    type: "tool_calls",
+    toolCalls: [{ id: "call-1", name: "tool-a", params: {} }],
+    rawResponse: {},
+    durationMs: 100,
+    usage: { inputTokens: 100, outputTokens: 50 },
+  })
+  callLLMQueue.push({
+    type: "text",
+    content: "done",
+    rawResponse: {},
+    durationMs: 100,
+    usage: { inputTokens: 150, outputTokens: 75 },
+  })
+  executeFunctionQueue.push({ ok: true, result: { ok: true }, durationMs: 0 })
+
+  const res = await threadWorkflow({
+    threadId: "thread-1",
+    agentId: "agent-1",
+    agentVersionMode: "current",
+    organizationId: "org-1",
+    environmentId: "env-1",
+    channelId: "chan-1",
+    subject: "sub",
+    message: "hi",
+  })
+
+  expect(res.status).toBe("completed")
+  expect(completeRunInputs.length).toBe(1)
+  expect(completeRunInputs[0].inputTokens).toBe(250)
+  expect(completeRunInputs[0].outputTokens).toBe(125)
+})
+
+test("passes token usage to failRun on failure", async () => {
+  resetState()
+
+  const times = [0, 30000]
+  Date.now = () => times.shift() ?? 30000
+
+  callLLMQueue.push({
+    type: "tool_calls",
+    toolCalls: [{ id: "call-1", name: "tool-a", params: {} }],
+    rawResponse: {},
+    durationMs: 1000,
+    usage: { inputTokens: 200, outputTokens: 100 },
+  })
+  executeFunctionQueue.push({ ok: true, result: { ok: true }, durationMs: 0 })
+
+  const res = await threadWorkflow({
+    threadId: "thread-1",
+    agentId: "agent-1",
+    agentVersionMode: "current",
+    organizationId: "org-1",
+    environmentId: "env-1",
+    channelId: "chan-1",
+    subject: "sub",
+    message: "hi",
+  })
+
+  expect(res.status).toBe("failed")
+  expect(failRunInputs.length).toBe(1)
+  expect(failRunInputs[0].error).toBe("Active time limit exceeded")
+  expect(failRunInputs[0].inputTokens).toBe(200)
+  expect(failRunInputs[0].outputTokens).toBe(100)
+})
+
+test("returns token usage when no usage data is present", async () => {
+  resetState()
+
+  callLLMQueue.push({
+    type: "text",
+    content: "done",
+    rawResponse: {},
+    durationMs: 100,
+  })
+
+  const res = await threadWorkflow({
+    threadId: "thread-1",
+    agentId: "agent-1",
+    agentVersionMode: "current",
+    organizationId: "org-1",
+    environmentId: "env-1",
+    channelId: "chan-1",
+    subject: "sub",
+    message: "hi",
+  })
+
+  expect(res.status).toBe("completed")
+  expect(completeRunInputs.length).toBe(1)
+  expect(completeRunInputs[0].inputTokens).toBeUndefined()
+  expect(completeRunInputs[0].outputTokens).toBeUndefined()
 })

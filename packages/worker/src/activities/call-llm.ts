@@ -33,8 +33,20 @@ export interface CallLLMInput {
 }
 
 export type CallLLMResult =
-  | { type: "text"; content: string; rawResponse: unknown; durationMs: number }
-  | { type: "tool_calls"; toolCalls: ToolCallRecord[]; rawResponse: unknown; durationMs: number }
+  | {
+      type: "text"
+      content: string
+      rawResponse: unknown
+      durationMs: number
+      usage?: { inputTokens: number; outputTokens: number }
+    }
+  | {
+      type: "tool_calls"
+      toolCalls: ToolCallRecord[]
+      rawResponse: unknown
+      durationMs: number
+      usage?: { inputTokens: number; outputTokens: number }
+    }
   | { type: "error"; reason: "timeout" | "abort"; error: string; durationMs: number }
 
 const HUMAN_REQUEST_INSTRUCTIONS = `
@@ -164,6 +176,11 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
 
     const durationMs = Date.now() - start
 
+    const usage =
+      response.usage && response.usage.inputTokens !== undefined && response.usage.outputTokens !== undefined
+        ? { inputTokens: response.usage.inputTokens, outputTokens: response.usage.outputTokens }
+        : undefined
+
     if (response.toolCalls && response.toolCalls.length > 0) {
       const toolCalls: ToolCallRecord[] = response.toolCalls.map((tc) => ({
         id: tc.toolCallId,
@@ -176,6 +193,7 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
         toolCalls,
         rawResponse: response,
         durationMs,
+        usage,
       }
     }
 
@@ -184,6 +202,7 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
       content: response.text,
       rawResponse: response,
       durationMs,
+      usage,
     }
   } catch (err) {
     const durationMs = Date.now() - start

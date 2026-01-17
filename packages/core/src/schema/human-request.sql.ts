@@ -24,35 +24,21 @@ export const HumanRequestTable = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-
     threadId: uuid("thread_id")
       .notNull()
       .references(() => ThreadTable.id, { onDelete: "cascade" }),
-
     runId: uuid("run_id").references(() => RunTable.id, { onDelete: "set null" }),
-
     toolCallId: text("tool_call_id"),
-
     kind: humanRequestKindEnum("kind").notNull(),
-
     title: text("title").notNull(),
-
     description: text("description"),
-
     config: jsonb("config").$type<HumanRequestConfig>().notNull(),
-
     authority: humanRequestAuthorityEnum("authority").default("any_member"),
-
     timeoutMs: integer("timeout_ms"),
-
     fallback: humanRequestFallbackEnum("fallback"),
-
     expiresAt: timestamp("expires_at", { withTimezone: true }),
-
     status: humanRequestStatusEnum("status").notNull().default("pending"),
-
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
@@ -72,17 +58,12 @@ export const HumanResponseTable = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-
     requestId: uuid("request_id")
       .notNull()
       .references(() => HumanRequestTable.id, { onDelete: "cascade" }),
-
     status: humanResponseStatusEnum("status").notNull(),
-
     respondedBy: uuid("responded_by").references(() => UserTable.id, { onDelete: "set null" }),
-
     data: jsonb("data").$type<unknown>(),
-
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [uniqueIndex("human_response_request_idx").on(table.requestId)],

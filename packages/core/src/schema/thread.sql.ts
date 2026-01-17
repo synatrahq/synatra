@@ -17,56 +17,34 @@ export const ThreadTable = pgTable(
     id: uuid("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => OrganizationTable.id, { onDelete: "cascade" }),
-
     kind: threadKindEnum("kind").notNull().default("thread"),
-
     environmentId: uuid("environment_id")
       .notNull()
       .references(() => EnvironmentTable.id, { onDelete: "cascade" }),
-
     agentId: uuid("agent_id")
       .notNull()
       .references(() => AgentTable.id, { onDelete: "cascade" }),
-
     agentReleaseId: uuid("agent_release_id").references(() => AgentReleaseTable.id, { onDelete: "cascade" }),
-
     channelId: uuid("channel_id").references(() => ChannelTable.id, { onDelete: "cascade" }),
-
     triggerId: uuid("trigger_id").references(() => TriggerTable.id, { onDelete: "set null" }),
-
     triggerReleaseId: uuid("trigger_release_id").references(() => TriggerReleaseTable.id, { onDelete: "set null" }),
-
     isDebug: boolean("is_debug").default(false).notNull(),
-
     agentConfigHash: text("agent_config_hash").notNull(),
-
     workflowId: text("workflow_id").notNull(),
-
     subject: text("subject").notNull(),
-
     status: threadStatusEnum("status").notNull().default("running"),
-
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
-
     result: jsonb("result").$type<unknown>(),
-
     error: text("error"),
-
     skipReason: text("skip_reason"),
-
     seq: bigint("seq", { mode: "number" }).notNull().default(0),
-
     createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
-
     userId: uuid("user_id").references(() => UserTable.id, { onDelete: "set null" }),
-
     archived: boolean("archived").notNull().default(false),
     archivedAt: timestamp("archived_at", { withTimezone: true }),
-
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },

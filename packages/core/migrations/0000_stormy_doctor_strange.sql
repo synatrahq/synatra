@@ -400,6 +400,8 @@ CREATE TABLE "run" (
 	"output" jsonb,
 	"error" text,
 	"duration_ms" integer,
+	"input_tokens" integer,
+	"output_tokens" integer,
 	"started_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"completed_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,

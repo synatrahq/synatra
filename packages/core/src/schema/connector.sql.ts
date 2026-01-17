@@ -18,13 +18,11 @@ export const ConnectorTable = pgTable(
     organizationId: uuid("organization_id")
       .references(() => OrganizationTable.id, { onDelete: "cascade" })
       .notNull(),
-
     name: text("name").notNull(),
     tokenHash: text("token_hash").notNull(),
     status: connectorStatusEnum("status").default("offline").notNull(),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
     metadata: jsonb("metadata").$type<ConnectorMetadata>(),
-
     createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
     updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

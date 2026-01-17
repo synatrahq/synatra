@@ -39,7 +39,8 @@ async function run(): Promise<void> {
   })
 
   try {
-    const useBundle = existsSync(bundlePath)
+    const isDev = process.env.NODE_ENV !== "production"
+    const useBundle = !isDev && existsSync(bundlePath)
     const workflowOptions: Pick<WorkerOptions, "workflowBundle" | "workflowsPath"> = useBundle
       ? { workflowBundle: { codePath: bundlePath } }
       : { workflowsPath }

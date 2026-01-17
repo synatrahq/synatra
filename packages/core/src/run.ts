@@ -21,18 +21,24 @@ export const UpdateRunSchema = z.object({
   error: z.string().optional(),
   completedAt: z.date().optional(),
   durationMs: z.number().optional(),
+  inputTokens: z.number().int().optional(),
+  outputTokens: z.number().int().optional(),
 })
 
 export const CompleteRunSchema = z.object({
   id: z.string(),
   output: z.unknown().optional(),
   durationMs: z.number().optional(),
+  inputTokens: z.number().int().optional(),
+  outputTokens: z.number().int().optional(),
 })
 
 export const FailRunSchema = z.object({
   id: z.string(),
   error: z.string(),
   durationMs: z.number().optional(),
+  inputTokens: z.number().int().optional(),
+  outputTokens: z.number().int().optional(),
 })
 
 export async function createRun(raw: z.input<typeof CreateRunSchema>) {
@@ -64,7 +70,9 @@ export async function updateRun(raw: z.input<typeof UpdateRunSchema>) {
     input.output !== undefined ||
     input.error !== undefined ||
     input.completedAt !== undefined ||
-    input.durationMs !== undefined
+    input.durationMs !== undefined ||
+    input.inputTokens !== undefined ||
+    input.outputTokens !== undefined
   if (!hasChange) return null
 
   const updateData: Record<string, unknown> = { updatedAt: new Date() }
@@ -73,6 +81,8 @@ export async function updateRun(raw: z.input<typeof UpdateRunSchema>) {
   if (input.error !== undefined) updateData.error = input.error
   if (input.completedAt !== undefined) updateData.completedAt = input.completedAt
   if (input.durationMs !== undefined) updateData.durationMs = input.durationMs
+  if (input.inputTokens !== undefined) updateData.inputTokens = input.inputTokens
+  if (input.outputTokens !== undefined) updateData.outputTokens = input.outputTokens
 
   const [updated] = await withDb((db) =>
     db.update(RunTable).set(updateData).where(eq(RunTable.id, input.id)).returning(),
@@ -130,6 +140,8 @@ export async function completeRun(raw: z.input<typeof CompleteRunSchema>) {
   }
   if (input.output !== undefined) updateData.output = input.output
   if (input.durationMs !== undefined) updateData.durationMs = input.durationMs
+  if (input.inputTokens !== undefined) updateData.inputTokens = input.inputTokens
+  if (input.outputTokens !== undefined) updateData.outputTokens = input.outputTokens
 
   const [updated] = await withDb((db) =>
     db.update(RunTable).set(updateData).where(eq(RunTable.id, input.id)).returning(),
@@ -153,6 +165,8 @@ export async function failRun(raw: z.input<typeof FailRunSchema>) {
     updatedAt: new Date(),
   }
   if (input.durationMs !== undefined) updateData.durationMs = input.durationMs
+  if (input.inputTokens !== undefined) updateData.inputTokens = input.inputTokens
+  if (input.outputTokens !== undefined) updateData.outputTokens = input.outputTokens
 
   const [updated] = await withDb((db) =>
     db.update(RunTable).set(updateData).where(eq(RunTable.id, input.id)).returning(),
