@@ -112,7 +112,7 @@ export function DebugPanel(props: DebugPanelProps) {
 
   const startPolling = () => {
     stopPolling()
-    pollingTimer = window.setInterval(() => fetchMessages(), 10000)
+    pollingTimer = window.setInterval(() => fetchMessages(true), 10000)
   }
 
   const handleStreamError = (sessionId: string) => {
@@ -149,10 +149,10 @@ export function DebugPanel(props: DebugPanelProps) {
     }
   }
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (silent = false) => {
     const s = session()
     if (!s) return
-    setHistoryLoading(true)
+    if (!silent) setHistoryLoading(true)
     try {
       const res = await api.api.agents[":id"].playground.session.$get({ param: { id: props.agentId } })
       if (!res.ok) throw new Error("Failed to fetch messages")
@@ -171,7 +171,7 @@ export function DebugPanel(props: DebugPanelProps) {
     } catch (e) {
       console.error("Failed to fetch debug messages", e)
     } finally {
-      setHistoryLoading(false)
+      if (!silent) setHistoryLoading(false)
     }
   }
 
@@ -467,7 +467,7 @@ export function DebugPanel(props: DebugPanelProps) {
 
     eventSource.addEventListener("resync_required", () => {
       setLastSeq(null)
-      fetchMessages()
+      fetchMessages(true)
     })
 
     eventSource.addEventListener("error", (e: Event) => {
@@ -487,7 +487,8 @@ export function DebugPanel(props: DebugPanelProps) {
   createEffect(
     on(
       () => [props.agentId, props.environmentId] as const,
-      () => {
+      ([agentId, environmentId], prev) => {
+        if (prev && agentId === prev[0] && environmentId === prev[1]) return
         closeStream()
         clearRetry()
         stopPolling()
@@ -500,7 +501,7 @@ export function DebugPanel(props: DebugPanelProps) {
         setInput("")
         setLoading(false)
         setLastSeq(null)
-        initSession()
+        if (agentId && environmentId) initSession()
       },
     ),
   )
@@ -515,10 +516,8 @@ export function DebugPanel(props: DebugPanelProps) {
   createEffect(
     on(
       () => props.runtimeConfig,
-      (config, prevConfig) => {
-        if (!prevConfig && config && !session()) {
-          initSession()
-        }
+      (config, prev) => {
+        if (!prev && config && !session()) initSession()
       },
     ),
   )

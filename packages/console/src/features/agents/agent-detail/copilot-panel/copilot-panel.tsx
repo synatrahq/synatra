@@ -129,7 +129,7 @@ export function CopilotPanel(props: CopilotPanelProps) {
 
   const startPolling = (threadId: string) => {
     stopPolling()
-    pollingTimer = window.setInterval(() => fetchMessages(threadId), 10000)
+    pollingTimer = window.setInterval(() => fetchMessages(threadId, true), 10000)
   }
 
   const handleStreamError = (threadId: string) => {
@@ -248,9 +248,9 @@ export function CopilotPanel(props: CopilotPanelProps) {
     setLoading(state.status !== "idle")
   }
 
-  const fetchMessages = async (threadId: string) => {
+  const fetchMessages = async (threadId: string, silent = false) => {
     if (!props.agentId) return
-    setHistoryLoading(true)
+    if (!silent) setHistoryLoading(true)
     try {
       const res = await api.api.agents[":id"].copilot.threads[":threadId"].$get({
         param: { id: props.agentId, threadId },
@@ -312,7 +312,7 @@ export function CopilotPanel(props: CopilotPanelProps) {
     } catch (e) {
       console.error("Failed to fetch messages", e)
     } finally {
-      setHistoryLoading(false)
+      if (!silent) setHistoryLoading(false)
     }
   }
 
@@ -363,7 +363,7 @@ export function CopilotPanel(props: CopilotPanelProps) {
 
     eventSource.addEventListener("resync_required", () => {
       setLastSeq(null)
-      fetchMessages(threadId)
+      fetchMessages(threadId, true)
     })
 
     eventSource.addEventListener("copilot.thinking", (e) => {
@@ -628,8 +628,8 @@ export function CopilotPanel(props: CopilotPanelProps) {
   createEffect(
     on(
       () => props.agentId,
-      (agentId) => {
-        if (!agentId) return
+      (agentId, prev) => {
+        if (agentId === prev) return
         closeStream()
         clearRetry()
         stopPolling()
@@ -643,8 +643,12 @@ export function CopilotPanel(props: CopilotPanelProps) {
         setReasoningText("")
         setToolCalls([])
         setLoading(false)
-        setHistoryLoading(true)
         setLastSeq(null)
+        if (!agentId) {
+          setHistoryLoading(false)
+          return
+        }
+        setHistoryLoading(true)
         fetchThreads()
         fetchModels()
       },
