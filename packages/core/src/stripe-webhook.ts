@@ -166,6 +166,7 @@ async function handleSubscriptionUpdated(stripeSub: Stripe.Subscription): Promis
     const periodEnd = new Date(item.current_period_end * 1000)
     const isNewPeriod = !existing.currentPeriodEnd || periodEnd > existing.currentPeriodEnd
     const isNew = !existing.stripeSubscriptionId
+    const cancelAt = stripeSub.cancel_at ? new Date(stripeSub.cancel_at * 1000) : null
 
     const newPriceId = item.price.id
     const detectedPlan = getPlanFromPriceIdSubscription(newPriceId)
@@ -177,6 +178,7 @@ async function handleSubscriptionUpdated(stripeSub: Stripe.Subscription): Promis
         status: mapStripeStatus(stripeSub.status),
         stripeSubscriptionId: isNew ? stripeSub.id : undefined,
         stripePriceId: newPriceId,
+        cancelAt,
         ...(isNewPeriod && { currentPeriodStart: periodStart, currentPeriodEnd: periodEnd }),
       })
     } else {
@@ -184,6 +186,7 @@ async function handleSubscriptionUpdated(stripeSub: Stripe.Subscription): Promis
         status: mapStripeStatus(stripeSub.status),
         stripeSubscriptionId: isNew ? stripeSub.id : undefined,
         stripePriceId: newPriceId,
+        cancelAt,
         ...(isNewPeriod && { currentPeriodStart: periodStart, currentPeriodEnd: periodEnd }),
       })
     }
@@ -248,6 +251,7 @@ async function handleScheduleCompleted(schedule: Stripe.SubscriptionSchedule): P
       scheduledAt: null,
       stripeScheduleId: null,
     })
+    await updateUsageCurrentPeriodLimit({})
   })
 }
 

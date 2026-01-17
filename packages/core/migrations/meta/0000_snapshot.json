@@ -1,5 +1,5 @@
 {
-  "id": "fad75c82-5e74-4e49-9816-90697f5a11d7",
+  "id": "93f99ee1-03b6-4720-85f1-e26e90494736",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -4729,6 +4729,12 @@
         },
         "scheduled_at": {
           "name": "scheduled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cancel_at": {
+          "name": "cancel_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
