@@ -112,7 +112,7 @@ export function DebugPanel(props: DebugPanelProps) {
 
   const startPolling = () => {
     stopPolling()
-    pollingTimer = window.setInterval(() => fetchMessages(), 10000)
+    pollingTimer = window.setInterval(() => fetchMessages(true), 10000)
   }
 
   const handleStreamError = (sessionId: string) => {
@@ -129,7 +129,8 @@ export function DebugPanel(props: DebugPanelProps) {
 
   const initSession = async () => {
     if (!props.agentId || !props.environmentId || !props.runtimeConfig) return
-    setHistoryLoading(true)
+    const hasExistingData = session() !== null || messages().length > 0
+    if (!hasExistingData) setHistoryLoading(true)
     try {
       const res = await api.api.agents[":id"].playground.session.$post({
         param: { id: props.agentId },
@@ -141,7 +142,7 @@ export function DebugPanel(props: DebugPanelProps) {
         setLastSeq((prev) => Math.max(prev ?? 0, nextSeq))
       }
       setSession(data.session as PlaygroundSessionData)
-      if (!data.created) await fetchMessages()
+      if (!data.created) await fetchMessages(true)
       else setHistoryLoading(false)
     } catch (e) {
       console.error("Failed to init debug session", e)
@@ -149,10 +150,10 @@ export function DebugPanel(props: DebugPanelProps) {
     }
   }
 
-  const fetchMessages = async () => {
+  const fetchMessages = async (silent = false) => {
     const s = session()
     if (!s) return
-    setHistoryLoading(true)
+    if (!silent) setHistoryLoading(true)
     try {
       const res = await api.api.agents[":id"].playground.session.$get({ param: { id: props.agentId } })
       if (!res.ok) throw new Error("Failed to fetch messages")
@@ -467,7 +468,7 @@ export function DebugPanel(props: DebugPanelProps) {
 
     eventSource.addEventListener("resync_required", () => {
       setLastSeq(null)
-      fetchMessages()
+      fetchMessages(true)
     })
 
     eventSource.addEventListener("error", (e: Event) => {
@@ -484,10 +485,19 @@ export function DebugPanel(props: DebugPanelProps) {
     eventSource.onerror = () => handleStreamError(sessionId)
   }
 
+  let prevAgentEnv: string | null = null
   createEffect(
     on(
       () => [props.agentId, props.environmentId] as const,
-      () => {
+      ([agentId, environmentId]) => {
+        if (!agentId || !environmentId) {
+          prevAgentEnv = null
+          return
+        }
+        const key = `${agentId}:${environmentId}`
+        const isInitialOrChanged = prevAgentEnv === null || prevAgentEnv !== key
+        prevAgentEnv = key
+        if (!isInitialOrChanged) return
         closeStream()
         clearRetry()
         stopPolling()

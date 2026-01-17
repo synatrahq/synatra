@@ -129,7 +129,7 @@ export function CopilotPanel(props: CopilotPanelProps) {
 
   const startPolling = (threadId: string) => {
     stopPolling()
-    pollingTimer = window.setInterval(() => fetchMessages(threadId), 10000)
+    pollingTimer = window.setInterval(() => fetchMessages(threadId, true), 10000)
   }
 
   const handleStreamError = (threadId: string) => {
@@ -248,9 +248,9 @@ export function CopilotPanel(props: CopilotPanelProps) {
     setLoading(state.status !== "idle")
   }
 
-  const fetchMessages = async (threadId: string) => {
+  const fetchMessages = async (threadId: string, silent = false) => {
     if (!props.agentId) return
-    setHistoryLoading(true)
+    if (!silent) setHistoryLoading(true)
     try {
       const res = await api.api.agents[":id"].copilot.threads[":threadId"].$get({
         param: { id: props.agentId, threadId },
@@ -363,7 +363,7 @@ export function CopilotPanel(props: CopilotPanelProps) {
 
     eventSource.addEventListener("resync_required", () => {
       setLastSeq(null)
-      fetchMessages(threadId)
+      fetchMessages(threadId, true)
     })
 
     eventSource.addEventListener("copilot.thinking", (e) => {
@@ -625,11 +625,18 @@ export function CopilotPanel(props: CopilotPanelProps) {
     eventSource.onerror = () => handleStreamError(threadId)
   }
 
+  let prevAgentId: string | null = null
   createEffect(
     on(
       () => props.agentId,
       (agentId) => {
-        if (!agentId) return
+        if (!agentId) {
+          prevAgentId = null
+          return
+        }
+        const isInitialOrChanged = prevAgentId === null || prevAgentId !== agentId
+        prevAgentId = agentId
+        if (!isInitialOrChanged) return
         closeStream()
         clearRetry()
         stopPolling()
@@ -651,17 +658,23 @@ export function CopilotPanel(props: CopilotPanelProps) {
     ),
   )
 
+  let prevThreadId: string | null = null
   createEffect(
     on(
       () => selectedThreadId(),
       (threadId) => {
-        if (!threadId) return
+        if (!threadId) {
+          prevThreadId = null
+          return
+        }
+        const isSameThread = prevThreadId === threadId
+        prevThreadId = threadId
         closeStream()
         clearRetry()
         stopPolling()
         reconnectAttempts = 0
         setLastSeq(null)
-        fetchMessages(threadId)
+        fetchMessages(threadId, isSameThread)
         connectStream(threadId)
       },
     ),
