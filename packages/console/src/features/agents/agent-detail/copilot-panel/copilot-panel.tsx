@@ -658,14 +658,14 @@ export function CopilotPanel(props: CopilotPanelProps) {
   createEffect(
     on(
       () => selectedThreadId(),
-      (threadId, prev) => {
+      (threadId) => {
         if (!threadId) return
         closeStream()
         clearRetry()
         stopPolling()
         reconnectAttempts = 0
         setLastSeq(null)
-        fetchMessages(threadId, threadId === prev)
+        fetchMessages(threadId)
         connectStream(threadId)
       },
     ),
