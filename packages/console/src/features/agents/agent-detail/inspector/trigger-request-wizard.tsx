@@ -1,9 +1,9 @@
 import { Show, For, createResource, Switch, Match } from "solid-js"
-import { Button, Spinner } from "../../../ui"
+import { Button, Spinner } from "../../../../ui"
 import { Check, X, Lightning, Clock, Globe, Plugs, PencilSimple, Plus } from "phosphor-solid-js"
-import type { CopilotTriggerRequest, CopilotTriggerConfig } from "./copilot-panel/types"
+import type { CopilotTriggerRequest, CopilotTriggerConfig } from "../copilot-panel/types"
 import { TriggerDiffView } from "./trigger-diff-view"
-import { api } from "../../../app"
+import { api } from "../../../../app"
 
 type TriggerRequestWizardProps = {
   request: CopilotTriggerRequest | null

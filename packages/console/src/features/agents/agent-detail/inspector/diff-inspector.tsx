@@ -1,5 +1,5 @@
 import { Show, For, createMemo, createSignal, type JSX } from "solid-js"
-import { Button } from "../../../ui"
+import { Button } from "../../../../ui"
 import { Check, X, Plus, Minus, PencilSimple, CaretDown, CaretRight } from "phosphor-solid-js"
 import type { AgentRuntimeConfig, AgentTool, SubagentDefinition } from "@synatra/core/types"
 
