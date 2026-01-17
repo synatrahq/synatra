@@ -248,6 +248,7 @@ async function handleScheduleCompleted(schedule: Stripe.SubscriptionSchedule): P
       scheduledAt: null,
       stripeScheduleId: null,
     })
+    await updateUsageCurrentPeriodLimit({})
   })
 }
 

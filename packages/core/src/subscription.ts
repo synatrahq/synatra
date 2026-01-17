@@ -347,6 +347,7 @@ export async function changeSubscriptionPlan(raw: z.input<typeof ChangeSubscript
     .update(
       schedule.id,
       {
+        end_behavior: "release",
         phases: [
           {
             items: [{ price: item.price.id }],
