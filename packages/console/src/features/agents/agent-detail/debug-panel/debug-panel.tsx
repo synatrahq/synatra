@@ -485,19 +485,12 @@ export function DebugPanel(props: DebugPanelProps) {
     eventSource.onerror = () => handleStreamError(sessionId)
   }
 
-  let prevAgentEnv: string | null = null
   createEffect(
     on(
       () => [props.agentId, props.environmentId] as const,
-      ([agentId, environmentId]) => {
-        if (!agentId || !environmentId) {
-          prevAgentEnv = null
-          return
-        }
-        const key = `${agentId}:${environmentId}`
-        const isInitialOrChanged = prevAgentEnv === null || prevAgentEnv !== key
-        prevAgentEnv = key
-        if (!isInitialOrChanged) return
+      ([agentId, environmentId], prev) => {
+        if (!agentId || !environmentId) return
+        if (prev && agentId === prev[0] && environmentId === prev[1]) return
         closeStream()
         clearRetry()
         stopPolling()

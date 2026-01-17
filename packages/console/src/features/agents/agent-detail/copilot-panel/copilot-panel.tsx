@@ -625,18 +625,11 @@ export function CopilotPanel(props: CopilotPanelProps) {
     eventSource.onerror = () => handleStreamError(threadId)
   }
 
-  let prevAgentId: string | null = null
   createEffect(
     on(
       () => props.agentId,
-      (agentId) => {
-        if (!agentId) {
-          prevAgentId = null
-          return
-        }
-        const isInitialOrChanged = prevAgentId === null || prevAgentId !== agentId
-        prevAgentId = agentId
-        if (!isInitialOrChanged) return
+      (agentId, prev) => {
+        if (!agentId || agentId === prev) return
         closeStream()
         clearRetry()
         stopPolling()
@@ -658,23 +651,17 @@ export function CopilotPanel(props: CopilotPanelProps) {
     ),
   )
 
-  let prevThreadId: string | null = null
   createEffect(
     on(
       () => selectedThreadId(),
-      (threadId) => {
-        if (!threadId) {
-          prevThreadId = null
-          return
-        }
-        const isSameThread = prevThreadId === threadId
-        prevThreadId = threadId
+      (threadId, prev) => {
+        if (!threadId) return
         closeStream()
         clearRetry()
         stopPolling()
         reconnectAttempts = 0
         setLastSeq(null)
-        fetchMessages(threadId, isSameThread)
+        fetchMessages(threadId, threadId === prev)
         connectStream(threadId)
       },
     ),
