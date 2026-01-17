@@ -312,7 +312,7 @@ export function CopilotPanel(props: CopilotPanelProps) {
     } catch (e) {
       console.error("Failed to fetch messages", e)
     } finally {
-      setHistoryLoading(false)
+      if (!silent) setHistoryLoading(false)
     }
   }
 

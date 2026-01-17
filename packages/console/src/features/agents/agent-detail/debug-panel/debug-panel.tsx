@@ -141,7 +141,7 @@ export function DebugPanel(props: DebugPanelProps) {
         setLastSeq((prev) => Math.max(prev ?? 0, nextSeq))
       }
       setSession(data.session as PlaygroundSessionData)
-      if (!data.created) await fetchMessages(true)
+      if (!data.created) await fetchMessages()
       else setHistoryLoading(false)
     } catch (e) {
       console.error("Failed to init debug session", e)
@@ -171,7 +171,7 @@ export function DebugPanel(props: DebugPanelProps) {
     } catch (e) {
       console.error("Failed to fetch debug messages", e)
     } finally {
-      setHistoryLoading(false)
+      if (!silent) setHistoryLoading(false)
     }
   }
 
