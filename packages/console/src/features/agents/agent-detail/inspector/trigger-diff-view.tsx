@@ -1,6 +1,6 @@
 import { Show, For, createMemo, createSignal } from "solid-js"
 import { Plus, Minus, PencilSimple, CaretDown, CaretRight } from "phosphor-solid-js"
-import type { CopilotTriggerConfig } from "./copilot-panel/types"
+import type { CopilotTriggerConfig } from "../copilot-panel/types"
 
 type TriggerDiffViewProps = {
   before: CopilotTriggerConfig

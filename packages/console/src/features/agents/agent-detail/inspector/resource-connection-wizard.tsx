@@ -1,12 +1,12 @@
 import { createSignal, createEffect, createResource, Show, For } from "solid-js"
 import { UserConfigurableResourceType, isManagedResourceType } from "@synatra/core/types"
 import { generateSlug } from "@synatra/util/identifier"
-import { Button, Input, Textarea, Spinner, Label, FormField } from "../../../ui"
-import { ResourceIcon } from "../../../components"
+import { Button, Input, Textarea, Spinner, Label, FormField } from "../../../../ui"
+import { ResourceIcon } from "../../../../components"
 import { CheckCircle } from "phosphor-solid-js"
-import type { CopilotResourceRequest } from "./copilot-panel/types"
-import { RESOURCE_TYPE_META } from "../../resources/types"
-import { api } from "../../../app"
+import type { CopilotResourceRequest } from "../copilot-panel/types"
+import { RESOURCE_TYPE_META } from "../../../resources/types"
+import { api } from "../../../../app"
 
 type ConfirmingResource = {
   requestId: string
