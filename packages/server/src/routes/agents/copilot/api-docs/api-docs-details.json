@@ -11744,6 +11744,53 @@
       "responseExample": {}
     },
     {
+      "method": "POST",
+      "path": "/orgs/{org}/projectsV2/{project_number}/views",
+      "pathParams": {
+        "org": {
+          "type": "string",
+          "description": "The organization name. The name is not case sensitive.",
+          "required": true
+        },
+        "project_number": {
+          "type": "number",
+          "description": "The project's number.",
+          "required": true
+        }
+      },
+      "bodyParams": {
+        "name": {
+          "type": "string",
+          "description": "The name of the view.",
+          "required": true
+        },
+        "layout": {
+          "type": "\"table\" | \"board\" | \"roadmap\"",
+          "description": "The layout of the view.",
+          "required": true
+        },
+        "filter": {
+          "type": "string",
+          "description": "The filter query for the view. See [Filtering projects](https://docs.github.com/issues/planning-and-tracking-with-projects/customizing-views-in-your-project/filtering-projects) for more information.",
+          "required": false
+        },
+        "visible_fields": {
+          "type": "number[]",
+          "description": "`visible_fields` is not applicable to `roadmap` layout views.\nFor `table` and `board` layouts, this represents the field IDs that should be visible in the view. If not provided, the default visible fields will be used.",
+          "required": false
+        }
+      },
+      "responseExample": {
+        "id": 0,
+        "number": 0,
+        "name": "string",
+        "layout": "table",
+        "node_id": "string",
+        "project_url": "https://api.github.com/orgs/octocat/projectsV2/1",
+        "html_url": "https://github.com/orgs/octocat/projects/1/views/1"
+      }
+    },
+    {
       "method": "GET",
       "path": "/orgs/{org}/projectsV2/{project_number}/views/{view_number}/items",
       "pathParams": {
@@ -34725,6 +34772,53 @@
           "url": "https://api.github.com/users/octocat"
         }
       ]
+    },
+    {
+      "method": "POST",
+      "path": "/users/{user_id}/projectsV2/{project_number}/views",
+      "pathParams": {
+        "user_id": {
+          "type": "string",
+          "description": "The unique identifier of the user.",
+          "required": true
+        },
+        "project_number": {
+          "type": "number",
+          "description": "The project's number.",
+          "required": true
+        }
+      },
+      "bodyParams": {
+        "name": {
+          "type": "string",
+          "description": "The name of the view.",
+          "required": true
+        },
+        "layout": {
+          "type": "\"table\" | \"board\" | \"roadmap\"",
+          "description": "The layout of the view.",
+          "required": true
+        },
+        "filter": {
+          "type": "string",
+          "description": "The filter query for the view. See [Filtering projects](https://docs.github.com/issues/planning-and-tracking-with-projects/customizing-views-in-your-project/filtering-projects) for more information.",
+          "required": false
+        },
+        "visible_fields": {
+          "type": "number[]",
+          "description": "`visible_fields` is not applicable to `roadmap` layout views.\nFor `table` and `board` layouts, this represents the field IDs that should be visible in the view. If not provided, the default visible fields will be used.",
+          "required": false
+        }
+      },
+      "responseExample": {
+        "id": 0,
+        "number": 0,
+        "name": "string",
+        "layout": "table",
+        "node_id": "string",
+        "project_url": "https://api.github.com/orgs/octocat/projectsV2/1",
+        "html_url": "https://github.com/orgs/octocat/projects/1/views/1"
+      }
     },
     {
       "method": "GET",
