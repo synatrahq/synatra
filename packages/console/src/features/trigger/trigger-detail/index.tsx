@@ -1,4 +1,4 @@
-import { Show, createSignal, createEffect, onCleanup, on } from "solid-js"
+import { Show, createSignal, createEffect, createMemo, onCleanup, on } from "solid-js"
 import { useBeforeLeave } from "@solidjs/router"
 import {
   Skeleton,
@@ -15,7 +15,7 @@ import { AppIcon } from "../../../components"
 import { Broadcast, Timer, PencilSimple, Lightning, Cube, Check } from "phosphor-solid-js"
 import { activeOrg, api, apiBaseURL } from "../../../app"
 import { AddEnvironmentModal } from "./add-environment-modal"
-import { generateSampleFromSchema, ensureObjectSchema } from "./utils"
+import { generateSampleFromSchema, ensureObjectSchema, getAppPayloadSchema } from "./utils"
 import { VersionControl, type TriggerRelease } from "./version-control"
 import { DeployDropdown } from "./deploy-dropdown"
 import { OutlinePanel } from "./outline-panel"
@@ -498,6 +498,24 @@ export function TriggerDetail(props: TriggerDetailProps) {
   const selectedPrompt = () => props.prompts.find((p) => p.id === editedPromptId())
   const selectedAppAccount = () => props.appAccounts?.find((a) => a.id === editedAppAccountId())
 
+  const effectivePayloadSchema = createMemo(() => {
+    if (editedType() === "app") {
+      const appId = selectedAppAccount()?.appId
+      return getAppPayloadSchema(appId, editedAppEvents()) ?? editedPayloadSchema()
+    }
+    return editedPayloadSchema()
+  })
+
+  createEffect(
+    on(
+      () => props.trigger?.id,
+      () => {
+        setSelection({ type: "settings" })
+      },
+      { defer: true },
+    ),
+  )
+
   const [addEnvModalOpen, setAddEnvModalOpen] = createSignal(false)
   const [removeEnvModalOpen, setRemoveEnvModalOpen] = createSignal(false)
   const [envToRemove, setEnvToRemove] = createSignal<string | null>(null)
@@ -621,7 +639,7 @@ export function TriggerDetail(props: TriggerDetailProps) {
                   availableChannels={props.channels}
                   releases={props.releases}
                   currentReleaseId={trigger().currentReleaseId}
-                  payloadSchema={editedPayloadSchema()}
+                  payloadSchema={effectivePayloadSchema()}
                   prompts={props.prompts.filter((p) => p.agentId === props.trigger?.agentId)}
                   promptMode={promptMode()}
                   selectedPromptId={editedPromptId()}

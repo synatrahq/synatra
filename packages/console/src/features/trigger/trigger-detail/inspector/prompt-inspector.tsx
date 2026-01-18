@@ -114,7 +114,7 @@ function NestedSchemaPreview(props: { schema: Record<string, unknown> }) {
   )
 }
 
-function AppPayloadSchemaSection(props: { appId: string; events: string[] }) {
+function AppPayloadSchemaSection(props: { appId: string; events: string[]; showPlaceholders?: boolean }) {
   const schema = () => getAppPayloadSchema(props.appId, props.events) ?? { type: "object", properties: {} }
   const placeholders = () => generatePlaceholdersFromSchema(schema())
 
@@ -124,7 +124,7 @@ function AppPayloadSchemaSection(props: { appId: string; events: string[] }) {
       <div class="rounded-md border border-border bg-surface px-3 py-2">
         <NestedSchemaPreview schema={schema()} />
       </div>
-      <Show when={placeholders().length > 0}>
+      <Show when={props.showPlaceholders !== false && placeholders().length > 0}>
         <div class="mt-2">
           <div class="mb-1 text-2xs text-text-muted">Available placeholders</div>
           <div class="flex flex-wrap gap-1">
@@ -313,7 +313,12 @@ export function PromptInspector(props: PromptInspectorProps) {
                 rootTypePolicy="fixed"
                 fixedRootKind="object"
               />
-              <Show when={Object.keys((props.payloadSchema.properties as Record<string, unknown>) ?? {}).length > 0}>
+              <Show
+                when={
+                  props.promptMode === "template" &&
+                  Object.keys((props.payloadSchema.properties as Record<string, unknown>) ?? {}).length > 0
+                }
+              >
                 <div class="mt-2">
                   <div class="mb-1 text-2xs text-text-muted">Available placeholders</div>
                   <div class="flex flex-wrap gap-1">
@@ -344,7 +349,11 @@ export function PromptInspector(props: PromptInspectorProps) {
               (props.promptMode === "template" || props.promptMode === "script")
             }
           >
-            <AppPayloadSchemaSection appId={props.appId!} events={props.appEvents ?? []} />
+            <AppPayloadSchemaSection
+              appId={props.appId!}
+              events={props.appEvents ?? []}
+              showPlaceholders={props.promptMode === "template"}
+            />
           </Show>
 
           <Show when={props.promptMode === "template"}>
