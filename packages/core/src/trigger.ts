@@ -108,7 +108,7 @@ export const CreateTriggerSchema = z.object({
   template: z.string().nullable().optional(),
   script: z.string().nullable().optional(),
   payloadSchema: z.unknown().nullable().optional(),
-  type: z.enum(triggerTypeEnum.enumValues).default("webhook"),
+  type: z.enum(triggerTypeEnum.enumValues).default("schedule"),
   cron: z.string().nullable().optional(),
   timezone: z
     .string()
