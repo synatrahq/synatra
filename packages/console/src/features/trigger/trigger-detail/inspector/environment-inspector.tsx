@@ -1,5 +1,5 @@
 import { Show, createSignal, createEffect } from "solid-js"
-import { Copy, Check, ArrowsClockwise } from "phosphor-solid-js"
+import { Copy, Check, ArrowsClockwise, Warning, Info } from "phosphor-solid-js"
 import {
   FormField,
   Input,
@@ -179,6 +179,25 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
   return (
     <>
       <div class="space-y-0">
+        <Show when={!props.env.active}>
+          <div class="mx-3 mb-2 mt-3 flex items-start gap-2 rounded border border-warning/30 bg-warning/5 px-2.5 py-2">
+            <Warning class="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" weight="fill" />
+            <div class="flex flex-col gap-0.5">
+              <span class="text-2xs font-medium text-warning">Environment disabled</span>
+              <span class="text-2xs leading-tight text-text-muted">
+                This trigger will not execute in this environment until enabled.
+              </span>
+            </div>
+          </div>
+        </Show>
+
+        <div class="mx-3 mb-2 mt-3 flex items-start gap-2 rounded border border-accent/30 bg-accent/5 px-2.5 py-2">
+          <Info class="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" weight="fill" />
+          <span class="text-2xs leading-tight text-text-muted">
+            Environment settings take effect immediately without deployment.
+          </span>
+        </div>
+
         <CollapsibleSection title={props.env.environment.name}>
           <div class="space-y-3">
             <FormField horizontal labelWidth="5rem" label="Channel">

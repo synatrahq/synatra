@@ -1,5 +1,5 @@
 import { Show, For, type JSX } from "solid-js"
-import { Gear, ChatCircle, Plus, X, CirclesThree } from "phosphor-solid-js"
+import { Gear, ChatCircle, Plus, X, CirclesThree, Warning } from "phosphor-solid-js"
 import { Switch } from "../../../ui"
 import type { Selection } from "./constants"
 import { getSelectionKey } from "./constants"
@@ -124,7 +124,19 @@ export function OutlinePanel(props: OutlinePanelProps) {
           />
           <Show
             when={props.environments.length > 0}
-            fallback={<div class="px-3 py-1 text-[10px] italic text-text-muted">No environments</div>}
+            fallback={
+              <div class="mx-2 mb-1 rounded border border-warning/30 bg-warning/5 px-2 py-1.5">
+                <div class="flex items-start gap-1.5">
+                  <Warning class="mt-0.5 h-3 w-3 shrink-0 text-warning" weight="fill" />
+                  <div class="flex flex-col gap-0.5">
+                    <span class="text-[10px] font-medium text-warning">No environments</span>
+                    <span class="text-[10px] leading-tight text-text-muted">
+                      Add an environment to enable this trigger
+                    </span>
+                  </div>
+                </div>
+              </div>
+            }
           >
             <For each={props.environments}>
               {(env) => {

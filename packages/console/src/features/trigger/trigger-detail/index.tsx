@@ -499,6 +499,28 @@ export function TriggerDetail(props: TriggerDetailProps) {
   const selectedAppAccount = () => props.appAccounts?.find((a) => a.id === editedAppAccountId())
 
   const [addEnvModalOpen, setAddEnvModalOpen] = createSignal(false)
+  const [removeEnvModalOpen, setRemoveEnvModalOpen] = createSignal(false)
+  const [envToRemove, setEnvToRemove] = createSignal<string | null>(null)
+  const [removingEnv, setRemovingEnv] = createSignal(false)
+
+  const envToRemoveInfo = () => {
+    const envId = envToRemove()
+    if (!envId) return null
+    return props.trigger?.environments.find((e) => e.environmentId === envId)
+  }
+
+  const handleRemoveEnvironment = async () => {
+    const envId = envToRemove()
+    if (!envId || !props.trigger) return
+    setRemovingEnv(true)
+    try {
+      await props.onRemoveEnvironment?.(props.trigger.id, envId)
+      setRemoveEnvModalOpen(false)
+      setEnvToRemove(null)
+    } finally {
+      setRemovingEnv(false)
+    }
+  }
 
   return (
     <div class="flex flex-1 flex-col overflow-hidden bg-surface-elevated">
@@ -575,7 +597,10 @@ export function TriggerDetail(props: TriggerDetailProps) {
                   selection={selection()}
                   onSelect={setSelection}
                   onAddEnvironment={() => setAddEnvModalOpen(true)}
-                  onRemoveEnvironment={(envId) => props.onRemoveEnvironment?.(trigger().id, envId)}
+                  onRemoveEnvironment={(envId) => {
+                    setEnvToRemove(envId)
+                    setRemoveEnvModalOpen(true)
+                  }}
                   onToggleEnvironment={(envId) => props.onToggleEnvironment?.(trigger().id, envId)}
                 />
               </div>
@@ -704,6 +729,38 @@ export function TriggerDetail(props: TriggerDetailProps) {
           }
         }}
       />
+
+      <Modal
+        open={removeEnvModalOpen()}
+        onBackdropClick={() => setRemoveEnvModalOpen(false)}
+        onEscape={() => setRemoveEnvModalOpen(false)}
+      >
+        <ModalContainer size="sm">
+          <div class="border-b border-border px-4 py-3">
+            <h3 class="text-xs font-medium text-text">Remove environment</h3>
+          </div>
+          <ModalBody>
+            <p class="text-xs text-text-muted">
+              Are you sure you want to remove{" "}
+              <span class="font-medium text-text">{envToRemoveInfo()?.environment.name}</span> from this trigger?
+            </p>
+            <p class="mt-2 text-xs text-text-muted">
+              This will disable the trigger for this environment. Webhook URLs and secrets will be invalidated.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <>
+              <Button variant="ghost" size="sm" onClick={() => setRemoveEnvModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" size="sm" onClick={handleRemoveEnvironment} disabled={removingEnv()}>
+                {removingEnv() && <Spinner size="xs" class="border-white border-t-transparent" />}
+                {removingEnv() ? "Removing..." : "Remove"}
+              </Button>
+            </>
+          </ModalFooter>
+        </ModalContainer>
+      </Modal>
 
       <Modal
         open={editNameModalOpen()}
