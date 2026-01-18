@@ -332,7 +332,7 @@ export function SettingsInspector(props: SettingsInspectorProps) {
 
   return (
     <div class="space-y-0">
-      <CollapsibleSection title="Settings">
+      <CollapsibleSection title="Trigger">
         <div class="space-y-3">
           <FormField horizontal labelWidth="5rem" label="Slug">
             <span class="py-1 font-code text-xs text-text">{props.slug}</span>

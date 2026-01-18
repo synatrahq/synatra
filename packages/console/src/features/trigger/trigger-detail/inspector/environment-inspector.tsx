@@ -191,11 +191,9 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
           </div>
         </Show>
 
-        <div class="mx-3 mb-2 mt-3 flex items-start gap-2 rounded border border-accent/30 bg-accent/5 px-2.5 py-2">
-          <Info class="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" weight="fill" />
-          <span class="text-2xs leading-tight text-text-muted">
-            Environment settings take effect immediately without deployment.
-          </span>
+        <div class="mx-3 mb-2 mt-3 flex items-center gap-2 rounded border border-accent/30 bg-accent/5 px-2.5 py-2">
+          <Info class="h-3.5 w-3.5 shrink-0 text-accent" weight="fill" />
+          <span class="text-2xs text-text-muted">Environment settings take effect immediately without deployment.</span>
         </div>
 
         <CollapsibleSection title="Settings">

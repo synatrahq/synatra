@@ -1,5 +1,5 @@
 import { Show, Index, For, type JSX } from "solid-js"
-import { ChatCircle, Code, Plus, DotsThree, Brain, BracketsCurly, Database, Gear, UsersThree } from "phosphor-solid-js"
+import { Code, Plus, DotsThree, BracketsCurly, Database, Gear, UsersThree } from "phosphor-solid-js"
 import type { AgentRuntimeConfig } from "@synatra/core/types"
 import { getSystemTools, type SystemToolDefinition } from "@synatra/core/system-tools"
 import { DropdownMenu, type DropdownMenuItem } from "../../../ui"
@@ -65,6 +65,7 @@ type TreeItemProps = {
   selected: boolean
   onClick: () => void
   onDelete?: () => void
+  code?: boolean
 }
 
 function TreeItem(props: TreeItemProps) {
@@ -82,7 +83,9 @@ function TreeItem(props: TreeItemProps) {
       }}
       onClick={props.onClick}
     >
-      <span class="truncate font-code">{props.label}</span>
+      <span class="truncate" classList={{ "font-code": props.code }}>
+        {props.label}
+      </span>
       <Show when={props.sublabel}>
         <span class="ml-auto truncate text-[10px] text-text-muted group-hover:hidden">{props.sublabel}</span>
       </Show>
@@ -98,30 +101,6 @@ function TreeItem(props: TreeItemProps) {
           />
         </span>
       </Show>
-    </button>
-  )
-}
-
-type SimpleTreeItemProps = {
-  icon: () => JSX.Element
-  label: string
-  selected: boolean
-  onClick: () => void
-}
-
-function SimpleTreeItem(props: SimpleTreeItemProps) {
-  return (
-    <button
-      type="button"
-      class="group flex w-full items-center gap-2 px-3 py-1.5 text-xs text-text transition-colors"
-      classList={{
-        "bg-surface-muted": props.selected,
-        "hover:bg-surface-muted": !props.selected,
-      }}
-      onClick={props.onClick}
-    >
-      {props.icon()}
-      <span class="truncate">{props.label}</span>
     </button>
   )
 }
@@ -156,25 +135,13 @@ export function OutlinePanel(props: OutlinePanelProps) {
 
   return (
     <div class="flex h-full flex-col overflow-y-auto bg-surface-elevated py-1 scrollbar-thin">
-      <div class="mb-2">
-        <div class="px-3 py-1">
-          <span class="text-2xs font-medium text-text-muted">General</span>
-        </div>
-        <SimpleTreeItem
-          icon={() => <Brain class="h-3.5 w-3.5 shrink-0 text-text-muted" weight="duotone" />}
-          label="Model"
-          selected={isSelected("model")}
-          onClick={() => props.onSelect({ type: "model" })}
-        />
-        <SimpleTreeItem
-          icon={() => <ChatCircle class="h-3.5 w-3.5 shrink-0 text-accent" weight="duotone" />}
-          label="Prompt"
-          selected={isSelected("prompt")}
-          onClick={() => props.onSelect({ type: "prompt" })}
-        />
+      <div>
+        <SectionHeader icon={<Gear class="h-3 w-3 text-text-muted" weight="duotone" />} label="General" />
+        <TreeItem label="Model" selected={isSelected("model")} onClick={() => props.onSelect({ type: "model" })} />
+        <TreeItem label="Prompt" selected={isSelected("prompt")} onClick={() => props.onSelect({ type: "prompt" })} />
       </div>
 
-      <div class="border-t border-border pt-2">
+      <div class="mt-2 border-t border-border">
         <SectionHeader
           icon={<BracketsCurly class="h-3 w-3 text-accent" weight="duotone" />}
           label="Types"
@@ -192,13 +159,14 @@ export function OutlinePanel(props: OutlinePanelProps) {
                 selected={isSelected("type", name)}
                 onClick={() => props.onSelect({ type: "type", name })}
                 onDelete={() => props.onRemoveType(name)}
+                code
               />
             )}
           </For>
         </Show>
       </div>
 
-      <div class="mt-2 border-t border-border pt-2">
+      <div class="mt-2 border-t border-border">
         <SectionHeader
           icon={<Code class="h-3 w-3 text-success" weight="duotone" />}
           label="Tools"
@@ -238,13 +206,14 @@ export function OutlinePanel(props: OutlinePanelProps) {
                 selected={isSelected("tool", index)}
                 onClick={() => props.onSelect({ type: "tool", index })}
                 onDelete={() => props.onRemoveTool(index)}
+                code
               />
             )}
           </Index>
         </Show>
       </div>
 
-      <div class="mt-2 border-t border-border pt-2">
+      <div class="mt-2 border-t border-border">
         <SectionHeader
           icon={<UsersThree class="h-3 w-3 text-warning" weight="duotone" />}
           label="Subagents"
@@ -268,7 +237,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
         </Show>
       </div>
 
-      <div class="mt-2 border-t border-border pt-2">
+      <div class="mt-2 border-t border-border">
         <SectionHeader icon={<Gear class="h-3 w-3 text-text-muted" weight="duotone" />} label="System tools" />
         <For each={getSystemTools()}>
           {(tool: SystemToolDefinition) => (
@@ -276,6 +245,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
               label={`${tool.name}()`}
               selected={isSelected("system_tool", tool.name)}
               onClick={() => props.onSelect({ type: "system_tool", name: tool.name })}
+              code
             />
           )}
         </For>
