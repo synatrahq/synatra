@@ -10,6 +10,7 @@ import { AgentRuntimeConfigSchema, SubscriptionPlan, PLAN_LIMITS } from "./types
 import { serializeConfig } from "@synatra/util/normalize"
 import { createError } from "@synatra/util/error"
 import { bumpVersion, parseVersion, stringifyVersion } from "@synatra/util/version"
+import { isReservedSlug } from "@synatra/util/identifier"
 import { currentSubscription } from "./subscription"
 
 export const CreateAgentSchema = z.object({
@@ -165,6 +166,9 @@ export async function findAgentBySlug(slug: string) {
 
 export async function createAgent(input: z.input<typeof CreateAgentSchema>) {
   const data = CreateAgentSchema.parse(input)
+  if (isReservedSlug(data.slug)) {
+    throw createError("BadRequestError", { message: `Slug "${data.slug}" is reserved` })
+  }
   const organizationId = principal.orgId()
   const userId = principal.userId()
   const versionParsed = parseVersion(data.initialVersion)
@@ -239,6 +243,9 @@ export async function createAgent(input: z.input<typeof CreateAgentSchema>) {
 
 export async function updateAgent(input: z.input<typeof UpdateAgentSchema>) {
   const data = UpdateAgentSchema.parse(input)
+  if (data.slug !== undefined && isReservedSlug(data.slug)) {
+    throw createError("BadRequestError", { message: `Slug "${data.slug}" is reserved` })
+  }
   await getAgentById(data.id)
   const userId = principal.userId()
   const updateData = {

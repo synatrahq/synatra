@@ -3,7 +3,7 @@ import { eq, and, notInArray } from "drizzle-orm"
 import { principal } from "./principal"
 import { withDb, first } from "./database"
 import { createError } from "@synatra/util/error"
-import { generateSlug, generateRandomId } from "@synatra/util/identifier"
+import { generateSlug, generateRandomId, isReservedSlug } from "@synatra/util/identifier"
 import { EnvironmentTable } from "./schema/environment.sql"
 import { EnvironmentColorRegex, STAGING_ENV } from "./types"
 
@@ -112,6 +112,9 @@ export async function createEnvironment(input: z.input<typeof CreateEnvironmentS
   const userId = principal.actingUserId()
 
   const prepared = prepareValues(data)
+  if (isReservedSlug(prepared.slug)) {
+    throw createError("BadRequestError", { message: `Slug "${prepared.slug}" is reserved` })
+  }
   const [environment] = await withDb((db) =>
     db
       .insert(EnvironmentTable)
@@ -133,11 +136,20 @@ export async function createManyEnvironments(input: z.input<typeof CreateManyEnv
     updatedBy: input.updatedBy ?? input.createdBy,
   }))
 
+  for (const v of values) {
+    if (isReservedSlug(v.slug)) {
+      throw createError("BadRequestError", { message: `Slug "${v.slug}" is reserved` })
+    }
+  }
+
   return withDb((db) => db.insert(EnvironmentTable).values(values).returning())
 }
 
 export async function updateEnvironment(input: z.input<typeof UpdateEnvironmentSchema>) {
   const data = UpdateEnvironmentSchema.parse(input)
+  if (data.slug !== undefined && isReservedSlug(data.slug)) {
+    throw createError("BadRequestError", { message: `Slug "${data.slug}" is reserved` })
+  }
   const existing = await getEnvironmentById(data.id)
 
   if (data.slug !== undefined && existing.protected && data.slug !== existing.slug) {
