@@ -17,7 +17,7 @@ drawtext=text='Review the changes and deploy your Agent.':fontfile=$FONT:fontsiz
 drawtext=text='Next, create a Trigger. This one reports tasks daily at 9 AM.':fontfile=$FONT:fontsize=36:fontcolor=white:$BOX:x=(w-text_w)/2:y=h-80:enable='between(t,30,36)',\
 drawtext=text='Triggers also support Webhooks and App events.':fontfile=$FONT:fontsize=36:fontcolor=white:$BOX:x=(w-text_w)/2:y=h-80:enable='between(t,37,46)',\
 drawtext=text='Next morning, 9 AM...':fontfile=$FONT:fontsize=48:fontcolor=white:$BOX:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,47,49)',\
-drawtext=text='Let'\''s check the Inbox.':fontfile=$FONT:fontsize=36:fontcolor=white:$BOX:x=(w-text_w)/2:y=h-80:enable='between(t,49,50)',\
+drawtext=text='Check the Inbox.':fontfile=$FONT:fontsize=36:fontcolor=white:$BOX:x=(w-text_w)/2:y=h-80:enable='between(t,49,50)',\
 drawtext=text='The report has arrived.':fontfile=$FONT:fontsize=36:fontcolor=white:$BOX:x=(w-text_w)/2:y=h-80:enable='between(t,50,53)',\
 drawtext=text='You can also request additional tasks from the AI.':fontfile=$FONT:fontsize=36:fontcolor=white:$BOX:x=(w-text_w)/2:y=h-80:enable='between(t,53,57)',\
 drawtext=text='For important actions, AI requests your approval.':fontfile=$FONT:fontsize=36:fontcolor=white:$BOX:x=(w-text_w)/2:y=h-80:enable='between(t,58,64)'\
