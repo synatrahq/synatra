@@ -198,7 +198,7 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
           </span>
         </div>
 
-        <CollapsibleSection title={props.env.environment.name}>
+        <CollapsibleSection title="Settings">
           <div class="space-y-3">
             <FormField horizontal labelWidth="5rem" label="Channel">
               <Select
@@ -208,6 +208,9 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
                 class="h-7 text-xs"
               />
             </FormField>
+            <p class="text-2xs leading-relaxed text-text-muted">
+              The channel where the agent will post responses and interact with users when this trigger fires.
+            </p>
             <Show when={channelDirty()}>
               <div class="flex items-center justify-end gap-2">
                 <Button variant="outline" size="xs" onClick={handleResetChannel} disabled={savingChannel()}>
