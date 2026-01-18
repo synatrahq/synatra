@@ -1,5 +1,6 @@
 import { Show, For, createSignal, createEffect } from "solid-js"
 import { Note, Pencil, Code } from "phosphor-solid-js"
+import { ManagedResourceType } from "@synatra/core/types"
 import {
   FormField,
   Select,
@@ -389,7 +390,10 @@ export function PromptInspector(props: PromptInspectorProps) {
                     const res = await api.api.resources.$get()
                     if (!res.ok) return []
                     const data = await res.json()
-                    return data.map((r) => ({ slug: r.slug, type: r.type }))
+                    const filtered = data.filter(
+                      (r) => !ManagedResourceType.includes(r.type as (typeof ManagedResourceType)[number]),
+                    )
+                    return filtered.map((r) => ({ slug: r.slug, type: r.type }))
                   }}
                 />
                 <CodeEditor
