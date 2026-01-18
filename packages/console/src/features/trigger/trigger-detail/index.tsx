@@ -515,6 +515,9 @@ export function TriggerDetail(props: TriggerDetailProps) {
     setRemovingEnv(true)
     try {
       await props.onRemoveEnvironment?.(props.trigger.id, envId)
+      if (selection()?.type === "environment" && (selection() as { environmentId: string }).environmentId === envId) {
+        setSelection({ type: "settings" })
+      }
       setRemoveEnvModalOpen(false)
       setEnvToRemove(null)
     } finally {
@@ -726,6 +729,7 @@ export function TriggerDetail(props: TriggerDetailProps) {
         onAdd={async (environmentId, channelId, addAgentToChannel) => {
           if (props.trigger && props.onAddEnvironment) {
             await props.onAddEnvironment(props.trigger.id, environmentId, channelId, addAgentToChannel)
+            setSelection({ type: "environment", environmentId })
           }
         }}
       />
