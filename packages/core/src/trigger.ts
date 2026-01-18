@@ -3,7 +3,7 @@ import { eq, and, sql, desc, getTableColumns } from "drizzle-orm"
 import { randomBytes, createHash } from "crypto"
 import { principal } from "./principal"
 import { withDb, withTx, first } from "./database"
-import { generateSlug, generateRandomId } from "@synatra/util/identifier"
+import { generateSlug, generateRandomId, isReservedSlug } from "@synatra/util/identifier"
 import {
   TriggerTable,
   TriggerReleaseTable,
@@ -317,6 +317,9 @@ export async function createTrigger(input: z.input<typeof CreateTriggerSchema>) 
 
   const userId = principal.userId()
   const slug = data.slug || generateSlug(data.name) || generateRandomId()
+  if (isReservedSlug(slug)) {
+    throw createError("BadRequestError", { message: `Slug "${slug}" is reserved` })
+  }
   const versionParsed = parseVersion(data.initialVersion ?? "0.0.1")
   const versionText = stringifyVersion(versionParsed)
 
@@ -417,6 +420,9 @@ export async function createTrigger(input: z.input<typeof CreateTriggerSchema>) 
 
 export async function updateTrigger(input: z.input<typeof UpdateTriggerSchema>) {
   const data = UpdateTriggerSchema.parse(input)
+  if (data.slug !== undefined && isReservedSlug(data.slug)) {
+    throw createError("BadRequestError", { message: `Slug "${data.slug}" is reserved` })
+  }
   await getTriggerById(data.id)
   if (data.name === undefined && data.slug === undefined) return findTriggerById(data.id)
 

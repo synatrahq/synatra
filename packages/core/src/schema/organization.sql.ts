@@ -1,6 +1,5 @@
 import { pgTable, uniqueIndex, uuid, timestamp, text, jsonb } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
-import { UserTable } from "./user.sql"
 
 export const OrganizationTable = pgTable(
   "organization",

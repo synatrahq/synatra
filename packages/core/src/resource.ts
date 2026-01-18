@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm"
 import { principal } from "./principal"
 import { withDb, first } from "./database"
 import { createError } from "@synatra/util/error"
-import { generateSlug, generateRandomId } from "@synatra/util/identifier"
+import { generateSlug, generateRandomId, isReservedSlug } from "@synatra/util/identifier"
 import { ResourceTable, ResourceConfigTable } from "./schema/resource.sql"
 import { EnvironmentTable } from "./schema/environment.sql"
 import { ConnectorTable } from "./schema/connector.sql"
@@ -509,6 +509,10 @@ export async function createResource(input: z.input<typeof CreateResourceSchema>
   const userId = principal.userId()
   const slug = data.slug?.trim() || generateSlug(data.name) || generateRandomId()
 
+  if (!data.managed && isReservedSlug(slug)) {
+    throw createError("BadRequestError", { message: `Slug "${slug}" is reserved` })
+  }
+
   const [resource] = await withDb((db) =>
     db
       .insert(ResourceTable)
@@ -545,14 +549,19 @@ export async function createResource(input: z.input<typeof CreateResourceSchema>
 
 export async function updateResource(input: z.input<typeof UpdateResourceSchema>) {
   const data = UpdateResourceSchema.parse(input)
-  await getResourceById(data.id)
+  const existing = await getResourceById(data.id)
   const updateData: Record<string, unknown> = {
     updatedAt: new Date(),
     updatedBy: principal.userId(),
   }
 
   if (data.name !== undefined) updateData.name = data.name
-  if (data.slug !== undefined) updateData.slug = data.slug
+  if (data.slug !== undefined) {
+    if (!existing.managed && isReservedSlug(data.slug)) {
+      throw createError("BadRequestError", { message: `Slug "${data.slug}" is reserved` })
+    }
+    updateData.slug = data.slug
+  }
   if (data.description !== undefined) updateData.description = data.description
 
   const [resource] = await withDb((db) =>

@@ -16,3 +16,16 @@ export function generateRandomId(): string {
   }
   return id
 }
+
+const RESERVED_SLUG_PATTERNS = [/^synatra/i]
+
+const RESERVED_SLUGS = new Set(["context", "params", "payload", "console", "global", "system", "internal"])
+
+export function isReservedSlug(slug: string): boolean {
+  const normalized = slug.replace(/_/g, "").toLowerCase()
+  if (RESERVED_SLUGS.has(normalized)) return true
+  for (const pattern of RESERVED_SLUG_PATTERNS) {
+    if (pattern.test(slug.replace(/_/g, ""))) return true
+  }
+  return false
+}
