@@ -1,4 +1,4 @@
-import { Show, Switch, Match } from "solid-js"
+import { Show, Switch, Match, createSignal } from "solid-js"
 import type { Selection } from "./constants"
 import { SettingsInspector, type AppAccountInfo } from "./inspector/settings-inspector"
 import { EnvironmentInspector } from "./inspector/environment-inspector"
@@ -89,6 +89,8 @@ type InspectorPanelProps = {
 }
 
 export function InspectorPanel(props: InspectorPanelProps) {
+  const [debugVersion, setDebugVersion] = createSignal("preview")
+
   const selectedEnvironment = () => {
     const sel = props.selection
     if (sel?.type !== "environment") return null
@@ -139,6 +141,8 @@ export function InspectorPanel(props: InspectorPanelProps) {
               releases={props.releases}
               currentReleaseId={props.currentReleaseId}
               payloadSchema={props.payloadSchema}
+              debugVersion={debugVersion()}
+              onDebugVersionChange={setDebugVersion}
               onRegenerateWebhookSecret={() => props.onRegenerateWebhookSecret(selectedEnvironment()!.environmentId)}
               onRegenerateDebugSecret={() => props.onRegenerateDebugSecret(selectedEnvironment()!.environmentId)}
               onUpdateChannel={(channelId) =>

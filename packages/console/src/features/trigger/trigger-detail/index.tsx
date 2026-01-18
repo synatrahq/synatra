@@ -509,8 +509,10 @@ export function TriggerDetail(props: TriggerDetailProps) {
   createEffect(
     on(
       () => props.trigger?.id,
-      () => {
-        setSelection({ type: "settings" })
+      (id, prevId) => {
+        if (id && prevId && id !== prevId) {
+          setSelection({ type: "settings" })
+        }
       },
       { defer: true },
     ),
