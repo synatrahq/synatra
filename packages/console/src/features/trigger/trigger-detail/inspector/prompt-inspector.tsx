@@ -1,24 +1,34 @@
 import { Show, For, createSignal, createEffect } from "solid-js"
 import { Note, Pencil, Code } from "phosphor-solid-js"
+import { ManagedResourceType } from "@synatra/core/types"
 import {
   FormField,
   Select,
   CodeEditor,
-  TopLevelSchemaEditor,
   SchemaTypeDisplay,
   Tooltip,
+  TopLevelSchemaEditor,
   CollapsibleSection,
-} from "../../../ui"
-import { ScriptSignature } from "../../../components"
+} from "../../../../ui"
+import { ScriptSignature } from "../../../../components"
 import {
   validateTemplate,
   getAppPayloadSchema,
   generatePlaceholdersFromSchema,
   type ValidationStatus,
   type ValidationHighlight,
-} from "./utils"
-import { api } from "../../../app"
-import type { Prompts } from "../../../app/api"
+} from "../utils"
+import { api } from "../../../../app"
+import type { Prompts } from "../../../../app/api"
+
+export type PromptMode = "prompt" | "template" | "script"
+export type PromptVersionMode = "current" | "fixed"
+
+type PromptReleaseItem = {
+  id: string
+  version: string
+  createdAt: string
+}
 
 function InputSchemaPreview(props: { schema: Record<string, unknown> }) {
   const properties = () => (props.schema.properties as Record<string, Record<string, unknown>>) ?? {}
@@ -104,7 +114,7 @@ function NestedSchemaPreview(props: { schema: Record<string, unknown> }) {
   )
 }
 
-function AppPayloadSchemaSection(props: { appId: string; events: string[] }) {
+function AppPayloadSchemaSection(props: { appId: string; events: string[]; showPlaceholders?: boolean }) {
   const schema = () => getAppPayloadSchema(props.appId, props.events) ?? { type: "object", properties: {} }
   const placeholders = () => generatePlaceholdersFromSchema(schema())
 
@@ -114,7 +124,7 @@ function AppPayloadSchemaSection(props: { appId: string; events: string[] }) {
       <div class="rounded-md border border-border bg-surface px-3 py-2">
         <NestedSchemaPreview schema={schema()} />
       </div>
-      <Show when={placeholders().length > 0}>
+      <Show when={props.showPlaceholders !== false && placeholders().length > 0}>
         <div class="mt-2">
           <div class="mb-1 text-2xs text-text-muted">Available placeholders</div>
           <div class="flex flex-wrap gap-1">
@@ -136,16 +146,7 @@ function AppPayloadSchemaSection(props: { appId: string; events: string[] }) {
   )
 }
 
-export type PromptMode = "prompt" | "template" | "script"
-export type PromptVersionMode = "current" | "fixed"
-
-type PromptReleaseItem = {
-  id: string
-  version: string
-  createdAt: string
-}
-
-type PromptSectionProps = {
+type PromptInspectorProps = {
   triggerType: "webhook" | "schedule" | "app"
   promptMode: PromptMode
   onPromptModeChange: (mode: PromptMode) => void
@@ -171,7 +172,7 @@ type PromptSectionProps = {
   appEvents?: string[]
 }
 
-export function PromptSection(props: PromptSectionProps) {
+export function PromptInspector(props: PromptInspectorProps) {
   const [validation, setValidation] = createSignal<{ status: ValidationStatus; message: string } | null>(null)
   const [highlights, setHighlights] = createSignal<ValidationHighlight[]>([])
 
@@ -191,152 +192,171 @@ export function PromptSection(props: PromptSectionProps) {
   })
 
   return (
-    <CollapsibleSection title="Prompt">
-      <div class="space-y-3">
-        <FormField horizontal labelWidth="5rem" label="Mode">
-          <div class="flex gap-1.5">
-            <button
-              type="button"
-              class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
-              classList={{
-                "border-accent bg-accent/5 text-text": props.promptMode === "template",
-                "border-border text-text-muted hover:border-border-strong": props.promptMode !== "template",
-              }}
-              onClick={() => props.onPromptModeChange("template")}
-            >
-              <Pencil class="h-3 w-3" />
-              Template
-            </button>
-            <button
-              type="button"
-              class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
-              classList={{
-                "border-accent bg-accent/5 text-text": props.promptMode === "script",
-                "border-border text-text-muted hover:border-border-strong": props.promptMode !== "script",
-              }}
-              onClick={() => props.onPromptModeChange("script")}
-            >
-              <Code class="h-3 w-3" />
-              Script
-            </button>
-            <button
-              type="button"
-              class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
-              classList={{
-                "border-accent bg-accent/5 text-text": props.promptMode === "prompt",
-                "border-border text-text-muted hover:border-border-strong": props.promptMode !== "prompt",
-              }}
-              onClick={() => props.onPromptModeChange("prompt")}
-            >
-              <Note class="h-3 w-3" />
-              Prompt
-            </button>
-          </div>
-        </FormField>
-
-        <Show when={props.promptMode === "prompt"}>
-          <FormField horizontal labelWidth="5rem" label="Prompt">
-            <Select
-              value={props.selectedPromptId}
-              options={props.prompts.map((p) => ({
-                value: p.id,
-                label: p.name,
-              }))}
-              onChange={(value) => props.onPromptIdChange(value)}
-              placeholder="Select prompt"
-              class="h-7 text-xs"
-            />
-          </FormField>
-          <Show when={props.selectedPromptId && props.promptReleases.length > 0}>
-            <FormField horizontal labelWidth="5rem" label="Version">
-              <Select
-                value={props.promptVersionMode === "current" ? "latest" : (props.selectedPromptReleaseId ?? "")}
-                options={[
-                  { value: "latest", label: "Always use latest" },
-                  ...props.promptReleases.map((r) => ({ value: r.id, label: r.version })),
-                ]}
-                onChange={(value) => {
-                  if (value === "latest") {
-                    props.onPromptVersionModeChange("current")
-                    props.onPromptReleaseIdChange(null)
-                  } else {
-                    props.onPromptVersionModeChange("fixed")
-                    props.onPromptReleaseIdChange(value)
-                  }
+    <div class="space-y-0">
+      <CollapsibleSection title="Prompt">
+        <div class="space-y-4">
+          <FormField horizontal labelWidth="5rem" label="Mode">
+            <div class="flex gap-1.5">
+              <button
+                type="button"
+                class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
+                classList={{
+                  "border-accent bg-accent/5 text-text": props.promptMode === "template",
+                  "border-border text-text-muted hover:border-border-strong": props.promptMode !== "template",
                 }}
+                onClick={() => props.onPromptModeChange("template")}
+              >
+                <Pencil class="h-3 w-3" />
+                Template
+              </button>
+              <button
+                type="button"
+                class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
+                classList={{
+                  "border-accent bg-accent/5 text-text": props.promptMode === "script",
+                  "border-border text-text-muted hover:border-border-strong": props.promptMode !== "script",
+                }}
+                onClick={() => props.onPromptModeChange("script")}
+              >
+                <Code class="h-3 w-3" />
+                Script
+              </button>
+              <button
+                type="button"
+                class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
+                classList={{
+                  "border-accent bg-accent/5 text-text": props.promptMode === "prompt",
+                  "border-border text-text-muted hover:border-border-strong": props.promptMode !== "prompt",
+                }}
+                onClick={() => props.onPromptModeChange("prompt")}
+              >
+                <Note class="h-3 w-3" />
+                Prompt
+              </button>
+            </div>
+          </FormField>
+
+          <Show when={props.promptMode === "prompt"}>
+            <FormField horizontal labelWidth="5rem" label="Prompt">
+              <Select
+                value={props.selectedPromptId}
+                options={props.prompts.map((p) => ({
+                  value: p.id,
+                  label: p.name,
+                }))}
+                onChange={(value) => props.onPromptIdChange(value)}
+                placeholder="Select prompt"
                 class="h-7 text-xs"
               />
             </FormField>
-          </Show>
-          <Show when={props.currentPromptInputSchema}>
-            <Show
-              when={props.triggerType === "schedule"}
-              fallback={
-                <FormField horizontal labelWidth="5rem" label="Input">
-                  <div class="py-1 font-code text-xs">
-                    <SchemaTypeDisplay schema={props.currentPromptInputSchema as Record<string, unknown>} />
-                  </div>
-                </FormField>
-              }
-            >
-              <div>
-                <div class="mb-1 text-xs text-text-muted">Input</div>
-                <CodeEditor
-                  value={props.input ?? ""}
-                  onChange={(v) => props.onInputChange?.(v)}
-                  language="json"
-                  bordered
-                  minLines={5}
-                  indent={false}
-                  placeholder={props.inputPlaceholder}
+            <Show when={props.selectedPromptId && props.promptReleases.length > 0}>
+              <FormField horizontal labelWidth="5rem" label="Version">
+                <Select
+                  value={props.promptVersionMode === "current" ? "latest" : (props.selectedPromptReleaseId ?? "")}
+                  options={[
+                    { value: "latest", label: "Always use latest" },
+                    ...props.promptReleases.map((r) => ({ value: r.id, label: r.version })),
+                  ]}
+                  onChange={(value) => {
+                    if (value === "latest") {
+                      props.onPromptVersionModeChange("current")
+                      props.onPromptReleaseIdChange(null)
+                    } else {
+                      props.onPromptVersionModeChange("fixed")
+                      props.onPromptReleaseIdChange(value)
+                    }
+                  }}
+                  class="h-7 text-xs"
                 />
-                <div class="mt-2 rounded-md border border-border bg-surface px-3 py-2">
-                  <div class="mb-1.5 text-2xs text-text-muted">Expected input schema</div>
-                  <InputSchemaPreview schema={props.currentPromptInputSchema as Record<string, unknown>} />
-                </div>
-              </div>
+              </FormField>
             </Show>
-          </Show>
-        </Show>
-
-        <Show when={props.promptMode === "template"}>
-          <div class="space-y-4">
-            <Show when={props.triggerType === "webhook"}>
-              <div>
-                <div class="mb-2 text-xs text-text-muted">Payload schema</div>
-                <TopLevelSchemaEditor
-                  schema={props.payloadSchema}
-                  onChange={props.onPayloadSchemaChange}
-                  availableRefs={[]}
-                  rootTypePolicy="fixed"
-                  fixedRootKind="object"
-                />
-                <Show when={Object.keys((props.payloadSchema.properties as Record<string, unknown>) ?? {}).length > 0}>
-                  <div class="mt-2">
-                    <div class="mb-1 text-2xs text-text-muted">Available placeholders</div>
-                    <div class="flex flex-wrap gap-1">
-                      {Object.keys((props.payloadSchema.properties as Record<string, unknown>) ?? {}).map((key) => {
-                        const placeholder = `{{ ${key} }}`
-                        return (
-                          <Tooltip content="Click to copy">
-                            <button
-                              type="button"
-                              class="rounded bg-surface-muted px-1.5 py-0.5 font-code text-2xs text-text-muted transition-colors hover:bg-surface-muted/80 hover:text-text"
-                              onClick={() => navigator.clipboard.writeText(placeholder)}
-                            >
-                              {placeholder}
-                            </button>
-                          </Tooltip>
-                        )
-                      })}
+            <Show when={props.currentPromptInputSchema}>
+              <Show
+                when={props.triggerType === "schedule"}
+                fallback={
+                  <FormField horizontal labelWidth="5rem" label="Input">
+                    <div class="py-1 font-code text-xs">
+                      <SchemaTypeDisplay schema={props.currentPromptInputSchema as Record<string, unknown>} />
                     </div>
+                  </FormField>
+                }
+              >
+                <div>
+                  <div class="mb-1 text-xs text-text-muted">Input</div>
+                  <CodeEditor
+                    value={props.input ?? ""}
+                    onChange={(v) => props.onInputChange?.(v)}
+                    language="json"
+                    bordered
+                    minLines={5}
+                    indent={false}
+                    placeholder={props.inputPlaceholder}
+                  />
+                  <div class="mt-2 rounded-md border border-border bg-surface px-3 py-2">
+                    <div class="mb-1.5 text-2xs text-text-muted">Expected input schema</div>
+                    <InputSchemaPreview schema={props.currentPromptInputSchema as Record<string, unknown>} />
                   </div>
-                </Show>
-              </div>
+                </div>
+              </Show>
             </Show>
-            <Show when={props.triggerType === "app" && props.appId}>
-              <AppPayloadSchemaSection appId={props.appId!} events={props.appEvents ?? []} />
-            </Show>
+          </Show>
+
+          <Show
+            when={props.triggerType === "webhook" && (props.promptMode === "template" || props.promptMode === "script")}
+          >
+            <div>
+              <div class="mb-2 text-xs text-text-muted">Payload schema</div>
+              <TopLevelSchemaEditor
+                schema={props.payloadSchema}
+                onChange={props.onPayloadSchemaChange}
+                availableRefs={[]}
+                rootTypePolicy="fixed"
+                fixedRootKind="object"
+              />
+              <Show
+                when={
+                  props.promptMode === "template" &&
+                  Object.keys((props.payloadSchema.properties as Record<string, unknown>) ?? {}).length > 0
+                }
+              >
+                <div class="mt-2">
+                  <div class="mb-1 text-2xs text-text-muted">Available placeholders</div>
+                  <div class="flex flex-wrap gap-1">
+                    {Object.keys((props.payloadSchema.properties as Record<string, unknown>) ?? {}).map((key) => {
+                      const placeholder = `{{ ${key} }}`
+                      return (
+                        <Tooltip content="Click to copy">
+                          <button
+                            type="button"
+                            class="rounded bg-surface-muted px-1.5 py-0.5 font-code text-2xs text-text-muted transition-colors hover:bg-surface-muted/80 hover:text-text"
+                            onClick={() => navigator.clipboard.writeText(placeholder)}
+                          >
+                            {placeholder}
+                          </button>
+                        </Tooltip>
+                      )
+                    })}
+                  </div>
+                </div>
+              </Show>
+            </div>
+          </Show>
+
+          <Show
+            when={
+              props.triggerType === "app" &&
+              props.appId &&
+              (props.promptMode === "template" || props.promptMode === "script")
+            }
+          >
+            <AppPayloadSchemaSection
+              appId={props.appId!}
+              events={props.appEvents ?? []}
+              showPlaceholders={props.promptMode === "template"}
+            />
+          </Show>
+
+          <Show when={props.promptMode === "template"}>
             <div>
               <div class="mb-1 flex items-center justify-between">
                 <span class="text-xs text-text-muted">Content</span>
@@ -366,26 +386,9 @@ export function PromptSection(props: PromptSectionProps) {
                 highlights={props.triggerType !== "schedule" ? highlights() : []}
               />
             </div>
-          </div>
-        </Show>
+          </Show>
 
-        <Show when={props.promptMode === "script"}>
-          <div class="space-y-4">
-            <Show when={props.triggerType === "webhook"}>
-              <div>
-                <div class="mb-2 text-xs text-text-muted">Payload schema</div>
-                <TopLevelSchemaEditor
-                  schema={props.payloadSchema}
-                  onChange={props.onPayloadSchemaChange}
-                  availableRefs={[]}
-                  rootTypePolicy="fixed"
-                  fixedRootKind="object"
-                />
-              </div>
-            </Show>
-            <Show when={props.triggerType === "app" && props.appId}>
-              <AppPayloadSchemaSection appId={props.appId!} events={props.appEvents ?? []} />
-            </Show>
+          <Show when={props.promptMode === "script"}>
             <div>
               <div class="mb-2 text-xs text-text-muted">Script</div>
               <div class="rounded-md border border-border bg-surface">
@@ -396,7 +399,10 @@ export function PromptSection(props: PromptSectionProps) {
                     const res = await api.api.resources.$get()
                     if (!res.ok) return []
                     const data = await res.json()
-                    return data.map((r) => ({ slug: r.slug, type: r.type }))
+                    const filtered = data.filter(
+                      (r) => !ManagedResourceType.includes(r.type as (typeof ManagedResourceType)[number]),
+                    )
+                    return filtered.map((r) => ({ slug: r.slug, type: r.type }))
                   }}
                 />
                 <CodeEditor
@@ -414,9 +420,9 @@ return { action: "run", prompt: "Hello" }`}
                 <ScriptSignature paramName="payload" position="footer" />
               </div>
             </div>
-          </div>
-        </Show>
-      </div>
-    </CollapsibleSection>
+          </Show>
+        </div>
+      </CollapsibleSection>
+    </div>
   )
 }
