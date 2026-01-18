@@ -80,18 +80,20 @@ export default function AgentsPage() {
     queryFn: async (): Promise<Environments> => {
       const res = await api.api.environments.$get()
       if (!res.ok) throw new Error("Failed to fetch environments")
-      const data = await res.json()
-      if (data.length > 0) {
-        const current = selectedEnvironmentId()
-        const isValid = current && data.some((e) => e.id === current)
-        if (!isValid) {
-          const production = data.find((e) => e.slug === "production")
-          setSelectedEnvironmentId(production?.id ?? data[0].id)
-        }
-      }
-      return data
+      return res.json()
     },
   }))
+
+  createEffect(() => {
+    const data = environmentsQuery.data
+    if (!data || data.length === 0) return
+    const current = selectedEnvironmentId()
+    const isValid = current && data.some((e) => e.id === current)
+    if (!isValid) {
+      const production = data.find((e) => e.slug === "production")
+      setSelectedEnvironmentId(production?.id ?? data[0].id)
+    }
+  })
 
   const selectedAgentFromList = createMemo(() => {
     if (!params.id || !agentsQuery.data) return null
