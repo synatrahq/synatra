@@ -250,23 +250,21 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
           </CollapsibleSection>
         </Show>
 
-        <CollapsibleSection
-          title="Debug"
-          actions={
-            <Select
-              value={debugVersion()}
-              options={[
-                { value: "preview", label: "Working copy" },
-                { value: "latest", label: "Latest release" },
-                ...(props.releases ?? []).map((r) => ({ value: r.version, label: `v${r.version}` })),
-              ]}
-              onChange={setDebugVersion}
-              wrapperClass="relative flex w-36 shrink-0"
-              class="h-6 px-2 text-xs"
-            />
-          }
-        >
+        <CollapsibleSection title="Debug">
           <div class="space-y-2">
+            <div class="flex items-center gap-1">
+              <span class="w-14 shrink-0 text-2xs text-text-muted">Version</span>
+              <Select
+                value={debugVersion()}
+                options={[
+                  { value: "preview", label: "Working copy" },
+                  { value: "latest", label: "Latest release" },
+                  ...(props.releases ?? []).map((r) => ({ value: r.version, label: `v${r.version}` })),
+                ]}
+                onChange={setDebugVersion}
+                class="h-6 flex-1 text-xs"
+              />
+            </div>
             <div class="flex items-center gap-1">
               <span class="w-14 shrink-0 text-2xs text-text-muted">URL</span>
               <Input type="text" value={debugUrl(debugVersion())} readOnly class="h-6 flex-1 font-code text-xs" />
