@@ -1,4 +1,4 @@
-import { pgTable, uuid, timestamp, text, integer, numeric, uniqueIndex } from "drizzle-orm/pg-core"
+import { pgTable, uuid, timestamp, text, uniqueIndex } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 import { OrganizationTable } from "./organization.sql"
 
@@ -13,8 +13,6 @@ export const SubscriptionTable = pgTable(
       .references(() => OrganizationTable.id, { onDelete: "cascade" }),
     plan: text("plan").notNull(),
     status: text("status").notNull(),
-    runLimit: integer("run_limit").notNull(),
-    overageRate: numeric("overage_rate", { precision: 10, scale: 4 }),
     currentPeriodStart: timestamp("current_period_start", { withTimezone: true }).notNull(),
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }).notNull(),
     stripeCustomerId: text("stripe_customer_id"),

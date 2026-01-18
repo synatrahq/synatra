@@ -2,6 +2,11 @@ import { Show } from "solid-js"
 import { Modal, ModalContainer, ModalFooter, Button, Spinner } from "../../ui"
 import { PLAN_LIMITS, type SubscriptionPlan } from "@synatra/core/types"
 
+function formatRunLimit(plan: SubscriptionPlan): string {
+  const limit = PLAN_LIMITS[plan].runLimit
+  return limit !== null ? `${limit.toLocaleString()}/month` : "Unlimited"
+}
+
 type PlanChangeModalProps = {
   open: boolean
   currentPlan: SubscriptionPlan
@@ -34,11 +39,11 @@ export function PlanChangeModal(props: PlanChangeModalProps) {
           <div class="flex flex-col gap-1.5 rounded border border-border bg-surface-elevated p-2">
             <div class="flex items-center justify-between text-2xs">
               <span class="text-text-muted">Current run limit</span>
-              <span class="text-text">{PLAN_LIMITS[props.currentPlan].runLimit.toLocaleString()}/month</span>
+              <span class="text-text">{formatRunLimit(props.currentPlan)}</span>
             </div>
             <div class="flex items-center justify-between text-2xs">
               <span class="text-text-muted">New run limit</span>
-              <span class="font-medium text-text">{PLAN_LIMITS[props.targetPlan].runLimit.toLocaleString()}/month</span>
+              <span class="font-medium text-text">{formatRunLimit(props.targetPlan)}</span>
             </div>
           </div>
         </div>

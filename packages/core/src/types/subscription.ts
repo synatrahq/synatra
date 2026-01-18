@@ -14,7 +14,7 @@ export const PLAN_HIERARCHY: Record<SubscriptionPlan, number> = {
 export const PLAN_LIMITS: Record<
   SubscriptionPlan,
   {
-    runLimit: number
+    runLimit: number | null
     overageRate: string | null
     userLimit: number | null
     agentLimit: number | null

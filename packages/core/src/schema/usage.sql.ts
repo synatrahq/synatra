@@ -2,8 +2,8 @@ import { pgTable, uuid, timestamp, integer, uniqueIndex } from "drizzle-orm/pg-c
 import { sql } from "drizzle-orm"
 import { OrganizationTable } from "./organization.sql"
 
-export const UsagePeriodTable = pgTable(
-  "usage_period",
+export const UsageMonthTable = pgTable(
+  "usage_month",
   {
     id: uuid("id")
       .primaryKey()
@@ -11,17 +11,15 @@ export const UsagePeriodTable = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => OrganizationTable.id, { onDelete: "cascade" }),
-    periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
-    periodEnd: timestamp("period_end", { withTimezone: true }).notNull(),
+    yearMonth: integer("year_month").notNull(),
     runCount: integer("run_count").notNull().default(0),
-    runLimit: integer("run_limit"),
     runsUser: integer("runs_user").notNull().default(0),
     runsTrigger: integer("runs_trigger").notNull().default(0),
     runsSubagent: integer("runs_subagent").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [uniqueIndex("usage_period_org_period_idx").on(table.organizationId, table.periodStart)],
+  (t) => [uniqueIndex("usage_month_org_ym_idx").on(t.organizationId, t.yearMonth)],
 )
 
-export type UsagePeriod = typeof UsagePeriodTable.$inferSelect
+export type UsageMonth = typeof UsageMonthTable.$inferSelect

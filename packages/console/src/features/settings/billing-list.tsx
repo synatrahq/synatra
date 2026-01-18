@@ -65,7 +65,8 @@ const PLAN_HIGHLIGHTS: Record<SubscriptionPlan, [string, string]> = {
 
 function getPlanFeatures(config: PlanConfig): string[] {
   const limits = PLAN_LIMITS[config.id]
-  const base = [`${limits.runLimit.toLocaleString()} runs/month`]
+  const runLimitStr = limits.runLimit !== null ? `${limits.runLimit.toLocaleString()} runs/month` : "Unlimited runs"
+  const base = [runLimitStr]
   if (limits.overageRate) base.push(`$${limits.overageRate} overage`)
   return [...base, ...PLAN_HIGHLIGHTS[config.id]]
 }
@@ -138,24 +139,32 @@ function CurrentSubscriptionBadge(props: {
       </div>
 
       <div class="flex flex-wrap gap-4">
-        <Show when={props.subscription.runLimit}>
-          <div class="flex items-center gap-2">
-            <Lightning class="h-3.5 w-3.5 text-accent" weight="duotone" />
-            <div class="flex flex-col">
-              <span class="text-xs font-medium text-text">{props.subscription.runLimit?.toLocaleString()} runs</span>
-              <span class="text-2xs text-text-muted">per month</span>
-            </div>
-          </div>
-        </Show>
-        <Show when={props.subscription.overageRate}>
-          <div class="flex items-center gap-2">
-            <div class="h-1 w-1 rounded-full bg-border"></div>
-            <div class="flex flex-col">
-              <span class="text-xs font-medium text-text">${props.subscription.overageRate}/run</span>
-              <span class="text-2xs text-text-muted">overage rate</span>
-            </div>
-          </div>
-        </Show>
+        {(() => {
+          const plan = props.subscription.plan as SubscriptionPlan
+          const limits = PLAN_LIMITS[plan]
+          return (
+            <>
+              <div class="flex items-center gap-2">
+                <Lightning class="h-3.5 w-3.5 text-accent" weight="duotone" />
+                <div class="flex flex-col">
+                  <span class="text-xs font-medium text-text">
+                    {limits.runLimit !== null ? `${limits.runLimit.toLocaleString()} runs` : "Unlimited runs"}
+                  </span>
+                  <span class="text-2xs text-text-muted">per month</span>
+                </div>
+              </div>
+              <Show when={limits.overageRate}>
+                <div class="flex items-center gap-2">
+                  <div class="h-1 w-1 rounded-full bg-border"></div>
+                  <div class="flex flex-col">
+                    <span class="text-xs font-medium text-text">${limits.overageRate}/run</span>
+                    <span class="text-2xs text-text-muted">overage rate</span>
+                  </div>
+                </div>
+              </Show>
+            </>
+          )
+        })()}
       </div>
 
       <Show when={props.subscription.scheduledPlan && scheduledDate()}>

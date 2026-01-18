@@ -1,5 +1,5 @@
 {
-  "id": "c4d15d52-bfa9-46fa-a8da-0e7438f218e9",
+  "id": "3fa11ae9-9bde-4fc2-81b8-ab1f49bd025c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -4685,18 +4685,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "run_limit": {
-          "name": "run_limit",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "overage_rate": {
-          "name": "overage_rate",
-          "type": "numeric(10, 4)",
-          "primaryKey": false,
-          "notNull": false
-        },
         "current_period_start": {
           "name": "current_period_start",
           "type": "timestamp with time zone",
@@ -6257,8 +6245,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.usage_period": {
-      "name": "usage_period",
+    "public.usage_month": {
+      "name": "usage_month",
       "schema": "",
       "columns": {
         "id": {
@@ -6274,15 +6262,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "period_start": {
-          "name": "period_start",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "period_end": {
-          "name": "period_end",
-          "type": "timestamp with time zone",
+        "year_month": {
+          "name": "year_month",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -6292,12 +6274,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
-        },
-        "run_limit": {
-          "name": "run_limit",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
         },
         "runs_user": {
           "name": "runs_user",
@@ -6336,8 +6312,8 @@
         }
       },
       "indexes": {
-        "usage_period_org_period_idx": {
-          "name": "usage_period_org_period_idx",
+        "usage_month_org_ym_idx": {
+          "name": "usage_month_org_ym_idx",
           "columns": [
             {
               "expression": "organization_id",
@@ -6346,7 +6322,7 @@
               "nulls": "last"
             },
             {
-              "expression": "period_start",
+              "expression": "year_month",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -6359,9 +6335,9 @@
         }
       },
       "foreignKeys": {
-        "usage_period_organization_id_organization_id_fk": {
-          "name": "usage_period_organization_id_organization_id_fk",
-          "tableFrom": "usage_period",
+        "usage_month_organization_id_organization_id_fk": {
+          "name": "usage_month_organization_id_organization_id_fk",
+          "tableFrom": "usage_month",
           "tableTo": "organization",
           "columnsFrom": [
             "organization_id"

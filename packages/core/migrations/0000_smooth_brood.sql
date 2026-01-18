@@ -459,8 +459,6 @@ CREATE TABLE "subscription" (
 	"organization_id" uuid NOT NULL,
 	"plan" text NOT NULL,
 	"status" text NOT NULL,
-	"run_limit" integer NOT NULL,
-	"overage_rate" numeric(10, 4),
 	"current_period_start" timestamp with time zone NOT NULL,
 	"current_period_end" timestamp with time zone NOT NULL,
 	"stripe_customer_id" text,
@@ -578,13 +576,11 @@ CREATE TABLE "trigger_working_copy" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "usage_period" (
+CREATE TABLE "usage_month" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,
-	"period_start" timestamp with time zone NOT NULL,
-	"period_end" timestamp with time zone NOT NULL,
+	"year_month" integer NOT NULL,
 	"run_count" integer DEFAULT 0 NOT NULL,
-	"run_limit" integer,
 	"runs_user" integer DEFAULT 0 NOT NULL,
 	"runs_trigger" integer DEFAULT 0 NOT NULL,
 	"runs_subagent" integer DEFAULT 0 NOT NULL,
@@ -709,7 +705,7 @@ ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_prompt_i
 ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_prompt_release_id_prompt_release_id_fk" FOREIGN KEY ("prompt_release_id") REFERENCES "public"."prompt_release"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_app_account_id_app_account_id_fk" FOREIGN KEY ("app_account_id") REFERENCES "public"."app_account"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trigger_working_copy" ADD CONSTRAINT "trigger_working_copy_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "usage_period" ADD CONSTRAINT "usage_period_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "usage_month" ADD CONSTRAINT "usage_month_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "agent_copilot_message_thread_idx" ON "agent_copilot_message" USING btree ("thread_id","created_at");--> statement-breakpoint
 CREATE INDEX "agent_copilot_proposal_thread_idx" ON "agent_copilot_proposal" USING btree ("thread_id","created_at");--> statement-breakpoint
 CREATE INDEX "agent_copilot_question_request_thread_idx" ON "agent_copilot_question_request" USING btree ("thread_id","status","created_at");--> statement-breakpoint
@@ -778,5 +774,5 @@ CREATE UNIQUE INDEX "trigger_release_unique_idx" ON "trigger_release" USING btre
 CREATE UNIQUE INDEX "trigger_release_semver_idx" ON "trigger_release" USING btree ("trigger_id","version_major","version_minor","version_patch");--> statement-breakpoint
 CREATE UNIQUE INDEX "trigger_org_slug_idx" ON "trigger" USING btree ("organization_id","slug");--> statement-breakpoint
 CREATE INDEX "trigger_current_release_idx" ON "trigger" USING btree ("current_release_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "usage_period_org_period_idx" ON "usage_period" USING btree ("organization_id","period_start");--> statement-breakpoint
+CREATE UNIQUE INDEX "usage_month_org_ym_idx" ON "usage_month" USING btree ("organization_id","year_month");--> statement-breakpoint
 CREATE UNIQUE INDEX "user_email_idx" ON "user" USING btree ("email");

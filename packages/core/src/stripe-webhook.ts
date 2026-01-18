@@ -8,7 +8,6 @@ import {
   getStripePriceIdSubscription,
   getPlanFromPriceIdSubscription,
 } from "./subscription"
-import { updateUsageCurrentPeriodLimit, resetUsagePeriod } from "./usage"
 import { ensureStagingEnvironment } from "./environment"
 import { findOrganizationByStripeCustomerId, findOrganizationById } from "./organization"
 import { findOwnerMember } from "./member"
@@ -89,7 +88,6 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
       stripeSubscriptionId: subscriptionId,
       stripePriceId: getStripePriceIdSubscription(plan) || undefined,
     })
-    await updateUsageCurrentPeriodLimit({})
 
     if (isPaidPlan(plan)) {
       await ensureStagingEnvironment()
@@ -124,7 +122,6 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
     const isNewPeriod = !sub.currentPeriodEnd || periodEnd > sub.currentPeriodEnd
 
     if (isNewPeriod) {
-      await resetUsagePeriod({ periodStart, periodEnd })
       await updateStripeInfoSubscription({
         status: "active",
         currentPeriodStart: periodStart,
@@ -190,12 +187,6 @@ async function handleSubscriptionUpdated(stripeSub: Stripe.Subscription): Promis
         ...(isNewPeriod && { currentPeriodStart: periodStart, currentPeriodEnd: periodEnd }),
       })
     }
-
-    if (isNewPeriod) {
-      await resetUsagePeriod({ periodStart, periodEnd })
-    } else if (planChanged) {
-      await updateUsageCurrentPeriodLimit({})
-    }
   })
 }
 
@@ -207,8 +198,15 @@ async function handleSubscriptionDeleted(stripeSub: Stripe.Subscription): Promis
   if (!org) return
 
   await principal.withSystem({ organizationId: org.id }, async () => {
-    await updateSubscription({ plan: "free", status: "cancelled" })
-    await updateUsageCurrentPeriodLimit({})
+    const now = new Date()
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+    await updateSubscription({
+      plan: "free",
+      status: "cancelled",
+      currentPeriodStart: start,
+      currentPeriodEnd: end,
+    })
   })
 }
 
@@ -251,7 +249,6 @@ async function handleScheduleCompleted(schedule: Stripe.SubscriptionSchedule): P
       scheduledAt: null,
       stripeScheduleId: null,
     })
-    await updateUsageCurrentPeriodLimit({})
   })
 }
 

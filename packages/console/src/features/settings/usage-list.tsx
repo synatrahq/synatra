@@ -15,9 +15,27 @@ type UsageListProps = {
   loading?: boolean
 }
 
-function formatPeriod(date: string | Date): string {
-  const d = new Date(date)
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "long", timeZone: "UTC" })
+function formatPeriodRange(start: string | Date, end: string | Date): string {
+  const s = new Date(start)
+  const e = new Date(end)
+  const startStr = s.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+  const sameYear = s.getUTCFullYear() === e.getUTCFullYear()
+  const endStr = e.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+  if (sameYear) {
+    return `${startStr} - ${endStr}`
+  }
+  const startWithYear = s.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  })
+  return `${startWithYear} - ${endStr}`
 }
 
 function formatNumber(n: number): string {
@@ -128,17 +146,20 @@ function EmptyState() {
 function LimitWarning(props: { usage: UsageCurrent; subscription: SubscriptionCurrent | null }) {
   const plan = () => (props.subscription?.plan || "free") as SubscriptionPlan
   const limits = createMemo(() => getPlanLimits(plan()))
-  const pct = createMemo(() => (limits().runLimit ? (props.usage.runCount / limits().runLimit) * 100 : 0))
+  const runLimit = createMemo(() => limits().runLimit)
+  const pct = createMemo(() => (runLimit() !== null ? (props.usage.runCount / runLimit()!) * 100 : 0))
   const atLimit = createMemo(() => pct() >= 100)
   const nearLimit = createMemo(() => pct() >= 80 && pct() < 100)
   const isFree = createMemo(() => props.subscription?.plan === "free")
 
   const warning = createMemo(() => {
-    const { runLimit, overageRate } = limits()
+    const { overageRate } = limits()
+    const limit = runLimit()
+    if (limit === null) return null
     if (atLimit() && isFree()) {
       return {
         title: "Run limit exceeded",
-        message: `You have reached your monthly limit of ${runLimit.toLocaleString()} runs. Upgrade to a paid plan to continue running agents.`,
+        message: `You have reached your monthly limit of ${limit.toLocaleString()} runs. Upgrade to a paid plan to continue running agents.`,
       }
     }
     if (atLimit()) {
@@ -151,7 +172,7 @@ function LimitWarning(props: { usage: UsageCurrent; subscription: SubscriptionCu
     if (nearLimit()) {
       return {
         title: "Approaching run limit",
-        message: `You have used ${pct().toFixed(0)}% of your monthly run limit (${props.usage.runCount.toLocaleString()} / ${runLimit.toLocaleString()} runs).`,
+        message: `You have used ${pct().toFixed(0)}% of your monthly run limit (${props.usage.runCount.toLocaleString()} / ${limit.toLocaleString()} runs).`,
       }
     }
     return null
@@ -216,7 +237,9 @@ export function UsageList(props: UsageListProps) {
                       <ChartBar class="h-4 w-4 text-text-muted" weight="duotone" />
                       <span class="text-xs font-medium text-text">Current Period</span>
                     </div>
-                    <span class="text-2xs text-text-muted">{formatPeriod(current().periodStart)}</span>
+                    <span class="text-2xs text-text-muted">
+                      {formatPeriodRange(current().periodStart, current().periodEnd)}
+                    </span>
                   </div>
 
                   <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -234,8 +257,8 @@ export function UsageList(props: UsageListProps) {
                     />
                   </div>
 
-                  <Show when={runLimit() > 0}>
-                    <ProgressBar used={current().runCount} limit={runLimit()} />
+                  <Show when={runLimit() !== null && runLimit()! > 0}>
+                    <ProgressBar used={current().runCount} limit={runLimit()!} />
                   </Show>
                 </div>
 
@@ -246,7 +269,9 @@ export function UsageList(props: UsageListProps) {
                       <For each={props.history}>
                         {(period) => (
                           <div class="flex items-center justify-between border-b border-border py-2 last:border-0">
-                            <span class="text-xs text-text">{formatPeriod(period.periodStart)}</span>
+                            <span class="text-xs text-text">
+                              {formatPeriodRange(period.periodStart, period.periodEnd)}
+                            </span>
                             <div class="flex items-center gap-3">
                               <span class="text-2xs text-text-muted">{formatNumber(period.runsUser)} user</span>
                               <span class="text-2xs text-text-muted">{formatNumber(period.runsTrigger)} trigger</span>

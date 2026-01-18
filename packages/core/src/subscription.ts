@@ -4,12 +4,11 @@ import { z } from "zod"
 import { principal } from "./principal"
 import { withDb } from "./database"
 import { SubscriptionTable } from "./schema"
-import { SubscriptionPlan, SubscriptionStatus, PLAN_HIERARCHY, PLAN_LIMITS } from "./types"
+import { SubscriptionPlan, SubscriptionStatus, PLAN_HIERARCHY } from "./types"
 import { config } from "./config"
 import { getStripe } from "./stripe"
 import { findOrganizationById } from "./organization"
 import { createError } from "@synatra/util/error"
-import { updateUsageCurrentPeriodLimit } from "./usage"
 import { ensureStagingEnvironment } from "./environment"
 
 export function isUpgradeSubscription(current: SubscriptionPlan, next: SubscriptionPlan): boolean {
@@ -56,7 +55,6 @@ export async function currentSubscription(input?: z.input<typeof CurrentSubscrip
   const now = new Date()
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
   const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
-  const { runLimit, overageRate } = PLAN_LIMITS.free
 
   const [created] = await withDb((db) =>
     db
@@ -65,8 +63,6 @@ export async function currentSubscription(input?: z.input<typeof CurrentSubscrip
         organizationId,
         plan: "free",
         status: "active",
-        runLimit,
-        overageRate,
         currentPeriodStart: start,
         currentPeriodEnd: end,
       })
@@ -103,15 +99,12 @@ export const UpdateSubscriptionSchema = UpdateStripeInfoSubscriptionSchema.exten
 
 export async function updatePlanSubscription(raw: z.input<typeof UpdatePlanSubscriptionSchema>) {
   const input = UpdatePlanSubscriptionSchema.parse(raw)
-  const { runLimit, overageRate } = PLAN_LIMITS[input.plan]
 
   await withDb((db) =>
     db
       .update(SubscriptionTable)
       .set({
         plan: input.plan,
-        runLimit,
-        overageRate,
         stripePriceId: getStripePriceIdSubscription(input.plan),
         updatedAt: new Date(),
       })
@@ -144,11 +137,8 @@ export async function updateStripeInfoSubscription(raw: z.input<typeof UpdateStr
 
 export async function updateSubscription(raw: z.input<typeof UpdateSubscriptionSchema>) {
   const input = UpdateSubscriptionSchema.parse(raw)
-  const { runLimit, overageRate } = PLAN_LIMITS[input.plan]
   const updates: Record<string, unknown> = {
     plan: input.plan,
-    runLimit,
-    overageRate,
     stripePriceId: input.stripePriceId ?? getStripePriceIdSubscription(input.plan),
     updatedAt: new Date(),
   }
@@ -331,7 +321,6 @@ export async function changeSubscriptionPlan(raw: z.input<typeof ChangeSubscript
 
     await principal.withSystem({ organizationId: sub.organizationId }, async () => {
       await updateSubscription({ plan: input.plan, stripePriceId: priceId })
-      await updateUsageCurrentPeriodLimit({})
 
       if (sub.plan === "free") {
         await ensureStagingEnvironment()
