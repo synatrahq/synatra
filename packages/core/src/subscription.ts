@@ -191,6 +191,10 @@ export async function createCheckoutSession(raw: z.input<typeof CreateCheckoutSe
     await updateStripeInfoSubscription({ stripeCustomerId: customerId })
   }
 
+  const now = new Date()
+  const nextMonthFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+  const billingCycleAnchor = Math.floor(nextMonthFirst.getTime() / 1000)
+
   const session = await stripe.checkout.sessions.create(
     {
       customer: customerId,
@@ -199,6 +203,10 @@ export async function createCheckoutSession(raw: z.input<typeof CreateCheckoutSe
       success_url: input.successUrl,
       cancel_url: input.cancelUrl,
       metadata: { organizationId: org.id, plan: input.plan },
+      subscription_data: {
+        billing_cycle_anchor: billingCycleAnchor,
+        proration_behavior: "create_prorations",
+      },
     },
     { idempotencyKey: randomUUID() },
   )
