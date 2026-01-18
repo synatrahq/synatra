@@ -141,7 +141,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
         <TreeItem label="Prompt" selected={isSelected("prompt")} onClick={() => props.onSelect({ type: "prompt" })} />
       </div>
 
-      <div class="border-t border-border pt-2">
+      <div class="mt-2 border-t border-border">
         <SectionHeader
           icon={<BracketsCurly class="h-3 w-3 text-accent" weight="duotone" />}
           label="Types"
@@ -166,7 +166,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
         </Show>
       </div>
 
-      <div class="mt-2 border-t border-border pt-2">
+      <div class="mt-2 border-t border-border">
         <SectionHeader
           icon={<Code class="h-3 w-3 text-success" weight="duotone" />}
           label="Tools"
@@ -213,7 +213,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
         </Show>
       </div>
 
-      <div class="mt-2 border-t border-border pt-2">
+      <div class="mt-2 border-t border-border">
         <SectionHeader
           icon={<UsersThree class="h-3 w-3 text-warning" weight="duotone" />}
           label="Subagents"
@@ -237,7 +237,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
         </Show>
       </div>
 
-      <div class="mt-2 border-t border-border pt-2">
+      <div class="mt-2 border-t border-border">
         <SectionHeader icon={<Gear class="h-3 w-3 text-text-muted" weight="duotone" />} label="System tools" />
         <For each={getSystemTools()}>
           {(tool: SystemToolDefinition) => (

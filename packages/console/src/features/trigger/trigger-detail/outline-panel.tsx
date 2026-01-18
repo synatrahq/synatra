@@ -109,7 +109,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
           />
         </div>
 
-        <div class="border-t border-border pt-2">
+        <div class="mt-2 border-t border-border">
           <SectionHeader
             icon={<TreeStructure class="h-3 w-3 text-accent" weight="duotone" />}
             label="Environments"
@@ -138,7 +138,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
                 return (
                   <button
                     type="button"
-                    class="group flex h-7 w-full items-center gap-2 pl-7 pr-3 text-xs text-text transition-colors"
+                    class="group flex w-full items-center gap-2 py-1 pl-7 pr-3 text-xs text-text transition-colors"
                     classList={{
                       "bg-surface-muted": selected(),
                       "hover:bg-surface-muted": !selected(),
@@ -160,7 +160,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
                           e.stopPropagation()
                           props.onToggleEnvironment?.(env.environmentId)
                         }}
-                        class="scale-[0.7] opacity-0 transition-opacity group-hover:opacity-100"
+                        class="-my-1 scale-[0.7] opacity-0 transition-opacity group-hover:opacity-100"
                       />
                       <span
                         class="rounded p-0.5 text-text-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
