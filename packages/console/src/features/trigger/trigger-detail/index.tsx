@@ -1,62 +1,30 @@
-import { Show, createSignal, createEffect, createMemo, onCleanup, on } from "solid-js"
+import { Show, createSignal, createEffect, onCleanup, on } from "solid-js"
 import { useBeforeLeave } from "@solidjs/router"
 import {
   Skeleton,
   SkeletonText,
   Input,
-  FormField,
-  Select,
-  MultiSelect,
   Button,
   Spinner,
   Modal,
   ModalContainer,
   ModalBody,
   ModalFooter,
-  CollapsibleSection,
 } from "../../../ui"
-import { getIconComponent, ICON_COLORS, AppIcon } from "../../../components"
-import { Broadcast, Timer, PencilSimple, Lightning, Cube, Plus, Check } from "phosphor-solid-js"
+import { AppIcon } from "../../../components"
+import { Broadcast, Timer, PencilSimple, Lightning, Cube, Check } from "phosphor-solid-js"
 import { activeOrg, api, apiBaseURL } from "../../../app"
-import { EnvironmentSection } from "./environment-section"
 import { AddEnvironmentModal } from "./add-environment-modal"
-import { PromptSection, type PromptMode } from "./prompt-section"
-import { generateSampleFromSchema, generateSamplePayload, ensureObjectSchema, getAppPayloadSchema } from "./utils"
-import { ScheduleEditor } from "./schedule-editor"
+import { generateSampleFromSchema, ensureObjectSchema } from "./utils"
 import { VersionControl, type TriggerRelease } from "./version-control"
 import { DeployDropdown } from "./deploy-dropdown"
+import { OutlinePanel } from "./outline-panel"
+import { InspectorPanel } from "./inspector-panel"
+import type { Selection } from "./constants"
+import type { PromptMode } from "./inspector/prompt-inspector"
+import type { AppAccountInfo } from "./inspector/settings-inspector"
+export type { AppAccountInfo }
 import type { Environments, Prompts, Channels } from "../../../app/api"
-
-const APP_EVENTS: Record<string, { value: string; label: string }[]> = {
-  intercom: [
-    { value: "conversation.user.created", label: "New conversation" },
-    { value: "conversation.user.replied", label: "Customer replied" },
-    { value: "conversation.admin.replied", label: "Admin replied" },
-    { value: "conversation.admin.closed", label: "Conversation closed" },
-  ],
-  github: [
-    { value: "push", label: "Push" },
-    { value: "create.branch", label: "Branch created" },
-    { value: "create.tag", label: "Tag created" },
-    { value: "delete.branch", label: "Branch deleted" },
-    { value: "delete.tag", label: "Tag deleted" },
-    { value: "pull_request.opened", label: "PR opened" },
-    { value: "pull_request.merged", label: "PR merged" },
-    { value: "pull_request.closed", label: "PR closed" },
-    { value: "pull_request.reopened", label: "PR reopened" },
-    { value: "pull_request.synchronize", label: "PR updated" },
-    { value: "pull_request.ready_for_review", label: "PR ready for review" },
-    { value: "issues.opened", label: "Issue opened" },
-    { value: "issues.closed", label: "Issue closed" },
-    { value: "issues.reopened", label: "Issue reopened" },
-    { value: "issue_comment.created", label: "Issue comment" },
-    { value: "pull_request_comment.created", label: "PR comment" },
-    { value: "pull_request_review.approved", label: "Review approved" },
-    { value: "pull_request_review.changes_requested", label: "Changes requested" },
-    { value: "pull_request_review.commented", label: "Review commented" },
-    { value: "release.published", label: "Release published" },
-  ],
-}
 
 type AgentInfo = {
   id: string
@@ -77,27 +45,6 @@ type AgentRelease = {
   id: string
   version: string
   createdAt: string
-}
-
-type IntercomMetadata = { workspaceName?: string; workspaceId?: string }
-type GitHubMetadata = { accountLogin: string; accountType: "User" | "Organization" }
-
-export type AppAccountInfo = {
-  id: string
-  appId: string
-  name: string
-  metadata: IntercomMetadata | GitHubMetadata | null
-}
-
-function getAppAccountDetail(account: AppAccountInfo | null | undefined): string | null {
-  if (!account?.metadata) return null
-  if ("workspaceName" in account.metadata) {
-    return account.metadata.workspaceName ?? null
-  }
-  if ("accountLogin" in account.metadata) {
-    return `${account.metadata.accountLogin} (${account.metadata.accountType})`
-  }
-  return null
 }
 
 type TriggerEnvironmentInfo = {
@@ -303,6 +250,7 @@ export function TriggerDetail(props: TriggerDetailProps) {
   const [isDirty, setIsDirty] = createSignal(false)
   const [lastSavedHash, setLastSavedHash] = createSignal("")
   const [savingName, setSavingName] = createSignal(false)
+  const [selection, setSelection] = createSignal<Selection | null>({ type: "settings" })
 
   let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
   const AUTO_SAVE_DELAY = 1000
@@ -548,16 +496,7 @@ export function TriggerDetail(props: TriggerDetailProps) {
   }
 
   const selectedPrompt = () => props.prompts.find((p) => p.id === editedPromptId())
-
   const selectedAppAccount = () => props.appAccounts?.find((a) => a.id === editedAppAccountId())
-
-  const effectivePayloadSchema = createMemo(() => {
-    if (editedType() === "app") {
-      const appId = selectedAppAccount()?.appId
-      return getAppPayloadSchema(appId, editedAppEvents()) ?? editedPayloadSchema()
-    }
-    return editedPayloadSchema()
-  })
 
   const [addEnvModalOpen, setAddEnvModalOpen] = createSignal(false)
 
@@ -626,245 +565,126 @@ export function TriggerDetail(props: TriggerDetailProps) {
               </div>
             </div>
 
-            <div class="flex-1 overflow-y-auto scrollbar-thin">
-              <CollapsibleSection title="General">
-                <div class="space-y-3">
-                  <FormField horizontal labelWidth="5rem" label="Slug">
-                    <span class="py-1 font-code text-xs text-text">{trigger().slug}</span>
-                  </FormField>
-                  <FormField horizontal labelWidth="5rem" label="Type">
-                    <div class="flex gap-1.5">
-                      <button
-                        type="button"
-                        class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
-                        classList={{
-                          "border-accent bg-accent/5 text-text": editedType() === "webhook",
-                          "border-border text-text-muted hover:border-border-strong": editedType() !== "webhook",
-                        }}
-                        onClick={() => {
-                          setEditedType("webhook")
-                          markDirty()
-                        }}
-                      >
-                        <Broadcast class="h-3 w-3" />
-                        Webhook
-                      </button>
-                      <button
-                        type="button"
-                        class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
-                        classList={{
-                          "border-accent bg-accent/5 text-text": editedType() === "schedule",
-                          "border-border text-text-muted hover:border-border-strong": editedType() !== "schedule",
-                        }}
-                        onClick={() => {
-                          setEditedType("schedule")
-                          markDirty()
-                        }}
-                      >
-                        <Timer class="h-3 w-3" />
-                        Schedule
-                      </button>
-                      <button
-                        type="button"
-                        class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
-                        classList={{
-                          "border-accent bg-accent/5 text-text": editedType() === "app",
-                          "border-border text-text-muted hover:border-border-strong": editedType() !== "app",
-                        }}
-                        onClick={() => {
-                          setEditedType("app")
-                          markDirty()
-                        }}
-                      >
-                        <Cube class="h-3 w-3" />
-                        App
-                      </button>
-                    </div>
-                  </FormField>
-                  <Show when={agentReleases().length > 0}>
-                    <FormField horizontal labelWidth="5rem" label="Agent version">
-                      <Select
-                        value={editedAgentVersionMode() === "current" ? "latest" : (editedAgentReleaseId() ?? "")}
-                        options={[
-                          { value: "latest", label: "Always use latest" },
-                          ...agentReleases().map((r) => ({ value: r.id, label: r.version })),
-                        ]}
-                        onChange={(value) => {
-                          if (value === "latest") {
-                            setEditedAgentVersionMode("current")
-                            setEditedAgentReleaseId(null)
-                          } else {
-                            setEditedAgentVersionMode("fixed")
-                            setEditedAgentReleaseId(value)
-                          }
-                          markDirty()
-                        }}
-                        class="h-7 text-xs"
-                      />
-                    </FormField>
-                  </Show>
-                </div>
-              </CollapsibleSection>
-
-              <EnvironmentSection
-                triggerId={trigger().id}
-                triggerSlug={trigger().slug}
-                triggerType={editedType()}
-                orgSlug={activeOrg()?.slug ?? ""}
-                apiBaseUrl={apiBaseURL}
-                environments={trigger().environments}
-                availableChannels={props.channels}
-                releases={props.releases}
-                currentReleaseId={trigger().currentReleaseId}
-                payloadSchema={effectivePayloadSchema()}
-                onToggle={(envId) => props.onToggleEnvironment?.(trigger().id, envId) ?? Promise.resolve()}
-                onRegenerateWebhookSecret={(envId) =>
-                  props.onRegenerateWebhookSecret?.(trigger().id, envId) ?? Promise.resolve()
-                }
-                onRegenerateDebugSecret={(envId) =>
-                  props.onRegenerateDebugSecret?.(trigger().id, envId) ?? Promise.resolve()
-                }
-                onUpdateChannel={(envId, channelId) =>
-                  props.onUpdateEnvironmentChannel?.(trigger().id, envId, channelId) ?? Promise.resolve()
-                }
-                onRemove={(envId) => props.onRemoveEnvironment?.(trigger().id, envId) ?? Promise.resolve()}
-                onAdd={() => setAddEnvModalOpen(true)}
-              />
-
-              <Show when={editedType() === "schedule"}>
-                <CollapsibleSection title="Schedule">
-                  <div class="space-y-3">
-                    <ScheduleEditor
-                      cron={editedCron()}
-                      timezone={editedTimezone()}
-                      onCronChange={(v) => {
-                        setEditedCron(v)
-                        markDirty()
-                      }}
-                      onTimezoneChange={(v) => {
-                        setEditedTimezone(v)
-                        markDirty()
-                      }}
-                    />
-                  </div>
-                </CollapsibleSection>
-              </Show>
-
-              <Show when={editedType() === "app"}>
-                <CollapsibleSection title="App">
-                  <div class="space-y-3">
-                    <FormField horizontal labelWidth="5rem" label="Connection">
-                      <Select
-                        value={editedAppAccountId() ?? ""}
-                        options={[
-                          ...(props.appAccounts ?? []).map((a) => ({
-                            value: a.id,
-                            label: a.name,
-                            icon: (iconProps: { class?: string }) => (
-                              <AppIcon appId={a.appId} class={iconProps.class} />
-                            ),
-                          })),
-                          ...(props.onAppConnect
-                            ? [
-                                {
-                                  value: "__connect_new__",
-                                  label: "Connect new",
-                                  icon: (iconProps: { class?: string }) => <Plus class={iconProps.class} />,
-                                },
-                              ]
-                            : []),
-                        ]}
-                        onChange={(value) => {
-                          if (value === "__connect_new__") {
-                            props.onAppConnect?.(null)
-                            return
-                          }
-                          setEditedAppAccountId(value || null)
-                          setEditedAppEvents([])
-                          markDirty()
-                        }}
-                        placeholder="Select connection"
-                        class="h-7 text-xs"
-                      />
-                    </FormField>
-                    <Show when={editedAppAccountId()}>
-                      <FormField horizontal labelWidth="5rem" label="Events">
-                        <MultiSelect
-                          values={editedAppEvents()}
-                          options={(() => {
-                            const account = props.appAccounts?.find((a) => a.id === editedAppAccountId())
-                            if (!account) return []
-                            return APP_EVENTS[account.appId as keyof typeof APP_EVENTS] ?? []
-                          })()}
-                          onChange={(v) => {
-                            setEditedAppEvents(v)
-                            markDirty()
-                          }}
-                          placeholder="Select events"
-                          class="text-xs"
-                        />
-                      </FormField>
-                      <Show when={getAppAccountDetail(selectedAppAccount())}>
-                        <FormField horizontal labelWidth="5rem" label="Account">
-                          <span class="py-1 text-xs text-text-muted">{getAppAccountDetail(selectedAppAccount())}</span>
-                        </FormField>
-                      </Show>
-                    </Show>
-                  </div>
-                </CollapsibleSection>
-              </Show>
-
-              <PromptSection
-                triggerType={editedType()}
-                promptMode={promptMode()}
-                onPromptModeChange={(v) => {
-                  setPromptMode(v)
-                  markDirty()
-                }}
-                prompts={props.prompts.filter((p) => p.agentId === props.trigger?.agentId)}
-                selectedPromptId={editedPromptId()}
-                onPromptIdChange={(v) => {
-                  setEditedPromptId(v)
-                  markDirty()
-                }}
-                promptVersionMode={editedPromptVersionMode()}
-                onPromptVersionModeChange={(v) => {
-                  setEditedPromptVersionMode(v)
-                  markDirty()
-                }}
-                promptReleases={props.promptReleases ?? []}
-                selectedPromptReleaseId={editedPromptReleaseId()}
-                onPromptReleaseIdChange={(v) => {
-                  setEditedPromptReleaseId(v)
-                  markDirty()
-                }}
-                promptContent={editedPromptContent()}
-                onPromptContentChange={(v) => {
-                  setEditedPromptContent(v)
-                  markDirty()
-                }}
-                script={editedScript()}
-                onScriptChange={(v) => {
-                  setEditedScript(v)
-                  markDirty()
-                }}
-                payloadSchema={editedPayloadSchema()}
-                onPayloadSchemaChange={(v) => {
-                  setEditedPayloadSchema(v)
-                  markDirty()
-                }}
-                currentPromptInputSchema={
-                  selectedPrompt()?.id === props.trigger?.prompt?.id ? props.trigger?.prompt?.inputSchema : undefined
-                }
-                input={editedInput()}
-                onInputChange={(v) => {
-                  setEditedInput(v)
-                  markDirty()
-                }}
-                inputPlaceholder={inputPlaceholder()}
-                appId={selectedAppAccount()?.appId ?? null}
-                appEvents={editedAppEvents()}
-              />
+            <div class="flex flex-1 overflow-hidden">
+              <div class="w-48 shrink-0 border-r border-border">
+                <OutlinePanel
+                  environments={trigger().environments}
+                  availableEnvironments={props.environments
+                    .filter((e) => !trigger().environments.some((te) => te.environmentId === e.id))
+                    .map((e) => ({ id: e.id, name: e.name, color: e.color ?? "#3B82F6" }))}
+                  selection={selection()}
+                  onSelect={setSelection}
+                  onAddEnvironment={() => setAddEnvModalOpen(true)}
+                  onRemoveEnvironment={(envId) => props.onRemoveEnvironment?.(trigger().id, envId)}
+                />
+              </div>
+              <div class="flex-1 overflow-hidden">
+                <InspectorPanel
+                  selection={selection()}
+                  triggerSlug={trigger().slug}
+                  triggerType={editedType()}
+                  orgSlug={activeOrg()?.slug ?? ""}
+                  apiBaseUrl={apiBaseURL}
+                  agentVersionMode={editedAgentVersionMode()}
+                  agentReleaseId={editedAgentReleaseId()}
+                  agentReleases={agentReleases()}
+                  environments={trigger().environments}
+                  availableChannels={props.channels}
+                  releases={props.releases}
+                  currentReleaseId={trigger().currentReleaseId}
+                  payloadSchema={editedPayloadSchema()}
+                  prompts={props.prompts.filter((p) => p.agentId === props.trigger?.agentId)}
+                  promptMode={promptMode()}
+                  selectedPromptId={editedPromptId()}
+                  promptVersionMode={editedPromptVersionMode()}
+                  promptReleases={props.promptReleases ?? []}
+                  selectedPromptReleaseId={editedPromptReleaseId()}
+                  promptContent={editedPromptContent()}
+                  script={editedScript()}
+                  currentPromptInputSchema={
+                    selectedPrompt()?.id === props.trigger?.prompt?.id ? props.trigger?.prompt?.inputSchema : undefined
+                  }
+                  input={editedInput()}
+                  inputPlaceholder={inputPlaceholder()}
+                  appAccounts={props.appAccounts ?? []}
+                  selectedAppAccountId={editedAppAccountId()}
+                  appEvents={editedAppEvents()}
+                  onTypeChange={(v) => {
+                    setEditedType(v)
+                    markDirty()
+                  }}
+                  onAgentVersionModeChange={(v) => {
+                    setEditedAgentVersionMode(v)
+                    markDirty()
+                  }}
+                  onAgentReleaseIdChange={(v) => {
+                    setEditedAgentReleaseId(v)
+                    markDirty()
+                  }}
+                  cron={editedCron()}
+                  timezone={editedTimezone()}
+                  onCronChange={(v) => {
+                    setEditedCron(v)
+                    markDirty()
+                  }}
+                  onTimezoneChange={(v) => {
+                    setEditedTimezone(v)
+                    markDirty()
+                  }}
+                  onAppAccountChange={(v) => {
+                    setEditedAppAccountId(v)
+                    setEditedAppEvents([])
+                    markDirty()
+                  }}
+                  onAppEventsChange={(v) => {
+                    setEditedAppEvents(v)
+                    markDirty()
+                  }}
+                  onAppConnect={props.onAppConnect}
+                  onToggleEnvironment={(envId) => props.onToggleEnvironment?.(trigger().id, envId) ?? Promise.resolve()}
+                  onRegenerateWebhookSecret={(envId) =>
+                    props.onRegenerateWebhookSecret?.(trigger().id, envId) ?? Promise.resolve()
+                  }
+                  onRegenerateDebugSecret={(envId) =>
+                    props.onRegenerateDebugSecret?.(trigger().id, envId) ?? Promise.resolve()
+                  }
+                  onUpdateEnvironmentChannel={(envId, channelId) =>
+                    props.onUpdateEnvironmentChannel?.(trigger().id, envId, channelId) ?? Promise.resolve()
+                  }
+                  onPromptModeChange={(v) => {
+                    setPromptMode(v)
+                    markDirty()
+                  }}
+                  onPromptIdChange={(v) => {
+                    setEditedPromptId(v)
+                    markDirty()
+                  }}
+                  onPromptVersionModeChange={(v) => {
+                    setEditedPromptVersionMode(v)
+                    markDirty()
+                  }}
+                  onPromptReleaseIdChange={(v) => {
+                    setEditedPromptReleaseId(v)
+                    markDirty()
+                  }}
+                  onPromptContentChange={(v) => {
+                    setEditedPromptContent(v)
+                    markDirty()
+                  }}
+                  onScriptChange={(v) => {
+                    setEditedScript(v)
+                    markDirty()
+                  }}
+                  onPayloadSchemaChange={(v) => {
+                    setEditedPayloadSchema(v)
+                    markDirty()
+                  }}
+                  onInputChange={(v) => {
+                    setEditedInput(v)
+                    markDirty()
+                  }}
+                />
+              </div>
             </div>
           </div>
         )}

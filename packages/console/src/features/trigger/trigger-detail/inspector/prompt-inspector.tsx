@@ -1,24 +1,25 @@
 import { Show, For, createSignal, createEffect } from "solid-js"
 import { Note, Pencil, Code } from "phosphor-solid-js"
-import {
-  FormField,
-  Select,
-  CodeEditor,
-  TopLevelSchemaEditor,
-  SchemaTypeDisplay,
-  Tooltip,
-  CollapsibleSection,
-} from "../../../ui"
-import { ScriptSignature } from "../../../components"
+import { FormField, Select, CodeEditor, SchemaTypeDisplay, Tooltip, TopLevelSchemaEditor } from "../../../../ui"
+import { ScriptSignature } from "../../../../components"
 import {
   validateTemplate,
   getAppPayloadSchema,
   generatePlaceholdersFromSchema,
   type ValidationStatus,
   type ValidationHighlight,
-} from "./utils"
-import { api } from "../../../app"
-import type { Prompts } from "../../../app/api"
+} from "../utils"
+import { api } from "../../../../app"
+import type { Prompts } from "../../../../app/api"
+
+export type PromptMode = "prompt" | "template" | "script"
+export type PromptVersionMode = "current" | "fixed"
+
+type PromptReleaseItem = {
+  id: string
+  version: string
+  createdAt: string
+}
 
 function InputSchemaPreview(props: { schema: Record<string, unknown> }) {
   const properties = () => (props.schema.properties as Record<string, Record<string, unknown>>) ?? {}
@@ -136,16 +137,7 @@ function AppPayloadSchemaSection(props: { appId: string; events: string[] }) {
   )
 }
 
-export type PromptMode = "prompt" | "template" | "script"
-export type PromptVersionMode = "current" | "fixed"
-
-type PromptReleaseItem = {
-  id: string
-  version: string
-  createdAt: string
-}
-
-type PromptSectionProps = {
+type PromptInspectorProps = {
   triggerType: "webhook" | "schedule" | "app"
   promptMode: PromptMode
   onPromptModeChange: (mode: PromptMode) => void
@@ -171,7 +163,7 @@ type PromptSectionProps = {
   appEvents?: string[]
 }
 
-export function PromptSection(props: PromptSectionProps) {
+export function PromptInspector(props: PromptInspectorProps) {
   const [validation, setValidation] = createSignal<{ status: ValidationStatus; message: string } | null>(null)
   const [highlights, setHighlights] = createSignal<ValidationHighlight[]>([])
 
@@ -191,7 +183,8 @@ export function PromptSection(props: PromptSectionProps) {
   })
 
   return (
-    <CollapsibleSection title="Prompt">
+    <div class="space-y-4 p-4">
+      <div class="text-xs font-medium text-text">Prompt Configuration</div>
       <div class="space-y-3">
         <FormField horizontal labelWidth="5rem" label="Mode">
           <div class="flex gap-1.5">
@@ -417,6 +410,6 @@ return { action: "run", prompt: "Hello" }`}
           </div>
         </Show>
       </div>
-    </CollapsibleSection>
+    </div>
   )
 }
