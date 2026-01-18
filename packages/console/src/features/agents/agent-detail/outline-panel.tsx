@@ -65,6 +65,7 @@ type TreeItemProps = {
   selected: boolean
   onClick: () => void
   onDelete?: () => void
+  code?: boolean
 }
 
 function TreeItem(props: TreeItemProps) {
@@ -82,7 +83,9 @@ function TreeItem(props: TreeItemProps) {
       }}
       onClick={props.onClick}
     >
-      <span class="truncate font-code">{props.label}</span>
+      <span class="truncate" classList={{ "font-code": props.code }}>
+        {props.label}
+      </span>
       <Show when={props.sublabel}>
         <span class="ml-auto truncate text-[10px] text-text-muted group-hover:hidden">{props.sublabel}</span>
       </Show>
@@ -156,6 +159,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
                 selected={isSelected("type", name)}
                 onClick={() => props.onSelect({ type: "type", name })}
                 onDelete={() => props.onRemoveType(name)}
+                code
               />
             )}
           </For>
@@ -202,6 +206,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
                 selected={isSelected("tool", index)}
                 onClick={() => props.onSelect({ type: "tool", index })}
                 onDelete={() => props.onRemoveTool(index)}
+                code
               />
             )}
           </Index>
@@ -240,6 +245,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
               label={`${tool.name}()`}
               selected={isSelected("system_tool", tool.name)}
               onClick={() => props.onSelect({ type: "system_tool", name: tool.name })}
+              code
             />
           )}
         </For>
