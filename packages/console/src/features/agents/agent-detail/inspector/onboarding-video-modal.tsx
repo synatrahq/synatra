@@ -49,16 +49,14 @@ export function OnboardingVideoModal(props: OnboardingVideoModalProps) {
       <ModalContainer size="6xl">
         <ModalHeader title="Welcome to Synatra" onClose={handleClose} />
         <div class="p-4">
-          <div class="aspect-video w-full overflow-hidden rounded-lg bg-black">
-            <video
-              ref={videoRef}
-              class="h-full w-full object-contain"
-              src="/videos/demo_with_subs.mp4"
-              controls
-              preload="auto"
-              onTimeUpdate={handleTimeUpdate}
-            />
-          </div>
+          <video
+            ref={videoRef}
+            class="block w-full rounded-lg"
+            src="/videos/demo_with_subs.mp4"
+            controls
+            preload="auto"
+            onTimeUpdate={handleTimeUpdate}
+          />
         </div>
       </ModalContainer>
     </Modal>
