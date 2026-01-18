@@ -10,7 +10,6 @@ import {
   ModalContainer,
   ModalFooter,
   Select,
-  Switch,
   CollapsibleSection,
 } from "../../../../ui"
 
@@ -50,7 +49,6 @@ type EnvironmentInspectorProps = {
   releases?: ReleaseInfo[]
   currentReleaseId?: string | null
   payloadSchema?: unknown
-  onToggle: () => Promise<void>
   onRegenerateWebhookSecret: () => Promise<void>
   onRegenerateDebugSecret: () => Promise<void>
   onUpdateChannel: (channelId: string) => Promise<void>
@@ -75,7 +73,6 @@ function CopyButton(props: { value: string }) {
 }
 
 export function EnvironmentInspector(props: EnvironmentInspectorProps) {
-  const [toggling, setToggling] = createSignal(false)
   const [regeneratingWebhook, setRegeneratingWebhook] = createSignal(false)
   const [regeneratingDebug, setRegeneratingDebug] = createSignal(false)
   const [confirmModalOpen, setConfirmModalOpen] = createSignal(false)
@@ -122,15 +119,6 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
   const debugUrl = (version: string) => {
     const urlVersion = version === "preview" || version === "latest" ? version : `v${version}`
     return `${props.apiBaseUrl}/api/triggers/${props.orgSlug}/${props.env.environment.slug}/${props.triggerSlug}/${urlVersion}/run`
-  }
-
-  const handleToggle = async () => {
-    setToggling(true)
-    try {
-      await props.onToggle()
-    } finally {
-      setToggling(false)
-    }
   }
 
   const handleSaveChannel = async () => {
@@ -191,17 +179,7 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
   return (
     <>
       <div class="space-y-0">
-        <CollapsibleSection
-          title={props.env.environment.name}
-          actions={
-            <div class="flex items-center gap-2">
-              <Show when={props.env.active}>
-                <span class="rounded bg-success/10 px-1.5 py-0.5 text-2xs font-medium text-success">Active</span>
-              </Show>
-              <Switch checked={props.env.active} onClick={handleToggle} disabled={toggling()} class="scale-75" />
-            </div>
-          }
-        >
+        <CollapsibleSection title={props.env.environment.name}>
           <div class="space-y-3">
             <FormField horizontal labelWidth="5rem" label="Channel">
               <Select

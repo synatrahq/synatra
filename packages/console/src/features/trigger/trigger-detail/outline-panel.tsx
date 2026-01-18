@@ -1,5 +1,6 @@
 import { Show, For, type JSX } from "solid-js"
 import { Gear, ChatCircle, Plus, X, CirclesThree } from "phosphor-solid-js"
+import { Switch } from "../../../ui"
 import type { Selection } from "./constants"
 import { getSelectionKey } from "./constants"
 
@@ -30,6 +31,7 @@ type OutlinePanelProps = {
   onSelect: (selection: Selection) => void
   onAddEnvironment?: () => void
   onRemoveEnvironment?: (environmentId: string) => void
+  onToggleEnvironment?: (environmentId: string) => void
 }
 
 type SectionHeaderProps = {
@@ -130,7 +132,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
                 return (
                   <button
                     type="button"
-                    class="group flex w-full items-center gap-2 px-3 py-1 text-xs text-text transition-colors"
+                    class="group flex h-7 w-full items-center gap-2 px-3 text-xs text-text transition-colors"
                     classList={{
                       "bg-surface-muted": selected(),
                       "hover:bg-surface-muted": !selected(),
@@ -139,17 +141,30 @@ export function OutlinePanel(props: OutlinePanelProps) {
                   >
                     <span
                       class="h-2 w-2 shrink-0 rounded-full"
+                      classList={{ "opacity-50": !env.active }}
                       style={{ background: env.environment.color ?? "#3B82F6" }}
                     />
-                    <span class="truncate">{env.environment.name}</span>
-                    <span
-                      class="ml-auto hidden rounded p-0.5 text-text-muted transition-colors hover:text-danger group-hover:block"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        props.onRemoveEnvironment?.(env.environmentId)
-                      }}
-                    >
-                      <X class="h-3 w-3" />
+                    <span class="truncate" classList={{ "opacity-50": !env.active }}>
+                      {env.environment.name}
+                    </span>
+                    <span class="ml-auto flex items-center gap-1">
+                      <Switch
+                        checked={env.active}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          props.onToggleEnvironment?.(env.environmentId)
+                        }}
+                        class="scale-[0.7] opacity-0 transition-opacity group-hover:opacity-100"
+                      />
+                      <span
+                        class="rounded p-0.5 text-text-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          props.onRemoveEnvironment?.(env.environmentId)
+                        }}
+                      >
+                        <X class="h-3 w-3" />
+                      </span>
                     </span>
                   </button>
                 )

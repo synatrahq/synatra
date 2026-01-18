@@ -576,6 +576,7 @@ export function TriggerDetail(props: TriggerDetailProps) {
                   onSelect={setSelection}
                   onAddEnvironment={() => setAddEnvModalOpen(true)}
                   onRemoveEnvironment={(envId) => props.onRemoveEnvironment?.(trigger().id, envId)}
+                  onToggleEnvironment={(envId) => props.onToggleEnvironment?.(trigger().id, envId)}
                 />
               </div>
               <div class="flex-1 overflow-hidden">
@@ -641,7 +642,6 @@ export function TriggerDetail(props: TriggerDetailProps) {
                     markDirty()
                   }}
                   onAppConnect={props.onAppConnect}
-                  onToggleEnvironment={(envId) => props.onToggleEnvironment?.(trigger().id, envId) ?? Promise.resolve()}
                   onRegenerateWebhookSecret={(envId) =>
                     props.onRegenerateWebhookSecret?.(trigger().id, envId) ?? Promise.resolve()
                   }

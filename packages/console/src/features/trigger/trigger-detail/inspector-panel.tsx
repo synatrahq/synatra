@@ -75,7 +75,6 @@ type InspectorPanelProps = {
   onAppAccountChange: (id: string | null) => void
   onAppEventsChange: (events: string[]) => void
   onAppConnect?: (appId: string | null) => void
-  onToggleEnvironment: (environmentId: string) => Promise<void>
   onRegenerateWebhookSecret: (environmentId: string) => Promise<void>
   onRegenerateDebugSecret: (environmentId: string) => Promise<void>
   onUpdateEnvironmentChannel: (environmentId: string, channelId: string) => Promise<void>
@@ -140,7 +139,6 @@ export function InspectorPanel(props: InspectorPanelProps) {
               releases={props.releases}
               currentReleaseId={props.currentReleaseId}
               payloadSchema={props.payloadSchema}
-              onToggle={() => props.onToggleEnvironment(selectedEnvironment()!.environmentId)}
               onRegenerateWebhookSecret={() => props.onRegenerateWebhookSecret(selectedEnvironment()!.environmentId)}
               onRegenerateDebugSecret={() => props.onRegenerateDebugSecret(selectedEnvironment()!.environmentId)}
               onUpdateChannel={(channelId) =>
