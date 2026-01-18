@@ -1881,6 +1881,11 @@
       "description": "Delete project item for organization"
     },
     {
+      "method": "POST",
+      "path": "/orgs/{org}/projectsV2/{project_number}/views",
+      "description": "Create a view for an organization-owned project"
+    },
+    {
       "method": "GET",
       "path": "/orgs/{org}/projectsV2/{project_number}/views/{view_number}/items",
       "description": "List items for an organization project view"
@@ -5129,6 +5134,11 @@
       "method": "GET",
       "path": "/users",
       "description": "List users"
+    },
+    {
+      "method": "POST",
+      "path": "/users/{user_id}/projectsV2/{project_number}/views",
+      "description": "Create a view for a user-owned project"
     },
     {
       "method": "GET",
