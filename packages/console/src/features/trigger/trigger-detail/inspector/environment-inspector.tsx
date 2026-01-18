@@ -1,4 +1,4 @@
-import { Show, createSignal, createEffect } from "solid-js"
+import { Show, createSignal, createEffect, on } from "solid-js"
 import { Copy, Check, ArrowsClockwise, Warning, Info } from "phosphor-solid-js"
 import {
   FormField,
@@ -49,6 +49,8 @@ type EnvironmentInspectorProps = {
   releases?: ReleaseInfo[]
   currentReleaseId?: string | null
   payloadSchema?: unknown
+  debugVersion: string
+  onDebugVersionChange: (version: string) => void
   onRegenerateWebhookSecret: () => Promise<void>
   onRegenerateDebugSecret: () => Promise<void>
   onUpdateChannel: (channelId: string) => Promise<void>
@@ -77,7 +79,6 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
   const [regeneratingDebug, setRegeneratingDebug] = createSignal(false)
   const [confirmModalOpen, setConfirmModalOpen] = createSignal(false)
   const [confirmAction, setConfirmAction] = createSignal<"webhook" | "debug" | null>(null)
-  const [debugVersion, setDebugVersion] = createSignal("preview")
   const [editedChannelId, setEditedChannelId] = createSignal(props.env.channelId)
   const [savingChannel, setSavingChannel] = createSignal(false)
 
@@ -104,7 +105,7 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
   }
 
   const debugSchema = () => {
-    const version = debugVersion()
+    const version = props.debugVersion
     if (version === "preview") return props.payloadSchema
     if (version === "latest") return props.releases?.[0]?.payloadSchema ?? {}
     return props.releases?.find((r) => r.version === version)?.payloadSchema ?? {}
@@ -137,9 +138,12 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
 
   const channelDirty = () => editedChannelId() !== props.env.channelId
 
-  createEffect(() => {
-    setEditedChannelId(props.env.channelId)
-  })
+  createEffect(
+    on(
+      () => props.env.environmentId,
+      () => setEditedChannelId(props.env.channelId),
+    ),
+  )
 
   const handleConfirmAction = async () => {
     const action = confirmAction()
@@ -275,20 +279,20 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
             <div class="flex items-center gap-1">
               <span class="w-14 shrink-0 text-2xs text-text-muted">Version</span>
               <Select
-                value={debugVersion()}
+                value={props.debugVersion}
                 options={[
                   { value: "preview", label: "Working copy" },
                   { value: "latest", label: "Latest release" },
                   ...(props.releases ?? []).map((r) => ({ value: r.version, label: `v${r.version}` })),
                 ]}
-                onChange={setDebugVersion}
+                onChange={props.onDebugVersionChange}
                 class="h-6 flex-1 text-xs"
               />
             </div>
             <div class="flex items-center gap-1">
               <span class="w-14 shrink-0 text-2xs text-text-muted">URL</span>
-              <Input type="text" value={debugUrl(debugVersion())} readOnly class="h-6 flex-1 font-code text-xs" />
-              <CopyButton value={debugUrl(debugVersion())} />
+              <Input type="text" value={debugUrl(props.debugVersion)} readOnly class="h-6 flex-1 font-code text-xs" />
+              <CopyButton value={debugUrl(props.debugVersion)} />
             </div>
             <div class="flex items-center gap-1">
               <span class="w-14 shrink-0 text-2xs text-text-muted">Secret</span>
@@ -314,13 +318,13 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
             </div>
             <div class="flex items-start gap-1">
               <pre class="flex-1 overflow-x-auto rounded-md bg-surface-muted p-2 font-code text-2xs text-text-muted">
-                {`curl -X POST ${debugUrl(debugVersion())} \\
+                {`curl -X POST ${debugUrl(props.debugVersion)} \\
   -H "Authorization: Bearer ${props.env.debugSecret ?? "<secret>"}" \\
   -H "Content-Type: application/json" \\
   -d '${debugPayloadSample()}'`}
               </pre>
               <CopyButton
-                value={`curl -X POST ${debugUrl(debugVersion())} -H "Authorization: Bearer ${props.env.debugSecret ?? "<secret>"}" -H "Content-Type: application/json" -d '${debugPayloadSample()}'`}
+                value={`curl -X POST ${debugUrl(props.debugVersion)} -H "Authorization: Bearer ${props.env.debugSecret ?? "<secret>"}" -H "Content-Type: application/json" -d '${debugPayloadSample()}'`}
               />
             </div>
           </div>

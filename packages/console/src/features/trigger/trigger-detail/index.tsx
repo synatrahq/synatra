@@ -506,11 +506,17 @@ export function TriggerDetail(props: TriggerDetailProps) {
     return editedPayloadSchema()
   })
 
+  let lastValidTriggerId: string | undefined = undefined
   createEffect(
     on(
       () => props.trigger?.id,
-      () => {
-        setSelection({ type: "settings" })
+      (id) => {
+        if (id && lastValidTriggerId !== undefined && id !== lastValidTriggerId) {
+          setSelection({ type: "settings" })
+        }
+        if (id) {
+          lastValidTriggerId = id
+        }
       },
       { defer: true },
     ),
