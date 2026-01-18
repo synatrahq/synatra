@@ -1,5 +1,5 @@
 import { Show, For, type JSX } from "solid-js"
-import { Gear, ChatCircle, Plus, X, CirclesThree, Warning } from "phosphor-solid-js"
+import { Gear, Plus, X, TreeStructure, Warning } from "phosphor-solid-js"
 import { Switch } from "../../../ui"
 import type { Selection } from "./constants"
 import { getSelectionKey } from "./constants"
@@ -64,25 +64,23 @@ function SectionHeader(props: SectionHeaderProps) {
   )
 }
 
-type SimpleTreeItemProps = {
-  icon: () => JSX.Element
+type TreeItemProps = {
   label: string
   selected: boolean
   onClick: () => void
 }
 
-function SimpleTreeItem(props: SimpleTreeItemProps) {
+function TreeItem(props: TreeItemProps) {
   return (
     <button
       type="button"
-      class="group flex w-full items-center gap-2 px-3 py-1.5 text-xs text-text transition-colors"
+      class="group flex w-full items-center gap-2 py-1 pl-7 pr-3 text-xs text-text transition-colors"
       classList={{
         "bg-surface-muted": props.selected,
         "hover:bg-surface-muted": !props.selected,
       }}
       onClick={props.onClick}
     >
-      {props.icon()}
       <span class="truncate">{props.label}</span>
     </button>
   )
@@ -97,18 +95,14 @@ export function OutlinePanel(props: OutlinePanelProps) {
   return (
     <div class="flex h-full flex-col overflow-hidden bg-surface-elevated">
       <div class="flex-1 overflow-y-auto py-1 scrollbar-thin">
-        <div class="mb-2">
-          <div class="px-3 py-1">
-            <span class="text-2xs font-medium text-text-muted">General</span>
-          </div>
-          <SimpleTreeItem
-            icon={() => <Gear class="h-3.5 w-3.5 shrink-0 text-text-muted" weight="duotone" />}
-            label="Settings"
+        <div>
+          <SectionHeader icon={<Gear class="h-3 w-3 text-text-muted" weight="duotone" />} label="General" />
+          <TreeItem
+            label="Trigger"
             selected={isSelected({ type: "settings" })}
             onClick={() => props.onSelect({ type: "settings" })}
           />
-          <SimpleTreeItem
-            icon={() => <ChatCircle class="h-3.5 w-3.5 shrink-0 text-accent" weight="duotone" />}
+          <TreeItem
             label="Prompt"
             selected={isSelected({ type: "prompt" })}
             onClick={() => props.onSelect({ type: "prompt" })}
@@ -117,7 +111,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
 
         <div class="border-t border-border pt-2">
           <SectionHeader
-            icon={<CirclesThree class="h-3 w-3 text-accent" weight="duotone" />}
+            icon={<TreeStructure class="h-3 w-3 text-accent" weight="duotone" />}
             label="Environments"
             count={props.environments.length}
             onAdd={props.availableEnvironments.length > 0 ? props.onAddEnvironment : undefined}
@@ -144,7 +138,7 @@ export function OutlinePanel(props: OutlinePanelProps) {
                 return (
                   <button
                     type="button"
-                    class="group flex h-7 w-full items-center gap-2 px-3 text-xs text-text transition-colors"
+                    class="group flex h-7 w-full items-center gap-2 pl-7 pr-3 text-xs text-text transition-colors"
                     classList={{
                       "bg-surface-muted": selected(),
                       "hover:bg-surface-muted": !selected(),
