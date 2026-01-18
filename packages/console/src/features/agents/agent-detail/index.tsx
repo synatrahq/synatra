@@ -365,7 +365,7 @@ export function AgentDetail(props: AgentDetailProps) {
           setSaveStatus("idle")
           setOpenTabs([])
           setActiveTabKey("")
-          const showWelcome = props.startCopilot || shouldShowWelcomeTab(agent.id)
+          const showWelcome = props.showCopilotHighlight || shouldShowWelcomeTab(agent.id)
           if (showWelcome) {
             setWelcomeTabShown(agent.id, true)
             setOpenTabs([{ type: "onboarding_video" }])
