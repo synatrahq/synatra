@@ -11,6 +11,7 @@ import {
   ModalFooter,
   Select,
   Switch,
+  CollapsibleSection,
 } from "../../../../ui"
 
 type ChannelInfo = {
@@ -189,55 +190,52 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
 
   return (
     <>
-      <div class="space-y-4 p-4">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span
-              class="h-3 w-3 shrink-0 rounded-full"
-              style={{ background: props.env.environment.color || "#6366F1" }}
-            />
-            <span class="text-xs font-medium text-text">{props.env.environment.name}</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <Show when={props.env.active}>
-              <span class="rounded bg-success/10 px-1.5 py-0.5 text-2xs font-medium text-success">Active</span>
-            </Show>
-            <Switch checked={props.env.active} onClick={handleToggle} disabled={toggling()} class="scale-75" />
-          </div>
-        </div>
-
-        <div class="space-y-3">
-          <FormField horizontal labelWidth="5rem" label="Channel">
-            <Select
-              value={editedChannelId()}
-              options={props.availableChannels.map((c) => ({ value: c.id, label: c.name }))}
-              onChange={setEditedChannelId}
-              class="h-7 text-xs"
-            />
-          </FormField>
-          <Show when={channelDirty()}>
-            <div class="flex items-center justify-end gap-2">
-              <Button variant="outline" size="xs" onClick={handleResetChannel} disabled={savingChannel()}>
-                Cancel
-              </Button>
-              <Button variant="default" size="xs" onClick={handleSaveChannel} disabled={savingChannel()}>
-                <Show when={savingChannel()}>
-                  <Spinner size="xs" class="border-white border-t-transparent" />
-                </Show>
-                Save changes
-              </Button>
+      <div class="space-y-0">
+        <CollapsibleSection
+          title={props.env.environment.name}
+          actions={
+            <div class="flex items-center gap-2">
+              <Show when={props.env.active}>
+                <span class="rounded bg-success/10 px-1.5 py-0.5 text-2xs font-medium text-success">Active</span>
+              </Show>
+              <Switch checked={props.env.active} onClick={handleToggle} disabled={toggling()} class="scale-75" />
             </div>
-          </Show>
+          }
+        >
+          <div class="space-y-3">
+            <FormField horizontal labelWidth="5rem" label="Channel">
+              <Select
+                value={editedChannelId()}
+                options={props.availableChannels.map((c) => ({ value: c.id, label: c.name }))}
+                onChange={setEditedChannelId}
+                class="h-7 text-xs"
+              />
+            </FormField>
+            <Show when={channelDirty()}>
+              <div class="flex items-center justify-end gap-2">
+                <Button variant="outline" size="xs" onClick={handleResetChannel} disabled={savingChannel()}>
+                  Cancel
+                </Button>
+                <Button variant="default" size="xs" onClick={handleSaveChannel} disabled={savingChannel()}>
+                  <Show when={savingChannel()}>
+                    <Spinner size="xs" class="border-white border-t-transparent" />
+                  </Show>
+                  Save changes
+                </Button>
+              </div>
+            </Show>
+          </div>
+        </CollapsibleSection>
 
-          <Show when={props.triggerType === "webhook"}>
-            <div class="border-t border-border pt-3">
-              <div class="mb-2 text-xs font-medium text-text-muted">Webhook</div>
+        <Show when={props.triggerType === "webhook"}>
+          <CollapsibleSection title="Webhook">
+            <div class="space-y-2">
               <div class="flex items-center gap-1">
                 <span class="w-14 shrink-0 text-2xs text-text-muted">URL</span>
                 <Input type="text" value={webhookUrl()} readOnly class="h-6 flex-1 font-code text-xs" />
                 <CopyButton value={webhookUrl()} />
               </div>
-              <div class="mt-2 flex items-center gap-1">
+              <div class="flex items-center gap-1">
                 <span class="w-14 shrink-0 text-2xs text-text-muted">Secret</span>
                 <Input
                   type="password"
@@ -259,7 +257,7 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
                   <ArrowsClockwise class="h-3.5 w-3.5" />
                 </IconButton>
               </div>
-              <div class="mt-2 flex items-start gap-1">
+              <div class="flex items-start gap-1">
                 <pre class="flex-1 overflow-x-auto rounded-md bg-surface-muted p-2 font-code text-2xs text-text-muted">
                   {`curl -X POST ${webhookUrl()} \\
   -H "Authorization: Bearer ${props.env.webhookSecret ?? "<secret>"}" \\
@@ -271,29 +269,32 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
                 />
               </div>
             </div>
-          </Show>
+          </CollapsibleSection>
+        </Show>
 
-          <div class="border-t border-border pt-3">
-            <div class="mb-2 flex items-center justify-between">
-              <span class="text-xs font-medium text-text-muted">Debug</span>
-              <Select
-                value={debugVersion()}
-                options={[
-                  { value: "preview", label: "Working copy" },
-                  { value: "latest", label: "Latest release" },
-                  ...(props.releases ?? []).map((r) => ({ value: r.version, label: `v${r.version}` })),
-                ]}
-                onChange={setDebugVersion}
-                wrapperClass="relative flex w-36 shrink-0"
-                class="h-6 px-2 text-xs"
-              />
-            </div>
+        <CollapsibleSection
+          title="Debug"
+          actions={
+            <Select
+              value={debugVersion()}
+              options={[
+                { value: "preview", label: "Working copy" },
+                { value: "latest", label: "Latest release" },
+                ...(props.releases ?? []).map((r) => ({ value: r.version, label: `v${r.version}` })),
+              ]}
+              onChange={setDebugVersion}
+              wrapperClass="relative flex w-36 shrink-0"
+              class="h-6 px-2 text-xs"
+            />
+          }
+        >
+          <div class="space-y-2">
             <div class="flex items-center gap-1">
               <span class="w-14 shrink-0 text-2xs text-text-muted">URL</span>
               <Input type="text" value={debugUrl(debugVersion())} readOnly class="h-6 flex-1 font-code text-xs" />
               <CopyButton value={debugUrl(debugVersion())} />
             </div>
-            <div class="mt-2 flex items-center gap-1">
+            <div class="flex items-center gap-1">
               <span class="w-14 shrink-0 text-2xs text-text-muted">Secret</span>
               <Input
                 type="password"
@@ -315,7 +316,7 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
                 <ArrowsClockwise class="h-3.5 w-3.5" />
               </IconButton>
             </div>
-            <div class="mt-2 flex items-start gap-1">
+            <div class="flex items-start gap-1">
               <pre class="flex-1 overflow-x-auto rounded-md bg-surface-muted p-2 font-code text-2xs text-text-muted">
                 {`curl -X POST ${debugUrl(debugVersion())} \\
   -H "Authorization: Bearer ${props.env.debugSecret ?? "<secret>"}" \\
@@ -327,7 +328,7 @@ export function EnvironmentInspector(props: EnvironmentInspectorProps) {
               />
             </div>
           </div>
-        </div>
+        </CollapsibleSection>
       </div>
 
       <Modal

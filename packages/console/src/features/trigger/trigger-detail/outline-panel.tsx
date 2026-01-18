@@ -1,5 +1,5 @@
 import { Show, For, type JSX } from "solid-js"
-import { Gear, ChatCircle, Plus, X } from "phosphor-solid-js"
+import { Gear, ChatCircle, Plus, X, CirclesThree } from "phosphor-solid-js"
 import type { Selection } from "./constants"
 import { getSelectionKey } from "./constants"
 
@@ -33,14 +33,22 @@ type OutlinePanelProps = {
 }
 
 type SectionHeaderProps = {
+  icon: JSX.Element
   label: string
+  count?: number
   onAdd?: () => void
 }
 
 function SectionHeader(props: SectionHeaderProps) {
   return (
     <div class="flex items-center justify-between px-3 py-2 text-xs">
-      <span class="font-medium text-text">{props.label}</span>
+      <div class="flex items-center gap-2">
+        {props.icon}
+        <span class="font-medium text-text">{props.label}</span>
+        <Show when={props.count !== undefined}>
+          <span class="text-[10px] text-text-muted">({props.count})</span>
+        </Show>
+      </div>
       <Show when={props.onAdd}>
         <button
           type="button"
@@ -107,7 +115,9 @@ export function OutlinePanel(props: OutlinePanelProps) {
 
         <div class="border-t border-border pt-2">
           <SectionHeader
+            icon={<CirclesThree class="h-3 w-3 text-accent" weight="duotone" />}
             label="Environments"
+            count={props.environments.length}
             onAdd={props.availableEnvironments.length > 0 ? props.onAddEnvironment : undefined}
           />
           <Show

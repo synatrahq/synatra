@@ -1,6 +1,6 @@
 import { Show, createSignal, createEffect } from "solid-js"
 import { Broadcast, Timer, Cube, ArrowsClockwise, Terminal, Plus } from "phosphor-solid-js"
-import { FormField, Select, Input, MultiSelect } from "../../../../ui"
+import { FormField, Select, Input, MultiSelect, CollapsibleSection } from "../../../../ui"
 import { AppIcon } from "../../../../components"
 
 const LOCAL_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -331,78 +331,78 @@ export function SettingsInspector(props: SettingsInspectorProps) {
   const selectedAppAccount = () => props.appAccounts?.find((a) => a.id === props.selectedAppAccountId)
 
   return (
-    <div class="space-y-4 p-4">
-      <div class="text-xs font-medium text-text">Settings</div>
-      <div class="space-y-3">
-        <FormField horizontal labelWidth="5rem" label="Slug">
-          <span class="py-1 font-code text-xs text-text">{props.slug}</span>
-        </FormField>
-        <FormField horizontal labelWidth="5rem" label="Type">
-          <div class="flex gap-1.5">
-            <button
-              type="button"
-              class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
-              classList={{
-                "border-accent bg-accent/5 text-text": props.type === "schedule",
-                "border-border text-text-muted hover:border-border-strong": props.type !== "schedule",
-              }}
-              onClick={() => props.onTypeChange("schedule")}
-            >
-              <Timer class="h-3 w-3" />
-              Schedule
-            </button>
-            <button
-              type="button"
-              class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
-              classList={{
-                "border-accent bg-accent/5 text-text": props.type === "webhook",
-                "border-border text-text-muted hover:border-border-strong": props.type !== "webhook",
-              }}
-              onClick={() => props.onTypeChange("webhook")}
-            >
-              <Broadcast class="h-3 w-3" />
-              Webhook
-            </button>
-            <button
-              type="button"
-              class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
-              classList={{
-                "border-accent bg-accent/5 text-text": props.type === "app",
-                "border-border text-text-muted hover:border-border-strong": props.type !== "app",
-              }}
-              onClick={() => props.onTypeChange("app")}
-            >
-              <Cube class="h-3 w-3" />
-              App
-            </button>
-          </div>
-        </FormField>
-        <Show when={props.agentReleases.length > 0}>
-          <FormField horizontal labelWidth="5rem" label="Agent version">
-            <Select
-              value={props.agentVersionMode === "current" ? "latest" : (props.agentReleaseId ?? "")}
-              options={[
-                { value: "latest", label: "Always use latest" },
-                ...props.agentReleases.map((r) => ({ value: r.id, label: r.version })),
-              ]}
-              onChange={(value) => {
-                if (value === "latest") {
-                  props.onAgentVersionModeChange("current")
-                  props.onAgentReleaseIdChange(null)
-                } else {
-                  props.onAgentVersionModeChange("fixed")
-                  props.onAgentReleaseIdChange(value)
-                }
-              }}
-              class="h-7 text-xs"
-            />
+    <div class="space-y-0">
+      <CollapsibleSection title="Settings">
+        <div class="space-y-3">
+          <FormField horizontal labelWidth="5rem" label="Slug">
+            <span class="py-1 font-code text-xs text-text">{props.slug}</span>
           </FormField>
-        </Show>
-      </div>
+          <FormField horizontal labelWidth="5rem" label="Type">
+            <div class="flex gap-1.5">
+              <button
+                type="button"
+                class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
+                classList={{
+                  "border-accent bg-accent/5 text-text": props.type === "schedule",
+                  "border-border text-text-muted hover:border-border-strong": props.type !== "schedule",
+                }}
+                onClick={() => props.onTypeChange("schedule")}
+              >
+                <Timer class="h-3 w-3" />
+                Schedule
+              </button>
+              <button
+                type="button"
+                class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
+                classList={{
+                  "border-accent bg-accent/5 text-text": props.type === "webhook",
+                  "border-border text-text-muted hover:border-border-strong": props.type !== "webhook",
+                }}
+                onClick={() => props.onTypeChange("webhook")}
+              >
+                <Broadcast class="h-3 w-3" />
+                Webhook
+              </button>
+              <button
+                type="button"
+                class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
+                classList={{
+                  "border-accent bg-accent/5 text-text": props.type === "app",
+                  "border-border text-text-muted hover:border-border-strong": props.type !== "app",
+                }}
+                onClick={() => props.onTypeChange("app")}
+              >
+                <Cube class="h-3 w-3" />
+                App
+              </button>
+            </div>
+          </FormField>
+          <Show when={props.agentReleases.length > 0}>
+            <FormField horizontal labelWidth="5rem" label="Agent version">
+              <Select
+                value={props.agentVersionMode === "current" ? "latest" : (props.agentReleaseId ?? "")}
+                options={[
+                  { value: "latest", label: "Always use latest" },
+                  ...props.agentReleases.map((r) => ({ value: r.id, label: r.version })),
+                ]}
+                onChange={(value) => {
+                  if (value === "latest") {
+                    props.onAgentVersionModeChange("current")
+                    props.onAgentReleaseIdChange(null)
+                  } else {
+                    props.onAgentVersionModeChange("fixed")
+                    props.onAgentReleaseIdChange(value)
+                  }
+                }}
+                class="h-7 text-xs"
+              />
+            </FormField>
+          </Show>
+        </div>
+      </CollapsibleSection>
 
       <Show when={props.type === "schedule"}>
-        <div class="border-t border-border pt-4">
-          <div class="mb-3 text-xs font-medium text-text-muted">Schedule</div>
+        <CollapsibleSection title="Schedule">
           <div class="space-y-3">
             <FormField horizontal labelWidth="5rem" label="Mode">
               <div class="flex gap-1.5">
@@ -529,12 +529,11 @@ export function SettingsInspector(props: SettingsInspectorProps) {
               </FormField>
             </Show>
           </div>
-        </div>
+        </CollapsibleSection>
       </Show>
 
       <Show when={props.type === "app"}>
-        <div class="border-t border-border pt-4">
-          <div class="mb-3 text-xs font-medium text-text-muted">App</div>
+        <CollapsibleSection title="App">
           <div class="space-y-3">
             <FormField horizontal labelWidth="5rem" label="Connection">
               <Select
@@ -587,7 +586,7 @@ export function SettingsInspector(props: SettingsInspectorProps) {
               </Show>
             </Show>
           </div>
-        </div>
+        </CollapsibleSection>
       </Show>
     </div>
   )
