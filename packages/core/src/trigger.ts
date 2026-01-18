@@ -323,6 +323,7 @@ export async function createTrigger(input: z.input<typeof CreateTriggerSchema>) 
   const versionParsed = parseVersion(data.initialVersion ?? "0.0.1")
   const versionText = stringifyVersion(versionParsed)
 
+  const triggerType = data.type ?? "schedule"
   const config = {
     agentId: data.agentId,
     agentReleaseId: data.agentReleaseId ?? null,
@@ -334,8 +335,8 @@ export async function createTrigger(input: z.input<typeof CreateTriggerSchema>) 
     template: data.template ?? "",
     script: data.script ?? "",
     payloadSchema: normalizeInputSchema(data.payloadSchema),
-    type: data.type ?? "webhook",
-    cron: data.cron ?? null,
+    type: triggerType,
+    cron: data.cron ?? (triggerType === "schedule" ? "0 9 * * *" : null),
     timezone: data.timezone ?? "UTC",
     input: data.input ?? null,
     appAccountId: data.appAccountId ?? null,

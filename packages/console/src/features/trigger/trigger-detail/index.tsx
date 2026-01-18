@@ -416,8 +416,8 @@ export function TriggerDetail(props: TriggerDetailProps) {
     setEditedScript(source.script ?? "")
     setEditedPayloadSchema(ensureObjectSchema(source.payloadSchema))
     setPromptMode(source.mode)
-    setEditedCron(source.cron ?? "")
-    setEditedTimezone(source.timezone)
+    setEditedCron(source.cron || (source.type === "schedule" ? "0 9 * * *" : ""))
+    setEditedTimezone(source.timezone || "UTC")
     setEditedInput(source.input ? JSON.stringify(source.input, null, 2) : "")
     setEditedAppAccountId(source.appAccountId)
     setEditedAppEvents(source.appEvents ?? [])
@@ -664,6 +664,9 @@ export function TriggerDetail(props: TriggerDetailProps) {
                   appEvents={editedAppEvents()}
                   onTypeChange={(v) => {
                     setEditedType(v)
+                    if (v === "schedule" && !editedCron()) {
+                      setEditedCron("0 9 * * *")
+                    }
                     markDirty()
                   }}
                   onAgentVersionModeChange={(v) => {
