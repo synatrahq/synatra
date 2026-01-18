@@ -441,7 +441,7 @@ export function SettingsInspector(props: SettingsInspectorProps) {
               />
             </FormField>
             <Show when={scheduleMode() === "interval"}>
-              <FormField horizontal labelWidth="5rem" label="Run every">
+              <FormField horizontal labelWidth="5rem" label="Run every" align="start">
                 <div class="flex flex-wrap items-center gap-2">
                   <Select
                     value={interval()}

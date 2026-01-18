@@ -8,6 +8,7 @@ type FormFieldProps = {
   required?: boolean
   horizontal?: boolean
   labelWidth?: string
+  align?: "start" | "center"
   children: JSX.Element
 }
 
@@ -17,7 +18,7 @@ export function FormField(props: FormFieldProps) {
       <label
         for={props.for}
         class="shrink-0 text-xs text-text-muted"
-        classList={{ "font-medium text-text": !props.horizontal }}
+        classList={{ "font-medium text-text": !props.horizontal, "pt-1.5": props.align === "start" }}
         style={props.labelWidth ? { width: props.labelWidth } : undefined}
       >
         {props.label}
@@ -41,7 +42,10 @@ export function FormField(props: FormFieldProps) {
 
   if (props.horizontal) {
     return (
-      <div class="flex items-center gap-3">
+      <div
+        class="flex gap-3"
+        classList={{ "items-start": props.align === "start", "items-center": props.align !== "start" }}
+      >
         {label}
         <div class="flex flex-1 flex-col gap-1">
           {props.children}
