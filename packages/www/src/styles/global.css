@@ -308,6 +308,18 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+
+  .prose a {
+    color: var(--color-text-primary);
+    text-decoration: underline;
+    text-decoration-color: var(--color-text-muted);
+    text-underline-offset: 3px;
+    transition: text-decoration-color var(--duration-normal) var(--ease-smooth);
+  }
+
+  .prose a:hover {
+    text-decoration-color: var(--color-text-primary);
+  }
 }
 
 @layer utilities {
