@@ -15,27 +15,9 @@ type UsageListProps = {
   loading?: boolean
 }
 
-function formatPeriodRange(start: string | Date, end: string | Date): string {
-  const s = new Date(start)
-  const e = new Date(end)
-  const startStr = s.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
-  const sameYear = s.getUTCFullYear() === e.getUTCFullYear()
-  const endStr = e.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  })
-  if (sameYear) {
-    return `${startStr} - ${endStr}`
-  }
-  const startWithYear = s.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  })
-  return `${startWithYear} - ${endStr}`
+function formatPeriod(date: string | Date): string {
+  const d = new Date(date)
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "long", timeZone: "UTC" })
 }
 
 function formatNumber(n: number): string {
@@ -237,9 +219,7 @@ export function UsageList(props: UsageListProps) {
                       <ChartBar class="h-4 w-4 text-text-muted" weight="duotone" />
                       <span class="text-xs font-medium text-text">Current Period</span>
                     </div>
-                    <span class="text-2xs text-text-muted">
-                      {formatPeriodRange(current().periodStart, current().periodEnd)}
-                    </span>
+                    <span class="text-2xs text-text-muted">{formatPeriod(current().periodStart)}</span>
                   </div>
 
                   <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -269,9 +249,7 @@ export function UsageList(props: UsageListProps) {
                       <For each={props.history}>
                         {(period) => (
                           <div class="flex items-center justify-between border-b border-border py-2 last:border-0">
-                            <span class="text-xs text-text">
-                              {formatPeriodRange(period.periodStart, period.periodEnd)}
-                            </span>
+                            <span class="text-xs text-text">{formatPeriod(period.periodStart)}</span>
                             <div class="flex items-center gap-3">
                               <span class="text-2xs text-text-muted">{formatNumber(period.runsUser)} user</span>
                               <span class="text-2xs text-text-muted">{formatNumber(period.runsTrigger)} trigger</span>
