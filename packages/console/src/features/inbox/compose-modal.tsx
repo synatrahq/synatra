@@ -222,8 +222,8 @@ export function ComposeModal(props: ComposeModalProps) {
           agentId: selectedAgent()!.id,
           environmentId: selectedEnvironment(),
           channelId: selectedChannel()!.id,
-          subject: message().slice(0, 50).trim() || "New request",
-          message: message(),
+          subject: message().trim().slice(0, 50) || "New request",
+          message: message().trim(),
         },
       })
       .catch(() => null)
