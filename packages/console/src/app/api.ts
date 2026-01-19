@@ -1,11 +1,34 @@
 import { hc } from "hono/client"
 import type { InferRequestType, InferResponseType } from "hono/client"
 import type { AppType } from "@synatra/server"
+import { extractErrorMessage, type ProblemDetails } from "@synatra/util/error"
 
 export const apiBaseURL = import.meta.env.VITE_API_URL?.toString().trim() ?? ""
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public problem: ProblemDetails,
+  ) {
+    super(message)
+    this.name = "ApiError"
+  }
+}
+
+const apiFetch: typeof fetch = async (input, init) => {
+  const res = await fetch(input, init)
+  if (!res.ok) {
+    const problem = (await res
+      .json()
+      .catch(() => ({ title: "Unknown error", name: "UnknownError", data: {} }))) as ProblemDetails
+    throw new ApiError(extractErrorMessage(problem), problem)
+  }
+  return res
+}
+
 export const api = hc<AppType>(apiBaseURL, {
   init: { credentials: "include" },
+  fetch: apiFetch,
 })
 
 export type Channel = InferResponseType<(typeof api.api.channels)[":id"]["$get"]>

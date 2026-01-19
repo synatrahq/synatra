@@ -203,7 +203,6 @@ export default function InboxPage() {
     queryKey: ["inbox", "channels", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.channels.$get({ query: {} })
-      if (!res.ok) throw new Error("Failed to fetch channels")
       const data = (await res.json()) as Array<{
         id: string
         name: string
@@ -223,7 +222,6 @@ export default function InboxPage() {
     queryKey: ["inbox", "counts", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.threads.counts.$get()
-      if (!res.ok) throw new Error("Failed to fetch counts")
       const data = await res.json()
       const pending = data.byStatus.waiting_human ?? 0
       setPendingCount(pending)
@@ -260,7 +258,6 @@ export default function InboxPage() {
       queryFn: async (): Promise<ChannelMembers> => {
         if (!channelId) return []
         const res = await api.api.channels[":channelId"].members.$get({ param: { channelId } })
-        if (!res.ok) throw new Error("Failed to fetch channel members")
         return res.json()
       },
       enabled: !!channelId && !!activeOrg()?.id,
@@ -274,7 +271,6 @@ export default function InboxPage() {
       queryFn: async (): Promise<ChannelAgents> => {
         if (!channelId) return []
         const res = await api.api.channels[":channelId"].agents.$get({ param: { channelId } })
-        if (!res.ok) throw new Error("Failed to fetch channel agents")
         return res.json()
       },
       enabled: !!channelId && !!activeOrg()?.id,
@@ -288,7 +284,6 @@ export default function InboxPage() {
       queryFn: async () => {
         if (!channelId) return null
         const res = await api.api.channels[":id"].$get({ param: { id: channelId } })
-        if (!res.ok) throw new Error("Failed to fetch channel data")
         return res.json() as Promise<ChannelSettingsData>
       },
       enabled: !!channelId && !!activeOrg()?.id,
@@ -357,7 +352,6 @@ export default function InboxPage() {
         query.cursor = pageParam
       }
       const res = await api.api.threads.$get({ query })
-      if (!res.ok) throw new Error("Failed to fetch threads")
       return res.json()
     },
     initialPageParam: null as string | null,
@@ -817,13 +811,10 @@ export default function InboxPage() {
         status: newStatus,
         data: isCancel ? undefined : data,
       }
-      const res = await api.api.threads[":threadId"]["human-requests"][":requestId"].respond.$post({
+      await api.api.threads[":threadId"]["human-requests"][":requestId"].respond.$post({
         param: { threadId, requestId },
         json: payload,
       })
-      if (!res.ok && threadId) {
-        await fetchThreadDetail(threadId)
-      }
       invalidateThreads()
       invalidateCounts()
     } catch (e) {
@@ -860,19 +851,10 @@ export default function InboxPage() {
 
     setReplying(true)
     try {
-      const res = await api.api.threads[":id"].reply.$post({
+      await api.api.threads[":id"].reply.$post({
         param: { id: threadId },
         json: { message },
       })
-      if (!res.ok) {
-        setSelectedThread((prev) => {
-          if (!prev || prev.id !== threadId) return prev
-          return {
-            ...prev,
-            messages: prev.messages.filter((m) => m.id !== optimisticMessage.id),
-          }
-        })
-      }
       invalidateThreads()
       invalidateCounts()
     } catch (e) {
@@ -901,8 +883,7 @@ export default function InboxPage() {
     if (!thread) return
     setDeleting(true)
     try {
-      const res = await api.api.threads[":id"].$delete({ param: { id: thread.id } })
-      if (!res.ok) return
+      await api.api.threads[":id"].$delete({ param: { id: thread.id } })
       setDeleteModalOpen(false)
       setDeletingThread(null)
       removeThreadFromCache(thread.id)
@@ -919,8 +900,7 @@ export default function InboxPage() {
 
   const handleArchive = async (id: string) => {
     try {
-      const res = await api.api.threads[":id"].archive.$post({ param: { id } })
-      if (!res.ok) return
+      await api.api.threads[":id"].archive.$post({ param: { id } })
       removeThreadFromCache(id)
       if (searchParams.thread === id) {
         setSearchParams({ thread: undefined })
@@ -933,8 +913,7 @@ export default function InboxPage() {
 
   const handleUnarchive = async (id: string) => {
     try {
-      const res = await api.api.threads[":id"].unarchive.$post({ param: { id } })
-      if (!res.ok) return
+      await api.api.threads[":id"].unarchive.$post({ param: { id } })
       removeThreadFromCache(id)
       if (searchParams.thread === id) {
         setSearchParams({ thread: undefined })
@@ -948,14 +927,9 @@ export default function InboxPage() {
   const handleCreateChannel = async (data: { name: string; slug?: string }) => {
     setCreatingChannel(true)
     try {
-      const res = await api.api.channels.$post({ json: data })
-      if (res.ok) {
-        setChannelCreateOpen(false)
-        invalidateChannels()
-      } else {
-        const err = (await res.json().catch(() => ({}))) as { data?: { message?: string } }
-        throw new Error(err.data?.message || "Failed to create channel")
-      }
+      await api.api.channels.$post({ json: data })
+      setChannelCreateOpen(false)
+      invalidateChannels()
     } finally {
       setCreatingChannel(false)
     }
@@ -964,59 +938,48 @@ export default function InboxPage() {
   const handleAddMembers = async (memberIds: string[]) => {
     const channelId = channelFilter()
     if (!channelId) return
-    const res = await api.api.channels[":channelId"].members.$post({
+    await api.api.channels[":channelId"].members.$post({
       param: { channelId },
       json: { memberIds },
     })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: "Failed to add members" }))
-      throw new Error((err as { message?: string }).message || "Failed to add members")
-    }
     invalidateChannelMembers()
   }
 
   const handleRemoveMember = async (memberId: string) => {
     const channelId = channelFilter()
     if (!channelId) return
-    const res = await api.api.channels[":channelId"].members[":memberId"].$delete({
+    await api.api.channels[":channelId"].members[":memberId"].$delete({
       param: { channelId, memberId },
     })
-    if (!res.ok) return
     invalidateChannelMembers()
   }
 
   const handleUpdateMemberRole = async (memberId: string, role: "owner" | "member") => {
     const channelId = channelFilter()
     if (!channelId) return
-    const res = await api.api.channels[":channelId"].members[":memberId"].$patch({
+    await api.api.channels[":channelId"].members[":memberId"].$patch({
       param: { channelId, memberId },
       json: { role },
     })
-    if (!res.ok) return
     invalidateChannelMembers()
   }
 
   const handleAddAgents = async (agentIds: string[]) => {
     const channelId = channelFilter()
     if (!channelId) return
-    const res = await api.api.channels[":channelId"].agents.$post({
+    await api.api.channels[":channelId"].agents.$post({
       param: { channelId },
       json: { agentIds },
     })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: "Failed to add agents" }))
-      throw new Error((err as { message?: string }).message || "Failed to add agents")
-    }
     invalidateChannelAgents()
   }
 
   const handleRemoveAgent = async (agentId: string) => {
     const channelId = channelFilter()
     if (!channelId) return
-    const res = await api.api.channels[":channelId"].agents[":agentId"].$delete({
+    await api.api.channels[":channelId"].agents[":agentId"].$delete({
       param: { channelId, agentId },
     })
-    if (!res.ok) return
     invalidateChannelAgents()
   }
 
@@ -1025,14 +988,10 @@ export default function InboxPage() {
     if (!channelId) return
     setSavingChannel(true)
     try {
-      const res = await api.api.channels[":id"].$patch({
+      await api.api.channels[":id"].$patch({
         param: { id: channelId },
         json: data,
       })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: "Failed to save channel" }))
-        throw new Error((err as { message?: string }).message || "Failed to save channel")
-      }
       invalidateChannels()
       invalidateChannelData()
     } finally {
@@ -1043,11 +1002,7 @@ export default function InboxPage() {
   const handleArchiveChannel = async () => {
     const channelId = channelFilter()
     if (!channelId) return
-    const res = await api.api.channels[":id"].archive.$post({ param: { id: channelId } })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: "Failed to archive channel" }))
-      throw new Error((err as { message?: string }).message || "Failed to archive channel")
-    }
+    await api.api.channels[":id"].archive.$post({ param: { id: channelId } })
     navigate("/inbox")
     invalidateChannels()
   }
@@ -1055,11 +1010,7 @@ export default function InboxPage() {
   const handleUnarchiveChannel = async () => {
     const channelId = channelFilter()
     if (!channelId) return
-    const res = await api.api.channels[":id"].unarchive.$post({ param: { id: channelId } })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ message: "Failed to unarchive channel" }))
-      throw new Error((err as { message?: string }).message || "Failed to unarchive channel")
-    }
+    await api.api.channels[":id"].unarchive.$post({ param: { id: channelId } })
     invalidateChannels()
     invalidateChannelData()
   }

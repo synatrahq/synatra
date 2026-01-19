@@ -104,7 +104,6 @@ export function AgentCreateModal(props: AgentCreateModalProps) {
     async (open) => {
       if (!open) return []
       const res = await api.api.agents.templates.$get()
-      if (!res.ok) return []
       const data = await res.json()
       return data.templates as AgentTemplate[]
     },
