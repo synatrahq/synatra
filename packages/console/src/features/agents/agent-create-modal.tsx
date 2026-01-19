@@ -3,7 +3,18 @@ import type { AgentRuntimeConfig, AgentTemplate, TemplateCategory } from "@synat
 import { generateSlug } from "@synatra/util/identifier"
 import type { SubscriptionPlan } from "@synatra/core/types"
 import { api } from "../../app"
-import { Modal, ModalContainer, ModalHeader, ModalBody, ModalFooter, Button, Input, Textarea, Spinner } from "../../ui"
+import {
+  Modal,
+  ModalContainer,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+  Textarea,
+  Spinner,
+  FormError,
+} from "../../ui"
 import {
   IconPicker,
   getIconComponent,
@@ -526,11 +537,7 @@ export function AgentCreateModal(props: AgentCreateModalProps) {
                 </div>
               </div>
 
-              <Show when={error()}>
-                <div class="rounded-md border border-danger bg-danger-soft px-2.5 py-1.5 text-2xs text-danger">
-                  {error()}
-                </div>
-              </Show>
+              <FormError message={error()} />
             </ModalBody>
 
             <ModalFooter>

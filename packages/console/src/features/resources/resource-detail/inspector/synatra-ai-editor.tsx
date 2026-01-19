@@ -1,7 +1,7 @@
 import { Show, For, createSignal, createEffect } from "solid-js"
-import { CaretRight, WarningCircle } from "phosphor-solid-js"
+import { CaretRight } from "phosphor-solid-js"
 import type { LlmProvider } from "@synatra/core/types"
-import { Input, Switch, FormField } from "../../../../ui"
+import { Input, Switch, FormField, FormError } from "../../../../ui"
 import type { SynatraAiEditorConfig, SynatraAiProviderEditorConfig } from "../constants"
 import { LLM_PROVIDERS } from "./constants"
 import { SensitiveInput, ProviderIcon } from "./shared"
@@ -93,14 +93,7 @@ export function SynatraAiConfigEditorContent(props: {
                       </a>
                     </FormField>
 
-                    <Show when={props.validationErrors?.[p.id]}>
-                      {(error) => (
-                        <div class="flex items-start gap-2 rounded-lg bg-danger-soft p-2">
-                          <WarningCircle size={14} weight="fill" class="mt-0.5 shrink-0 text-danger" />
-                          <p class="text-xs text-danger">{error()}</p>
-                        </div>
-                      )}
-                    </Show>
+                    <Show when={props.validationErrors?.[p.id]}>{(error) => <FormError message={error()} />}</Show>
 
                     <FormField label="Base URL">
                       <Input

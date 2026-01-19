@@ -4,7 +4,7 @@ import { Sparkle, ArrowRight } from "phosphor-solid-js"
 import type { AgentTemplate, TemplateCategory, LlmProvider } from "@synatra/core/types"
 import { generateSlug } from "@synatra/util/identifier"
 import { api, user, OrgGuard } from "../../app"
-import { Spinner, Button } from "../../ui"
+import { Spinner, Button, FormError } from "../../ui"
 import { ResourceIcon, EntityIcon } from "../../components"
 import { DemoPreview } from "./demo-preview"
 import { LlmSetupModal } from "./llm-setup-modal"
@@ -553,11 +553,7 @@ function OnboardingContent() {
                       </div>
                     </div>
 
-                    <Show when={error()}>
-                      <div class="mx-4 mb-4 rounded-md border border-danger bg-danger-soft px-3 py-2 text-xs text-danger">
-                        {error()}
-                      </div>
-                    </Show>
+                    <FormError message={error()} class="mx-4 mb-4" />
 
                     <div class="flex items-center justify-between border-t border-border px-4 py-3">
                       <p class="text-2xs text-text-muted">You can customize everything after creation</p>
@@ -613,11 +609,7 @@ function OnboardingContent() {
                       </Show>
                     </div>
 
-                    <Show when={error()}>
-                      <div class="mx-4 mb-4 rounded-md border border-danger bg-danger-soft px-3 py-2 text-xs text-danger">
-                        {error()}
-                      </div>
-                    </Show>
+                    <FormError message={error()} class="mx-4 mb-4" />
 
                     <div class="flex items-center justify-between border-t border-border px-4 py-3">
                       <p class="text-2xs text-text-muted">You can customize everything after creation</p>

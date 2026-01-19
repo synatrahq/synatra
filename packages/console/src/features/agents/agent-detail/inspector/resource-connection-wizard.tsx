@@ -1,7 +1,7 @@
 import { createSignal, createEffect, createResource, Show, For } from "solid-js"
 import { UserConfigurableResourceType, isManagedResourceType } from "@synatra/core/types"
 import { generateSlug } from "@synatra/util/identifier"
-import { Button, Input, Textarea, Spinner, Label, FormField } from "../../../../ui"
+import { Button, Input, Textarea, Spinner, Label, FormField, FormError } from "../../../../ui"
 import { ResourceIcon } from "../../../../components"
 import { CheckCircle } from "phosphor-solid-js"
 import type { CopilotResourceRequest } from "../copilot-panel/types"
@@ -109,12 +109,17 @@ export function ResourceConnectionWizard(props: ResourceConnectionWizardProps) {
       return
     }
 
-    await props.onComplete({
-      name: name().trim(),
-      slug: slug().trim() || undefined,
-      description: description().trim() || undefined,
-      type,
-    })
+    setError(null)
+    try {
+      await props.onComplete({
+        name: name().trim(),
+        slug: slug().trim() || undefined,
+        description: description().trim() || undefined,
+        type,
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create resource")
+    }
   }
 
   const canCreate = () => !!selectedType() && !!name().trim()
@@ -250,11 +255,7 @@ export function ResourceConnectionWizard(props: ResourceConnectionWizardProps) {
               </span>
             </FormField>
 
-            <Show when={error()}>
-              <div class="rounded-md border border-danger bg-danger-soft px-2.5 py-1.5 text-xs text-danger">
-                {error()}
-              </div>
-            </Show>
+            <FormError message={error()} />
           </div>
         </Show>
 

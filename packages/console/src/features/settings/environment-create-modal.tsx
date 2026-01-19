@@ -1,6 +1,17 @@
 import { createSignal, createEffect, Show, For, onCleanup } from "solid-js"
 import { EnvironmentColorPalette } from "@synatra/core/types"
-import { Modal, ModalContainer, ModalHeader, ModalBody, ModalFooter, Button, Input, FormField, Spinner } from "../../ui"
+import {
+  Modal,
+  ModalContainer,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+  FormField,
+  Spinner,
+  FormError,
+} from "../../ui"
 
 type EnvironmentCreateModalProps = {
   open: boolean
@@ -142,11 +153,7 @@ export function EnvironmentCreateModal(props: EnvironmentCreateModalProps) {
             </div>
           </FormField>
 
-          <Show when={error()}>
-            <div class="rounded-md border border-danger bg-danger-soft px-2.5 py-1.5 text-2xs text-danger">
-              {error()}
-            </div>
-          </Show>
+          <FormError message={error()} />
         </ModalBody>
         <ModalFooter>
           <Button variant="ghost" size="sm" onClick={props.onClose} disabled={props.saving}>

@@ -1,6 +1,17 @@
 import { createSignal, createEffect, Show, For } from "solid-js"
 import { generateSlug } from "@synatra/util/identifier"
-import { Modal, ModalContainer, ModalHeader, ModalBody, ModalFooter, Button, Input, Spinner, FormField } from "../../ui"
+import {
+  Modal,
+  ModalContainer,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+  Spinner,
+  FormField,
+  FormError,
+} from "../../ui"
 import { EntityIcon } from "../../components"
 
 type AgentOption = {
@@ -160,11 +171,7 @@ export function TriggerCreateModal(props: TriggerCreateModalProps) {
               </FormField>
             </div>
 
-            <Show when={error()}>
-              <div class="rounded-md border border-danger bg-danger-soft px-2.5 py-1.5 text-xs text-danger">
-                {error()}
-              </div>
-            </Show>
+            <FormError message={error()} />
           </ModalBody>
           <ModalFooter>
             <Button variant="ghost" size="sm" onClick={props.onClose}>

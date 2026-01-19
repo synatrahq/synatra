@@ -1,6 +1,17 @@
 import { createSignal, createEffect } from "solid-js"
 import { generateSlug } from "@synatra/util/identifier"
-import { Modal, ModalContainer, ModalHeader, ModalBody, ModalFooter, Button, Input, Spinner, FormField } from "../../ui"
+import {
+  Modal,
+  ModalContainer,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+  Spinner,
+  FormField,
+  FormError,
+} from "../../ui"
 
 type ChannelCreateModalProps = {
   open: boolean
@@ -80,11 +91,7 @@ export function ChannelCreateModal(props: ChannelCreateModalProps) {
               />
             </FormField>
           </div>
-          {error() && (
-            <div class="mt-3 rounded-md border border-danger bg-danger-soft px-2.5 py-1.5 text-xs text-danger">
-              {error()}
-            </div>
-          )}
+          <FormError message={error()} class="mt-3" />
         </ModalBody>
         <ModalFooter>
           <Button variant="ghost" size="sm" onClick={props.onClose}>

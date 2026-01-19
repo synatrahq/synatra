@@ -11,6 +11,7 @@ import {
   Spinner,
   Select,
   Checkbox,
+  FormError,
   type SelectOption,
 } from "../../../ui"
 import { ResourceIcon } from "../../../components"
@@ -1246,11 +1247,7 @@ export function GenerateToolsModal(props: GenerateToolsModalProps) {
                   </div>
                 </div>
 
-                <Show when={error()}>
-                  <div class="rounded-md border border-danger bg-danger-soft px-2.5 py-1.5 text-2xs text-danger">
-                    {error()}
-                  </div>
-                </Show>
+                <FormError message={error()} />
               </div>
             </Show>
           </ModalBody>

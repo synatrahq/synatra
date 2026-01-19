@@ -1,5 +1,16 @@
 import { createSignal, createEffect, Show, onCleanup } from "solid-js"
-import { Modal, ModalContainer, ModalHeader, ModalBody, ModalFooter, Button, Input, Textarea, Spinner } from "../../ui"
+import {
+  Modal,
+  ModalContainer,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+  Textarea,
+  Spinner,
+  FormError,
+} from "../../ui"
 import { IconPicker, getIconComponent, ICON_COLORS, type IconColor } from "../../components"
 
 type AgentEditModalProps = {
@@ -150,11 +161,7 @@ export function AgentEditModal(props: AgentEditModalProps) {
               </div>
             </div>
 
-            <Show when={error()}>
-              <div class="rounded-md border border-danger bg-danger-soft px-2.5 py-1.5 text-2xs text-danger">
-                {error()}
-              </div>
-            </Show>
+            <FormError message={error()} />
           </>
         </ModalBody>
 

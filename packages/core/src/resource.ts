@@ -513,21 +513,30 @@ export async function createResource(input: z.input<typeof CreateResourceSchema>
     throw createError("BadRequestError", { message: `Slug "${slug}" is reserved` })
   }
 
-  const [resource] = await withDb((db) =>
-    db
-      .insert(ResourceTable)
-      .values({
-        organizationId,
-        name: data.name,
-        slug,
-        managed: data.managed ?? false,
-        description: data.description ?? null,
-        type: data.type,
-        createdBy: userId,
-        updatedBy: userId,
-      })
-      .returning(),
-  )
+  let resource: typeof ResourceTable.$inferSelect
+  try {
+    const [created] = await withDb((db) =>
+      db
+        .insert(ResourceTable)
+        .values({
+          organizationId,
+          name: data.name,
+          slug,
+          managed: data.managed ?? false,
+          description: data.description ?? null,
+          type: data.type,
+          createdBy: userId,
+          updatedBy: userId,
+        })
+        .returning(),
+    )
+    resource = created
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("resource_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Resource with slug "${slug}" already exists` })
+    }
+    throw err
+  }
 
   const configs = data.configs ?? []
   if (configs.length > 0) {
@@ -564,11 +573,17 @@ export async function updateResource(input: z.input<typeof UpdateResourceSchema>
   }
   if (data.description !== undefined) updateData.description = data.description
 
-  const [resource] = await withDb((db) =>
-    db.update(ResourceTable).set(updateData).where(eq(ResourceTable.id, data.id)).returning(),
-  )
-
-  return resource
+  try {
+    const [resource] = await withDb((db) =>
+      db.update(ResourceTable).set(updateData).where(eq(ResourceTable.id, data.id)).returning(),
+    )
+    return resource
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("resource_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Resource with slug "${data.slug}" already exists` })
+    }
+    throw err
+  }
 }
 
 export async function removeResource(id: string) {

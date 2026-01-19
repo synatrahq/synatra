@@ -11,6 +11,7 @@ import {
   Textarea,
   Spinner,
   FormField,
+  FormError,
 } from "../../ui"
 import { EntityIcon } from "../../components"
 import type { Agents } from "../../app/api"
@@ -194,11 +195,7 @@ export function PromptCreateModal(props: PromptCreateModalProps) {
                 </span>
               </FormField>
 
-              <Show when={error()}>
-                <div class="rounded-md border border-danger bg-danger-soft px-2.5 py-1.5 text-xs text-danger">
-                  {error()}
-                </div>
-              </Show>
+              <FormError message={error()} />
             </>
           </ModalBody>
           <ModalFooter>

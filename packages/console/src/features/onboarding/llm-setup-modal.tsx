@@ -1,7 +1,17 @@
 import { createSignal, createEffect, Show, For } from "solid-js"
-import { WarningCircle } from "phosphor-solid-js"
 import type { LlmProvider } from "@synatra/core/types"
-import { Modal, ModalContainer, ModalHeader, ModalBody, ModalFooter, Button, Input, Spinner, FormField } from "../../ui"
+import {
+  Modal,
+  ModalContainer,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+  Spinner,
+  FormField,
+  FormError,
+} from "../../ui"
 import { theme, api } from "../../app"
 import openaiLight from "../../assets/images/openai_light.svg"
 import openaiDark from "../../assets/images/openai_dark.svg"
@@ -185,12 +195,7 @@ export function LlmSetupModal(props: LlmSetupModalProps) {
             </a>
           </FormField>
 
-          <Show when={error()}>
-            <div class="flex items-start gap-2 rounded-lg bg-danger-soft p-2">
-              <WarningCircle size={14} weight="fill" class="mt-0.5 shrink-0 text-danger" />
-              <p class="text-xs text-danger">{error()}</p>
-            </div>
-          </Show>
+          <FormError message={error()} />
         </ModalBody>
 
         <ModalFooter>
