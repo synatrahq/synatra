@@ -16,6 +16,7 @@ type ConfirmingResource = {
 type ResourceConnectionWizardProps = {
   request?: CopilotResourceRequest | null
   confirmingResource?: ConfirmingResource | null
+  completedConfirmation?: ConfirmingResource | null
   onComplete: (data: {
     name: string
     slug?: string
@@ -37,10 +38,13 @@ export function ResourceConnectionWizard(props: ResourceConnectionWizardProps) {
   const [selectedType, setSelectedType] = createSignal<UserConfigurableResourceType | null>(null)
   const [error, setError] = createSignal<string | null>(null)
   const [slugManuallyEdited, setSlugManuallyEdited] = createSignal(false)
-  const [completing, setCompleting] = createSignal(false)
+  const [confirmationError, setConfirmationError] = createSignal<string | null>(null)
+  const [confirmationSending, setConfirmationSending] = createSignal(false)
+
+  const activeConfirmation = () => props.confirmingResource ?? props.completedConfirmation
 
   const [confirmResource] = createResource(
-    () => props.confirmingResource?.resourceId,
+    () => activeConfirmation()?.resourceId,
     async (id) => {
       const res = await api.api.resources[":id"].$get({ param: { id } })
       if (!res.ok) throw new Error("Failed to fetch resource")
@@ -58,8 +62,26 @@ export function ResourceConnectionWizard(props: ResourceConnectionWizardProps) {
     return suggestion?.reason
   }
 
+  const sendConfirmation = async (confirm: ConfirmingResource) => {
+    if (!props.onConfirmationComplete || confirmationSending()) return
+    setConfirmationSending(true)
+    setConfirmationError(null)
+    try {
+      await props.onConfirmationComplete(confirm.requestId, confirm.resourceId)
+    } catch (err) {
+      setConfirmationError(err instanceof Error ? err.message : "Failed to send confirmation")
+    } finally {
+      setConfirmationSending(false)
+    }
+  }
+
   createEffect(() => {
-    if (props.confirmingResource) {
+    const confirm = props.confirmingResource
+    const completed = props.completedConfirmation
+    if (confirm) {
+      setStep("confirmation")
+      sendConfirmation(confirm)
+    } else if (completed) {
       setStep("confirmation")
     } else {
       setStep("select-type")
@@ -69,6 +91,7 @@ export function ResourceConnectionWizard(props: ResourceConnectionWizardProps) {
       setSelectedType(null)
       setError(null)
       setSlugManuallyEdited(false)
+      setConfirmationError(null)
     }
   })
 
@@ -123,17 +146,6 @@ export function ResourceConnectionWizard(props: ResourceConnectionWizardProps) {
   }
 
   const canCreate = () => !!selectedType() && !!name().trim()
-
-  const handleConfirmationComplete = async () => {
-    const confirm = props.confirmingResource
-    if (!confirm || !props.onConfirmationComplete) return
-    setCompleting(true)
-    try {
-      await props.onConfirmationComplete(confirm.requestId, confirm.resourceId)
-    } finally {
-      setCompleting(false)
-    }
-  }
 
   return (
     <div class="flex h-full flex-col">
@@ -302,12 +314,36 @@ export function ResourceConnectionWizard(props: ResourceConnectionWizardProps) {
                   </Show>
                 </div>
 
-                <div class="rounded-lg border border-accent/30 bg-accent/5 p-3">
-                  <p class="text-xs text-text-muted">
-                    Click <strong class="text-text">Continue</strong> to return to the Copilot conversation. The agent
-                    will now have access to this resource.
-                  </p>
-                </div>
+                <Show
+                  when={!confirmationError()}
+                  fallback={
+                    <div class="rounded-lg border border-error/30 bg-error/5 p-3">
+                      <p class="text-xs text-error">{confirmationError()}</p>
+                    </div>
+                  }
+                >
+                  <Show
+                    when={!confirmationSending() && props.completedConfirmation}
+                    fallback={
+                      <div class="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 p-3">
+                        <Show when={confirmationSending()}>
+                          <Spinner size="xs" />
+                        </Show>
+                        <p class="text-xs text-text-muted">
+                          {confirmationSending()
+                            ? "Sending to Copilot..."
+                            : "The agent will now have access to this resource."}
+                        </p>
+                      </div>
+                    }
+                  >
+                    <div class="rounded-lg border border-success/30 bg-success/5 p-3">
+                      <p class="text-xs text-text-muted">
+                        Resource connected successfully. The agent now has access to this resource.
+                      </p>
+                    </div>
+                  </Show>
+                </Show>
               </div>
             )}
           </Show>
@@ -327,15 +363,32 @@ export function ResourceConnectionWizard(props: ResourceConnectionWizardProps) {
           </Button>
         </Show>
         <Show when={step() === "confirmation"}>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleConfirmationComplete}
-            disabled={completing() || confirmResource.loading}
+          <Show
+            when={confirmationError() && props.confirmingResource}
+            fallback={
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={props.onCancel}
+                disabled={confirmResource.loading || confirmationSending()}
+              >
+                Close
+              </Button>
+            }
           >
-            {completing() && <Spinner size="xs" class="border-white border-t-transparent" />}
-            {completing() ? "Continuing..." : "Continue"}
-          </Button>
+            <Button variant="ghost" size="sm" onClick={props.onCancel}>
+              Close
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => sendConfirmation(props.confirmingResource!)}
+              disabled={confirmationSending()}
+            >
+              {confirmationSending() && <Spinner size="xs" class="border-white border-t-transparent" />}
+              Retry
+            </Button>
+          </Show>
         </Show>
       </div>
     </div>
