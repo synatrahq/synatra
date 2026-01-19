@@ -8,9 +8,7 @@ Every dashboard you build is debt. Every admin panel is a future meeting about t
 
 A startup builds a "quick metrics view." Three charts, ship it Friday.
 
-Six months later, 15 views for 15 stakeholders. Custom date ranges. Export buttons. A Slack channel for dashboard bugs. The original author has left. The documentation is a single comment that says `// TODO`.
-
-The admin panel grows tabs like it's getting paid per tab. The billing script breaks every Stripe update. Someone asks "why do we have three user management screens?" Nobody knows.
+Six months later. "Can we add a filter by region?" "Can we see week-over-week?" "Can you export this to CSV?" "Can this post to Slack automatically?" Each request is small. Each one ships. The dashboard now has 12 tabs and nobody remembers what half of them do.
 
 This isn't failure. This is what winning at internal tools looks like.
 
@@ -35,7 +33,7 @@ Construction cost dropped to near zero. And the debt? It's accumulating faster t
 
 More tools, built faster, maintained by no one. The paradox didn't go away. It got a turbo button.
 
-## What if the tool just disappeared?
+## What if the interface just disappeared?
 
 You ask "What's our MRR this month?" and a chart appears. You look at it. It's gone.
 
@@ -43,9 +41,11 @@ No dashboard to maintain. No quarterly review. No "can we add a filter?" No "the
 
 The answer exists for the moment you need it. Then it leaves.
 
-## Tools as code
+## Arm it, don't dress it
 
-Most AI platforms hide complexity behind drag-and-drop. Synatra takes a different approach. Tools are JavaScript.
+You don't build dashboards. You define what the AI can do.
+
+Fetch a customer. Process a refund. Query the database. Each capability is a small piece of JavaScript with your business rules baked in.
 
 ```javascript
 if (params.amount > 10000) {
@@ -63,7 +63,7 @@ return context.stripe.refunds.create({
 })
 ```
 
-Your business logic. Your validation rules. Your guardrails. The agent can only do what your code allows.
+That's it. No screens to design. No buttons to place. The AI takes these capabilities and generates whatever interface each person needs, in the moment they need it. Then it's gone.
 
 And because it's code, AI can write it too. Synatra has a built-in Copilot that understands your connected resources. Just tell it what you want to do.
 
