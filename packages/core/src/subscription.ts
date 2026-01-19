@@ -310,9 +310,6 @@ export async function resumeSubscription(raw?: z.input<typeof ResumeSubscription
     if (sub.status === "cancelled") {
       throw createError("BadRequestError", { message: "Subscription is cancelled" })
     }
-    if (!sub.cancelAt) {
-      throw createError("BadRequestError", { message: "Subscription is not scheduled to cancel" })
-    }
     throw createError("BadRequestError", { message: "Subscription is not scheduled to cancel" })
   }
 
