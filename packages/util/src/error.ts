@@ -213,6 +213,7 @@ export const fromUnknown = (input: unknown): AppError => {
 }
 
 export const extractErrorMessage = (problem: ProblemDetails): string => {
+  if (!problem.data || typeof problem.data !== "object") return problem.title
   const data = problem.data as Record<string, unknown>
   if (typeof data.message === "string") return data.message
   if (problem.name === "NotFoundError" && typeof data.type === "string") {
