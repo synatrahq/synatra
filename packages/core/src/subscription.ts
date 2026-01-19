@@ -208,6 +208,9 @@ export async function createCheckoutSession(raw: z.input<typeof CreateCheckoutSe
       success_url: input.successUrl,
       cancel_url: input.cancelUrl,
       metadata: { organizationId: org.id, plan: input.plan },
+      automatic_tax: { enabled: true },
+      tax_id_collection: { enabled: true },
+      customer_update: { address: "auto", name: "auto" },
       subscription_data: {
         billing_cycle_anchor: billingCycleAnchor,
         proration_behavior: "create_prorations",
@@ -410,6 +413,7 @@ export async function changeSubscriptionPlan(raw: z.input<typeof ChangeSubscript
         ],
         proration_behavior: "always_invoice",
         payment_behavior: "error_if_incomplete",
+        automatic_tax: { enabled: true },
       },
       { idempotencyKey: randomUUID() },
     )
