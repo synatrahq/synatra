@@ -5,7 +5,7 @@ import {
   currentSubscription,
   updateStripeInfoSubscription,
   updateSubscription,
-  getStripePriceIdSubscription,
+  getStripePricesSubscription,
   getPlanFromPriceIdSubscription,
 } from "./subscription"
 import { ensureStagingEnvironment } from "./environment"
@@ -14,6 +14,7 @@ import { findOwnerMember } from "./member"
 import { SubscriptionPlan, SubscriptionStatus } from "./types"
 import { createError, isAppError } from "@synatra/util/error"
 import { getStripe } from "./stripe"
+import { resetUsageMonth } from "./usage"
 
 export const HandleStripeWebhookEventSchema = z.object({
   event: z.custom<Stripe.Event>((val) => typeof val === "object" && val !== null && "type" in val),
@@ -82,14 +83,19 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   }
 
   await principal.withSystem({ organizationId, actingUserId: owner.userId }, async () => {
+    const existingSub = await currentSubscription({})
+    const wasFreePlan = existingSub.plan === "free"
+
+    const prices = getStripePricesSubscription(plan)
     await updateSubscription({
       plan,
       stripeCustomerId: customerId,
       stripeSubscriptionId: subscriptionId,
-      stripePriceId: getStripePriceIdSubscription(plan) || undefined,
+      stripePriceId: prices?.license,
     })
 
-    if (isPaidPlan(plan)) {
+    if (wasFreePlan && isPaidPlan(plan)) {
+      await resetUsageMonth()
       await ensureStagingEnvironment()
     }
   })
@@ -111,14 +117,15 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
     }
 
     const stripeSub = await getStripe().subscriptions.retrieve(sub.stripeSubscriptionId)
-    const item = stripeSub.items.data[0]
-    if (!item) {
+    const items = stripeSub.items.data
+    if (items.length === 0) {
       await updateStripeInfoSubscription({ status: "active" })
       return
     }
 
-    const periodStart = new Date(item.current_period_start * 1000)
-    const periodEnd = new Date(item.current_period_end * 1000)
+    const licenseItem = items.find((i) => i.price.recurring?.usage_type === "licensed") || items[0]
+    const periodStart = new Date(licenseItem.current_period_start * 1000)
+    const periodEnd = new Date(licenseItem.current_period_end * 1000)
     const isNewPeriod = !sub.currentPeriodEnd || periodEnd > sub.currentPeriodEnd
 
     if (isNewPeriod) {
@@ -156,17 +163,19 @@ async function handleSubscriptionUpdated(stripeSub: Stripe.Subscription): Promis
 
   await principal.withSystem({ organizationId: org.id }, async () => {
     const existing = await currentSubscription({})
-    const item = stripeSub.items.data[0]
-    if (!item) return
+    const items = stripeSub.items.data
+    if (items.length === 0) return
 
-    const periodStart = new Date(item.current_period_start * 1000)
-    const periodEnd = new Date(item.current_period_end * 1000)
+    const licenseItem = items.find((i) => i.price.recurring?.usage_type === "licensed") || items[0]
+
+    const periodStart = new Date(licenseItem.current_period_start * 1000)
+    const periodEnd = new Date(licenseItem.current_period_end * 1000)
     const isNewPeriod = !existing.currentPeriodEnd || periodEnd > existing.currentPeriodEnd
     const isNew = !existing.stripeSubscriptionId
     const cancelAt = stripeSub.cancel_at ? new Date(stripeSub.cancel_at * 1000) : null
 
-    const newPriceId = item.price.id
-    const detectedPlan = getPlanFromPriceIdSubscription(newPriceId)
+    const licensePriceId = licenseItem.price.id
+    const detectedPlan = getPlanFromPriceIdSubscription(licensePriceId)
     const planChanged = detectedPlan && detectedPlan !== existing.plan
 
     if (planChanged) {
@@ -174,7 +183,7 @@ async function handleSubscriptionUpdated(stripeSub: Stripe.Subscription): Promis
         plan: detectedPlan,
         status: mapStripeStatus(stripeSub.status),
         stripeSubscriptionId: isNew ? stripeSub.id : undefined,
-        stripePriceId: newPriceId,
+        stripePriceId: licensePriceId,
         cancelAt,
         ...(isNewPeriod && { currentPeriodStart: periodStart, currentPeriodEnd: periodEnd }),
       })
@@ -182,7 +191,7 @@ async function handleSubscriptionUpdated(stripeSub: Stripe.Subscription): Promis
       await updateStripeInfoSubscription({
         status: mapStripeStatus(stripeSub.status),
         stripeSubscriptionId: isNew ? stripeSub.id : undefined,
-        stripePriceId: newPriceId,
+        stripePriceId: licensePriceId,
         cancelAt,
         ...(isNewPeriod && { currentPeriodStart: periodStart, currentPeriodEnd: periodEnd }),
       })
@@ -241,10 +250,12 @@ async function handleScheduleCompleted(schedule: Stripe.SubscriptionSchedule): P
     if (!sub.scheduledPlan) return
 
     const newPlan = sub.scheduledPlan as SubscriptionPlan
+    const items = result.stripeSub.items.data
+    const licenseItem = items.find((i) => i.price.recurring?.usage_type === "licensed") || items[0]
 
     await updateSubscription({
       plan: newPlan,
-      stripePriceId: result.stripeSub.items.data[0]?.price.id,
+      stripePriceId: licenseItem?.price.id,
       scheduledPlan: null,
       scheduledAt: null,
       stripeScheduleId: null,

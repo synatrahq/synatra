@@ -2,25 +2,25 @@ import { describe, test, expect } from "vitest"
 import { z } from "zod"
 import {
   canResumeSubscription,
-  getStripePriceIdSubscription,
+  getStripePricesSubscription,
   isUpgradeSubscription,
   isDowngradeSubscription,
 } from "../subscription"
 import { SubscriptionPlan, SubscriptionStatus, PLAN_HIERARCHY, PLAN_LIMITS } from "../types"
 
 describe("Subscription", () => {
-  describe("getStripePriceId", () => {
+  describe("getStripePrices", () => {
     test("returns null for free plan", () => {
-      expect(getStripePriceIdSubscription("free")).toBeNull()
+      expect(getStripePricesSubscription("free")).toBeNull()
     })
 
-    test("returns null for enterprise plan", () => {
-      expect(getStripePriceIdSubscription("business")).toBeNull()
+    test("returns null when stripe not configured", () => {
+      expect(getStripePricesSubscription("business")).toBeNull()
     })
 
-    test("returns price id for starter plan", () => {
-      const priceId = getStripePriceIdSubscription("starter")
-      expect(priceId).toBeDefined()
+    test("returns null for starter when stripe not configured", () => {
+      const prices = getStripePricesSubscription("starter")
+      expect(prices).toBeNull()
     })
   })
 

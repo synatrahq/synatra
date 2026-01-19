@@ -76,11 +76,17 @@ projects:
                 sync: false
               - key: STRIPE_LLM_METER_ID
                 sync: false
-              - key: STRIPE_PRICE_STARTER
+              - key: STRIPE_PRICE_STARTER_LICENSE
                 sync: false
-              - key: STRIPE_PRICE_PRO
+              - key: STRIPE_PRICE_STARTER_OVERAGE
                 sync: false
-              - key: STRIPE_PRICE_BUSINESS
+              - key: STRIPE_PRICE_PRO_LICENSE
+                sync: false
+              - key: STRIPE_PRICE_PRO_OVERAGE
+                sync: false
+              - key: STRIPE_PRICE_BUSINESS_LICENSE
+                sync: false
+              - key: STRIPE_PRICE_BUSINESS_OVERAGE
                 sync: false
 
           - name: synatra-staging-auth
@@ -321,11 +327,17 @@ projects:
                 sync: false
               - key: STRIPE_LLM_METER_ID
                 sync: false
-              - key: STRIPE_PRICE_STARTER
+              - key: STRIPE_PRICE_STARTER_LICENSE
                 sync: false
-              - key: STRIPE_PRICE_PRO
+              - key: STRIPE_PRICE_STARTER_OVERAGE
                 sync: false
-              - key: STRIPE_PRICE_BUSINESS
+              - key: STRIPE_PRICE_PRO_LICENSE
+                sync: false
+              - key: STRIPE_PRICE_PRO_OVERAGE
+                sync: false
+              - key: STRIPE_PRICE_BUSINESS_LICENSE
+                sync: false
+              - key: STRIPE_PRICE_BUSINESS_OVERAGE
                 sync: false
 
         services:

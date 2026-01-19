@@ -12,6 +12,11 @@ const GitHubAppSchema = z.object({
   webhookSecret: z.string().min(1).optional(),
 })
 
+const PlanPricesSchema = z.object({
+  license: z.string().min(1),
+  overage: z.string().min(1),
+})
+
 const ConfigSchema = z.object({
   auth: z.object({
     secret: z.string().min(1),
@@ -62,9 +67,9 @@ const ConfigSchema = z.object({
       webhookSecret: z.string().min(1),
       runMeterId: z.string().min(1),
       llmMeterId: z.string().min(1),
-      priceStarter: z.string().min(1),
-      pricePro: z.string().min(1),
-      priceBusiness: z.string().min(1),
+      priceStarter: PlanPricesSchema,
+      pricePro: PlanPricesSchema,
+      priceBusiness: PlanPricesSchema,
     })
     .optional(),
 })
@@ -165,17 +170,29 @@ export function config(): ConfigType {
       process.env.STRIPE_WEBHOOK_SECRET &&
       process.env.STRIPE_RUN_METER_ID &&
       process.env.STRIPE_LLM_METER_ID &&
-      process.env.STRIPE_PRICE_STARTER &&
-      process.env.STRIPE_PRICE_PRO &&
-      process.env.STRIPE_PRICE_BUSINESS
+      process.env.STRIPE_PRICE_STARTER_LICENSE &&
+      process.env.STRIPE_PRICE_STARTER_OVERAGE &&
+      process.env.STRIPE_PRICE_PRO_LICENSE &&
+      process.env.STRIPE_PRICE_PRO_OVERAGE &&
+      process.env.STRIPE_PRICE_BUSINESS_LICENSE &&
+      process.env.STRIPE_PRICE_BUSINESS_OVERAGE
         ? {
             secretKey: process.env.STRIPE_SECRET_KEY.trim(),
             webhookSecret: process.env.STRIPE_WEBHOOK_SECRET.trim(),
             runMeterId: process.env.STRIPE_RUN_METER_ID.trim(),
             llmMeterId: process.env.STRIPE_LLM_METER_ID.trim(),
-            priceStarter: process.env.STRIPE_PRICE_STARTER.trim(),
-            pricePro: process.env.STRIPE_PRICE_PRO.trim(),
-            priceBusiness: process.env.STRIPE_PRICE_BUSINESS.trim(),
+            priceStarter: {
+              license: process.env.STRIPE_PRICE_STARTER_LICENSE.trim(),
+              overage: process.env.STRIPE_PRICE_STARTER_OVERAGE.trim(),
+            },
+            pricePro: {
+              license: process.env.STRIPE_PRICE_PRO_LICENSE.trim(),
+              overage: process.env.STRIPE_PRICE_PRO_OVERAGE.trim(),
+            },
+            priceBusiness: {
+              license: process.env.STRIPE_PRICE_BUSINESS_LICENSE.trim(),
+              overage: process.env.STRIPE_PRICE_BUSINESS_OVERAGE.trim(),
+            },
           }
         : undefined,
   }
