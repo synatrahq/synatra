@@ -1,5 +1,6 @@
 import { For, Show } from "solid-js"
 import { Button, IconButton, DropdownMenu, Skeleton } from "../../ui"
+import { SettingsHeader } from "./settings-header"
 import type { DropdownMenuItem } from "../../ui"
 import { Plus, DotsThree, Plugs, Circle } from "phosphor-solid-js"
 import type { Connector } from "../../app/api"
@@ -87,13 +88,12 @@ function formatLastSeen(lastSeenAt: string | null): string {
 export function ConnectorList(props: ConnectorListProps) {
   return (
     <div class="flex flex-1 flex-col overflow-hidden">
-      <div class="flex items-center justify-between px-3 py-2">
-        <h1 class="text-xs font-medium text-text">Connectors</h1>
+      <SettingsHeader title="Connectors">
         <Button variant="default" size="sm" onClick={() => props.onCreateClick()}>
           <Plus class="h-3 w-3" />
           Create
         </Button>
-      </div>
+      </SettingsHeader>
 
       <div class="flex-1 overflow-y-auto scrollbar-thin">
         <Show when={props.loading}>

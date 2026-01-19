@@ -1,5 +1,6 @@
 import { For, Show } from "solid-js"
 import { Button, IconButton, DropdownMenu, Skeleton } from "../../ui"
+import { SettingsHeader } from "./settings-header"
 import type { DropdownMenuItem } from "../../ui"
 import { Plus, DotsThree, TreeStructure } from "phosphor-solid-js"
 import type { Environment } from "../../app/api"
@@ -55,13 +56,12 @@ function EmptyState(props: { onCreateClick: () => void }) {
 export function EnvironmentList(props: EnvironmentListProps) {
   return (
     <div class="flex flex-1 flex-col overflow-hidden">
-      <div class="flex items-center justify-between px-3 py-2">
-        <h1 class="text-xs font-medium text-text">Environments</h1>
+      <SettingsHeader title="Environments">
         <Button variant="default" size="sm" onClick={() => props.onCreateClick()}>
           <Plus class="h-3 w-3" />
           Create
         </Button>
-      </div>
+      </SettingsHeader>
 
       <div class="flex-1 overflow-y-auto scrollbar-thin">
         <Show when={props.loading}>

@@ -1,5 +1,6 @@
 import { For, Show, createMemo, type JSX } from "solid-js"
 import { Skeleton } from "../../ui"
+import { SettingsHeader } from "./settings-header"
 import { ChartBar, User, Lightning, Robot, Warning } from "phosphor-solid-js"
 import type { UsageCurrent, UsagePeriod, SubscriptionCurrent } from "../../app/api"
 import { PLAN_LIMITS, type SubscriptionPlan } from "@synatra/core/types"
@@ -189,9 +190,7 @@ export function UsageList(props: UsageListProps) {
 
   return (
     <div class="flex flex-1 flex-col overflow-hidden">
-      <div class="flex items-center px-3 py-2">
-        <h1 class="text-xs font-medium text-text">Usage</h1>
-      </div>
+      <SettingsHeader title="Usage" />
 
       <div class="flex-1 overflow-y-auto px-3 pb-3 scrollbar-thin">
         <Show when={props.loading}>
