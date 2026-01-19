@@ -409,6 +409,7 @@ export async function changeSubscriptionPlan(raw: z.input<typeof ChangeSubscript
           { id: overageItem.id, price: newPrices.overage },
         ],
         proration_behavior: "always_invoice",
+        payment_behavior: "error_if_incomplete",
       },
       { idempotencyKey: randomUUID() },
     )
