@@ -252,6 +252,73 @@ export async function createBillingPortalSession(raw: z.input<typeof CreateBilli
   return { url: session.url }
 }
 
+export const CancelSubscriptionSchema = z.object({}).optional()
+
+export async function cancelSubscription(raw?: z.input<typeof CancelSubscriptionSchema>) {
+  CancelSubscriptionSchema.parse(raw)
+  const sub = await currentSubscription({})
+
+  if (!sub.stripeSubscriptionId) {
+    throw createError("BadRequestError", { message: "No active subscription found" })
+  }
+  if (sub.cancelAt) {
+    throw createError("BadRequestError", { message: "Subscription is already scheduled to cancel" })
+  }
+
+  const stripe = getStripe()
+  await stripe.subscriptions.update(
+    sub.stripeSubscriptionId,
+    { cancel_at_period_end: true },
+    { idempotencyKey: randomUUID() },
+  )
+
+  const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId)
+  const cancelAt = stripeSub.cancel_at ? new Date(stripeSub.cancel_at * 1000) : null
+
+  await updateStripeInfoSubscription({ cancelAt })
+
+  return { message: "Subscription will be cancelled at period end", cancelAt: cancelAt?.toISOString() }
+}
+
+export const ResumeSubscriptionSchema = z.object({}).optional()
+
+export function canResumeSubscription(sub: {
+  stripeSubscriptionId: string | null
+  cancelAt: Date | null
+  status: string
+}): sub is { stripeSubscriptionId: string; cancelAt: Date; status: string } {
+  return !!sub.stripeSubscriptionId && sub.status !== "cancelled" && !!sub.cancelAt
+}
+
+export async function resumeSubscription(raw?: z.input<typeof ResumeSubscriptionSchema>) {
+  ResumeSubscriptionSchema.parse(raw)
+  const sub = await currentSubscription({})
+
+  if (!canResumeSubscription(sub)) {
+    if (!sub.stripeSubscriptionId) {
+      throw createError("BadRequestError", { message: "No active subscription found" })
+    }
+    if (sub.status === "cancelled") {
+      throw createError("BadRequestError", { message: "Subscription is cancelled" })
+    }
+    if (!sub.cancelAt) {
+      throw createError("BadRequestError", { message: "Subscription is not scheduled to cancel" })
+    }
+    throw createError("BadRequestError", { message: "Subscription is not scheduled to cancel" })
+  }
+
+  const stripe = getStripe()
+  await stripe.subscriptions.update(
+    sub.stripeSubscriptionId,
+    { cancel_at_period_end: false },
+    { idempotencyKey: randomUUID() },
+  )
+
+  await updateStripeInfoSubscription({ cancelAt: null })
+
+  return { message: "Subscription cancellation has been reversed" }
+}
+
 export const CancelSubscriptionScheduledPlanSchema = z.object({}).optional()
 
 export async function cancelSubscriptionScheduledPlan(raw?: z.input<typeof CancelSubscriptionScheduledPlanSchema>) {

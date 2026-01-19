@@ -1,6 +1,11 @@
 import { describe, test, expect } from "vitest"
 import { z } from "zod"
-import { getStripePriceIdSubscription, isUpgradeSubscription, isDowngradeSubscription } from "../subscription"
+import {
+  canResumeSubscription,
+  getStripePriceIdSubscription,
+  isUpgradeSubscription,
+  isDowngradeSubscription,
+} from "../subscription"
 import { SubscriptionPlan, SubscriptionStatus, PLAN_HIERARCHY, PLAN_LIMITS } from "../types"
 
 describe("Subscription", () => {
@@ -157,6 +162,48 @@ describe("Subscription", () => {
           }
         })
       })
+    })
+  })
+
+  describe("canResumeSubscription", () => {
+    test("returns true when resumable", () => {
+      const result = canResumeSubscription({
+        stripeSubscriptionId: "sub_123",
+        cancelAt: new Date(),
+        status: "active",
+      })
+
+      expect(result).toBe(true)
+    })
+
+    test("rejects missing subscription id", () => {
+      const result = canResumeSubscription({
+        stripeSubscriptionId: null,
+        cancelAt: new Date(),
+        status: "active",
+      })
+
+      expect(result).toBe(false)
+    })
+
+    test("rejects cancelled subscription", () => {
+      const result = canResumeSubscription({
+        stripeSubscriptionId: "sub_123",
+        cancelAt: new Date(),
+        status: "cancelled",
+      })
+
+      expect(result).toBe(false)
+    })
+
+    test("rejects when not scheduled to cancel", () => {
+      const result = canResumeSubscription({
+        stripeSubscriptionId: "sub_123",
+        cancelAt: null,
+        status: "active",
+      })
+
+      expect(result).toBe(false)
     })
   })
 })

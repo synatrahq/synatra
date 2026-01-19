@@ -13,6 +13,10 @@ type BillingListProps = {
   cancellingSchedule?: boolean
   onManageBilling: () => void
   managingBilling?: boolean
+  onCancelSubscription: () => void
+  cancellingSubscription?: boolean
+  onResumeSubscription: () => void
+  resumingSubscription?: boolean
 }
 
 type PlanConfig = {
@@ -101,6 +105,8 @@ function CurrentSubscriptionBadge(props: {
   cancellingSchedule?: boolean
   onManageBilling: () => void
   managingBilling?: boolean
+  onResumeSubscription: () => void
+  resumingSubscription?: boolean
 }) {
   const scheduledDate = () =>
     props.subscription.scheduledAt &&
@@ -110,13 +116,20 @@ function CurrentSubscriptionBadge(props: {
       year: "numeric",
     })
 
-  const cancelDate = () =>
-    props.subscription.cancelAt &&
-    new Date(props.subscription.cancelAt).toLocaleDateString("en-US", {
+  const cancelDate = () => {
+    if (props.subscription.status !== "active") return null
+    if (!props.subscription.cancelAt) return null
+
+    const cancelAt = new Date(props.subscription.cancelAt)
+    if (Number.isNaN(cancelAt.getTime())) return null
+    if (cancelAt <= new Date()) return null
+
+    return cancelAt.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
     })
+  }
 
   return (
     <div class="flex flex-col gap-3 rounded-lg border border-border bg-surface-elevated px-3 py-3">
@@ -190,14 +203,20 @@ function CurrentSubscriptionBadge(props: {
       </Show>
 
       <Show when={cancelDate()}>
-        <div class="flex items-center gap-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5">
+        <div class="flex items-center justify-between gap-3 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2.5">
           <div class="flex items-start gap-2 flex-1">
             <Calendar class="h-3.5 w-3.5 shrink-0 text-danger" weight="duotone" />
             <p class="text-2xs text-danger leading-relaxed">
-              Subscription will be cancelled on <span class="font-semibold">{cancelDate()}</span>. Visit billing portal
-              to undo.
+              Subscription will be cancelled on <span class="font-semibold">{cancelDate()}</span>.
             </p>
           </div>
+          <button
+            onClick={props.onResumeSubscription}
+            disabled={props.resumingSubscription}
+            class="flex shrink-0 items-center gap-1 rounded-md border border-danger/20 bg-danger/5 px-2 py-1 text-2xs font-medium text-danger transition-all hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {props.resumingSubscription ? "Resuming..." : "Don't cancel"}
+          </button>
         </div>
       </Show>
     </div>
@@ -239,8 +258,8 @@ type PlanCardProps = {
   hasSchedule: boolean
   hasCancelScheduled: boolean
   isCancelled: boolean
-  onManageBilling: () => void
-  managingBilling: boolean
+  onCancelSubscription: () => void
+  cancellingSubscription: boolean
 }
 
 function PlanCard(props: PlanCardProps) {
@@ -257,7 +276,7 @@ function PlanCard(props: PlanCardProps) {
 
   function handleClick() {
     if (isFreeDowngrade()) {
-      props.onManageBilling()
+      props.onCancelSubscription()
     } else {
       props.onChangePlan()
     }
@@ -265,7 +284,7 @@ function PlanCard(props: PlanCardProps) {
 
   function isDisabled(): boolean {
     if (props.current || props.isCancelled || props.hasSchedule || props.hasCancelScheduled) return true
-    if (isFreeDowngrade()) return props.managingBilling
+    if (isFreeDowngrade()) return props.cancellingSubscription
     return props.changingPlan
   }
 
@@ -304,7 +323,7 @@ function PlanCard(props: PlanCardProps) {
         <Show when={props.changingPlan && !isFreeDowngrade()}>
           <Lightning class="h-3 w-3 animate-pulse" weight="duotone" />
         </Show>
-        {props.managingBilling && isFreeDowngrade() ? "Opening..." : label()}
+        {props.cancellingSubscription && isFreeDowngrade() ? "Cancelling..." : label()}
       </button>
       <div class="flex flex-col gap-1.5 border-t border-border pt-3">
         <For each={features()}>
@@ -341,6 +360,8 @@ export function BillingList(props: BillingListProps) {
                 cancellingSchedule={props.cancellingSchedule}
                 onManageBilling={props.onManageBilling}
                 managingBilling={props.managingBilling}
+                onResumeSubscription={props.onResumeSubscription}
+                resumingSubscription={props.resumingSubscription}
               />
 
               <Show when={sub().status === "cancelled"}>
@@ -361,8 +382,8 @@ export function BillingList(props: BillingListProps) {
                         hasSchedule={!!sub().scheduledPlan}
                         hasCancelScheduled={!!sub().cancelAt}
                         isCancelled={sub().status === "cancelled"}
-                        onManageBilling={props.onManageBilling}
-                        managingBilling={props.managingBilling || false}
+                        onCancelSubscription={props.onCancelSubscription}
+                        cancellingSubscription={props.cancellingSubscription || false}
                       />
                     )}
                   </For>
