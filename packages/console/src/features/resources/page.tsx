@@ -82,40 +82,44 @@ export default function ResourcesPage() {
   const [pendingConnectorId, setPendingConnectorId] = createSignal<string | null>(null)
 
   const resourcesQuery = useQuery(() => ({
-    queryKey: ["resources"],
+    queryKey: ["resources", activeOrg()?.id],
     queryFn: async (): Promise<Resources> => {
       const res = await api.api.resources.$get()
       if (!res.ok) throw new Error("Failed to fetch resources")
       return res.json()
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const environmentsQuery = useQuery(() => ({
-    queryKey: ["environments"],
+    queryKey: ["environments", activeOrg()?.id],
     queryFn: async (): Promise<Environments> => {
       const res = await api.api.environments.$get()
       if (!res.ok) throw new Error("Failed to fetch environments")
       return res.json()
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const connectorsQuery = useQuery(() => ({
-    queryKey: ["connectors"],
+    queryKey: ["connectors", activeOrg()?.id],
     queryFn: async (): Promise<Connectors> => {
       const res = await api.api.connectors.$get()
       if (!res.ok) throw new Error("Failed to fetch connectors")
       return res.json()
     },
     refetchInterval: 5000,
+    enabled: !!activeOrg()?.id,
   }))
 
   const appAccountsQuery = useQuery(() => ({
-    queryKey: ["app-accounts"],
+    queryKey: ["app-accounts", activeOrg()?.id],
     queryFn: async (): Promise<AppAccounts> => {
       const res = await api.api["app-accounts"].$get()
       if (!res.ok) throw new Error("Failed to fetch app accounts")
       return res.json()
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const selectedResourceFromList = createMemo(() => {

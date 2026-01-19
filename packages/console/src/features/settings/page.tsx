@@ -103,16 +103,17 @@ export default function SettingsPage() {
   const currentTab = createMemo(() => params.tab ?? "users")
 
   const environmentsQuery = useQuery(() => ({
-    queryKey: ["settings", "environments"],
+    queryKey: ["settings", "environments", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.environments.$get()
       if (!res.ok) throw new Error("Failed to fetch environments")
       return res.json() as Promise<Environment[]>
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const membersQuery = useQuery(() => ({
-    queryKey: ["settings", "members"],
+    queryKey: ["settings", "members", activeOrg()?.id],
     queryFn: async () => {
       const [membersRes, invitationsRes] = await Promise.all([
         auth.organization.listMembers(),
@@ -139,51 +140,57 @@ export default function SettingsPage() {
         : []
       return { members, invitations }
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const connectorsQuery = useQuery(() => ({
-    queryKey: ["settings", "connectors"],
+    queryKey: ["settings", "connectors", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.connectors.$get()
       if (!res.ok) throw new Error("Failed to fetch connectors")
       return res.json() as Promise<Connector[]>
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const appAccountsQuery = useQuery(() => ({
-    queryKey: ["settings", "app-accounts"],
+    queryKey: ["settings", "app-accounts", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api["app-accounts"].$get()
       if (!res.ok) throw new Error("Failed to fetch app accounts")
       return res.json() as Promise<AppAccount[]>
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const usageCurrentQuery = useQuery(() => ({
-    queryKey: ["settings", "usage", "current"],
+    queryKey: ["settings", "usage", "current", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.usage.current.$get()
       if (!res.ok) throw new Error("Failed to fetch usage")
       return res.json() as Promise<UsageCurrent>
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const usageHistoryQuery = useQuery(() => ({
-    queryKey: ["settings", "usage", "history"],
+    queryKey: ["settings", "usage", "history", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.usage.history.$get({ query: { months: "6" } })
       if (!res.ok) throw new Error("Failed to fetch usage history")
       return res.json() as Promise<{ periods: UsagePeriod[] }>
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const subscriptionQuery = useQuery(() => ({
-    queryKey: ["settings", "subscription"],
+    queryKey: ["settings", "subscription", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.subscriptions.current.$get()
       if (!res.ok) throw new Error("Failed to fetch subscription")
       return res.json() as Promise<SubscriptionCurrent>
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const envCreateMutate = useMutation(() => ({

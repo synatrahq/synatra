@@ -62,16 +62,17 @@ export default function TriggersPage() {
   const [pendingAppAccountId, setPendingAppAccountId] = createSignal<string | null>(null)
 
   const triggersQuery = useQuery(() => ({
-    queryKey: ["triggers"],
+    queryKey: ["triggers", activeOrg()?.id],
     queryFn: async (): Promise<Triggers> => {
       const res = await api.api.triggers.$get()
       if (!res.ok) throw new Error("Failed to fetch triggers")
       return res.json()
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const agentsQuery = useQuery(() => ({
-    queryKey: ["agents-with-channels"],
+    queryKey: ["agents-with-channels", activeOrg()?.id],
     queryFn: async (): Promise<AgentWithChannels[]> => {
       const res = await api.api.agents.$get()
       if (!res.ok) throw new Error("Failed to fetch agents")
@@ -92,42 +93,47 @@ export default function TriggersPage() {
       )
       return agentsWithChannels
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const promptsQuery = useQuery(() => ({
-    queryKey: ["prompts"],
+    queryKey: ["prompts", activeOrg()?.id],
     queryFn: async (): Promise<Prompts> => {
       const res = await api.api.prompts.$get()
       if (!res.ok) throw new Error("Failed to fetch prompts")
       return res.json()
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const environmentsQuery = useQuery(() => ({
-    queryKey: ["environments"],
+    queryKey: ["environments", activeOrg()?.id],
     queryFn: async (): Promise<Environments> => {
       const res = await api.api.environments.$get()
       if (!res.ok) throw new Error("Failed to fetch environments")
       return res.json()
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const channelsQuery = useQuery(() => ({
-    queryKey: ["channels"],
+    queryKey: ["channels", activeOrg()?.id],
     queryFn: async (): Promise<Channels> => {
       const res = await api.api.channels.$get({ query: {} })
       if (!res.ok) throw new Error("Failed to fetch channels")
       return res.json()
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const appAccountsQuery = useQuery(() => ({
-    queryKey: ["app-accounts"],
+    queryKey: ["app-accounts", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api["app-accounts"].$get()
       if (!res.ok) throw new Error("Failed to fetch app accounts")
       return res.json() as Promise<AppAccountInfo[]>
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const selectedTriggerFromList = createMemo(() => {

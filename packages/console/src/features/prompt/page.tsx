@@ -42,21 +42,23 @@ export default function PromptsPage() {
   const [deletingPrompt, setDeletingPrompt] = createSignal<{ id: string; name: string } | null>(null)
 
   const promptsQuery = useQuery(() => ({
-    queryKey: ["prompts-list"],
+    queryKey: ["prompts-list", activeOrg()?.id],
     queryFn: async (): Promise<Prompts> => {
       const res = await api.api.prompts.$get()
       if (!res.ok) throw new Error("Failed to fetch prompts")
       return res.json()
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const agentsQuery = useQuery(() => ({
-    queryKey: ["agents"],
+    queryKey: ["agents", activeOrg()?.id],
     queryFn: async (): Promise<Agents> => {
       const res = await api.api.agents.$get()
       if (!res.ok) throw new Error("Failed to fetch agents")
       return res.json()
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const selectedPromptFromList = createMemo(() => {

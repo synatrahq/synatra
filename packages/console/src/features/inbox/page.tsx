@@ -200,7 +200,7 @@ export default function InboxPage() {
   const [savingChannel, setSavingChannel] = createSignal(false)
 
   const channelsQuery = useQuery(() => ({
-    queryKey: ["inbox", "channels"],
+    queryKey: ["inbox", "channels", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.channels.$get({ query: {} })
       if (!res.ok) throw new Error("Failed to fetch channels")
@@ -216,10 +216,11 @@ export default function InboxPage() {
         .map((c) => ({ ...c, count: 0 }))
         .sort((a, b) => (b.isDefault ? 1 : 0) - (a.isDefault ? 1 : 0) || a.name.localeCompare(b.name)) as ChannelItem[]
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const countsQuery = useQuery(() => ({
-    queryKey: ["inbox", "counts"],
+    queryKey: ["inbox", "counts", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.threads.counts.$get()
       if (!res.ok) throw new Error("Failed to fetch counts")
@@ -233,6 +234,7 @@ export default function InboxPage() {
         byChannel: data.byChannel as Array<{ id: string; count: number }>,
       }
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const channels = () => {
@@ -254,42 +256,42 @@ export default function InboxPage() {
   const channelMembersQuery = useQuery(() => {
     const channelId = selectedChannelId()
     return {
-      queryKey: ["inbox", "channel", channelId ?? "", "members"],
+      queryKey: ["inbox", "channel", channelId ?? "", "members", activeOrg()?.id],
       queryFn: async (): Promise<ChannelMembers> => {
         if (!channelId) return []
         const res = await api.api.channels[":channelId"].members.$get({ param: { channelId } })
         if (!res.ok) throw new Error("Failed to fetch channel members")
         return res.json()
       },
-      enabled: !!channelId,
+      enabled: !!channelId && !!activeOrg()?.id,
     }
   })
 
   const channelAgentsQuery = useQuery(() => {
     const channelId = selectedChannelId()
     return {
-      queryKey: ["inbox", "channel", channelId ?? "", "agents"],
+      queryKey: ["inbox", "channel", channelId ?? "", "agents", activeOrg()?.id],
       queryFn: async (): Promise<ChannelAgents> => {
         if (!channelId) return []
         const res = await api.api.channels[":channelId"].agents.$get({ param: { channelId } })
         if (!res.ok) throw new Error("Failed to fetch channel agents")
         return res.json()
       },
-      enabled: !!channelId,
+      enabled: !!channelId && !!activeOrg()?.id,
     }
   })
 
   const channelDataQuery = useQuery(() => {
     const channelId = selectedChannelId()
     return {
-      queryKey: ["inbox", "channel", channelId ?? "", "data"],
+      queryKey: ["inbox", "channel", channelId ?? "", "data", activeOrg()?.id],
       queryFn: async () => {
         if (!channelId) return null
         const res = await api.api.channels[":id"].$get({ param: { id: channelId } })
         if (!res.ok) throw new Error("Failed to fetch channel data")
         return res.json() as Promise<ChannelSettingsData>
       },
-      enabled: !!channelId,
+      enabled: !!channelId && !!activeOrg()?.id,
     }
   })
 
@@ -328,7 +330,7 @@ export default function InboxPage() {
   }
 
   const threadsQuery = useInfiniteQuery(() => ({
-    queryKey: ["inbox", "threads", statusFilter(), channelFilter(), agentFilter()],
+    queryKey: ["inbox", "threads", statusFilter(), channelFilter(), agentFilter(), activeOrg()?.id],
     queryFn: async ({ pageParam }) => {
       const query: {
         status?: "running" | "waiting_human" | "completed" | "failed" | "cancelled" | "rejected"
@@ -360,6 +362,7 @@ export default function InboxPage() {
     },
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
+    enabled: !!activeOrg()?.id,
   }))
 
   const threads = () => threadsQuery.data?.pages.flatMap((p) => p.items) ?? []

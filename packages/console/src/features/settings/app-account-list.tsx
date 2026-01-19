@@ -1,6 +1,7 @@
 import { For, Show } from "solid-js"
 import { ComingSoonAppId } from "@synatra/core/types"
 import { Button, IconButton, DropdownMenu, type DropdownMenuItem } from "../../ui"
+import { SettingsHeader } from "./settings-header"
 import { AppIcon } from "../../components"
 import { Plus, DotsThree } from "phosphor-solid-js"
 import type { AppAccount } from "../../app/api"
@@ -107,8 +108,7 @@ function EmptyState(props: { onConnectClick: (appId: string) => void }) {
 export function AppAccountList(props: AppAccountListProps) {
   return (
     <div class="flex flex-1 flex-col overflow-hidden">
-      <div class="flex items-center justify-between px-3 py-2">
-        <h1 class="text-xs font-medium text-text">Apps</h1>
+      <SettingsHeader title="Apps">
         <DropdownMenu
           items={Object.entries(APP_INFO)
             .filter(([appId]) => !isComingSoon(appId))
@@ -125,7 +125,7 @@ export function AppAccountList(props: AppAccountListProps) {
             </Button>
           }
         />
-      </div>
+      </SettingsHeader>
 
       <div class="flex-1 overflow-y-auto scrollbar-thin">
         <Show when={props.loading}>

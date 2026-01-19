@@ -2,6 +2,7 @@ import { For, Show, createSignal, createMemo } from "solid-js"
 import type { Role } from "@synatra/core/permissions"
 import { MemberRole, type SubscriptionPlan } from "@synatra/core/types"
 import { Button, Badge, Avatar, Select, IconButton, DropdownMenu, Skeleton } from "../../ui"
+import { SettingsHeader } from "./settings-header"
 import type { SelectOption, DropdownMenuItem } from "../../ui"
 import { Plus, DotsThree, Users, EnvelopeSimple, Warning } from "phosphor-solid-js"
 import { can, user } from "../../app"
@@ -121,20 +122,21 @@ export function MemberList(props: MemberListProps) {
 
   return (
     <div class="flex flex-1 flex-col overflow-hidden">
-      <div class="flex items-center justify-between px-3 py-2">
-        <div class="flex items-center gap-2">
-          <h1 class="text-xs font-medium text-text">Users</h1>
+      <SettingsHeader
+        title="Users"
+        titleExtra={
           <Show when={limitCheck()}>
             <LimitBadge current={limitCheck()!.current} limit={limitCheck()!.limit} label="users" />
           </Show>
-        </div>
+        }
+      >
         <Show when={canManage()}>
           <Button variant="default" size="sm" onClick={() => props.onInviteClick()} disabled={!canInvite()}>
             <Plus class="h-3 w-3" />
             Invite
           </Button>
         </Show>
-      </div>
+      </SettingsHeader>
 
       <Show when={isOverLimit() && limitCheck()}>
         {(check) => (

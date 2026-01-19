@@ -67,21 +67,23 @@ export default function AgentsPage() {
   })
 
   const agentsQuery = useQuery(() => ({
-    queryKey: ["agents"],
+    queryKey: ["agents", activeOrg()?.id],
     queryFn: async (): Promise<Agents> => {
       const res = await api.api.agents.$get()
       if (!res.ok) throw new Error("Failed to fetch agents")
       return res.json()
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   const environmentsQuery = useQuery(() => ({
-    queryKey: ["environments"],
+    queryKey: ["environments", activeOrg()?.id],
     queryFn: async (): Promise<Environments> => {
       const res = await api.api.environments.$get()
       if (!res.ok) throw new Error("Failed to fetch environments")
       return res.json()
     },
+    enabled: !!activeOrg()?.id,
   }))
 
   createEffect(() => {

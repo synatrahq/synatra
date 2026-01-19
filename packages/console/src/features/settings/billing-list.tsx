@@ -1,5 +1,6 @@
 import { Show, For } from "solid-js"
 import { Button, Skeleton } from "../../ui"
+import { SettingsHeader } from "./settings-header"
 import { CreditCard, Check, Lightning, X, Calendar } from "phosphor-solid-js"
 import type { SubscriptionCurrent } from "../../app/api"
 import { PLAN_HIERARCHY, PLAN_LIMITS, type SubscriptionPlan } from "@synatra/core/types"
@@ -342,9 +343,7 @@ function PlanCard(props: PlanCardProps) {
 export function BillingList(props: BillingListProps) {
   return (
     <div class="flex flex-1 flex-col overflow-hidden">
-      <div class="flex items-center px-3 py-2">
-        <h1 class="text-xs font-medium text-text">Billing</h1>
-      </div>
+      <SettingsHeader title="Billing" />
 
       <div class="flex-1 overflow-y-auto scrollbar-thin">
         <Show when={props.loading}>
