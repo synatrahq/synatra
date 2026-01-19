@@ -14,6 +14,7 @@ import { findOwnerMember } from "./member"
 import { SubscriptionPlan, SubscriptionStatus } from "./types"
 import { createError, isAppError } from "@synatra/util/error"
 import { getStripe } from "./stripe"
+import { resetUsageMonth } from "./usage"
 
 export const HandleStripeWebhookEventSchema = z.object({
   event: z.custom<Stripe.Event>((val) => typeof val === "object" && val !== null && "type" in val),
@@ -94,6 +95,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     })
 
     if (wasFreePlan && isPaidPlan(plan)) {
+      await resetUsageMonth()
       await ensureStagingEnvironment()
     }
   })

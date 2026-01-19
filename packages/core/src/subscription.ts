@@ -10,6 +10,7 @@ import { getStripe } from "./stripe"
 import { findOrganizationById } from "./organization"
 import { createError } from "@synatra/util/error"
 import { ensureStagingEnvironment } from "./environment"
+import { resetUsageMonth } from "./usage"
 
 export function isUpgradeSubscription(current: SubscriptionPlan, next: SubscriptionPlan): boolean {
   return PLAN_HIERARCHY[next] > PLAN_HIERARCHY[current]
@@ -414,6 +415,7 @@ export async function changeSubscriptionPlan(raw: z.input<typeof ChangeSubscript
 
     await principal.withSystem({ organizationId: sub.organizationId }, async () => {
       await updateSubscription({ plan: input.plan, stripePriceId: newPrices.license })
+      await resetUsageMonth()
 
       if (sub.plan === "free") {
         await ensureStagingEnvironment()
