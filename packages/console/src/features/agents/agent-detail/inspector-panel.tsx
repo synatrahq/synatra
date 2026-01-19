@@ -66,6 +66,7 @@ type InspectorPanelProps = {
   onResourceRequestCancel?: () => void
   creatingResource?: boolean
   confirmingResource?: { requestId: string; resourceId: string } | null
+  completedConfirmation?: { requestId: string; resourceId: string } | null
   onConfirmationComplete?: (requestId: string, resourceId: string) => Promise<void>
   pendingTriggerRequest?: CopilotTriggerRequest | null
   onTriggerRequestApprove?: (requestId: string) => Promise<void>
@@ -315,12 +316,14 @@ export function InspectorPanel(props: InspectorPanelProps) {
             </Show>
             <Show
               when={
-                activeTab()?.type === "connect_resource" && (props.pendingResourceRequest || props.confirmingResource)
+                activeTab()?.type === "connect_resource" &&
+                (props.pendingResourceRequest || props.confirmingResource || props.completedConfirmation)
               }
             >
               <ResourceConnectionWizard
                 request={props.pendingResourceRequest!}
                 confirmingResource={props.confirmingResource}
+                completedConfirmation={props.completedConfirmation}
                 onComplete={async (data) => {
                   if (!props.onResourceCreate) return { resourceId: "" }
                   return props.onResourceCreate(data)

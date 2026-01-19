@@ -100,6 +100,10 @@ export function AgentDetail(props: AgentDetailProps) {
   const [approvingProposal, setApprovingProposal] = createSignal(false)
   const [rejectingProposal, setRejectingProposal] = createSignal(false)
   const [creatingResource, setCreatingResource] = createSignal(false)
+  const [completedConfirmation, setCompletedConfirmation] = createSignal<{
+    requestId: string
+    resourceId: string
+  } | null>(null)
   const [approvingTriggerRequest, setApprovingTriggerRequest] = createSignal(false)
   const [cancellingTriggerRequest, setCancellingTriggerRequest] = createSignal(false)
   const [copilotHighlightVisible, setCopilotHighlightVisible] = createSignal(false)
@@ -292,6 +296,15 @@ export function AgentDetail(props: AgentDetailProps) {
     if (key === "onboarding_video" && props.agent) {
       setWelcomeTabShown(props.agent.id, false)
     }
+    const closingTab = tabs[idx]
+    if (closingTab.type === "connect_resource") {
+      if (completedConfirmation()) {
+        setCompletedConfirmation(null)
+      }
+      if (confirmingResource()) {
+        setSearchParams({ completeResourceRequest: undefined, resourceId: undefined }, { replace: true })
+      }
+    }
     const newTabs = tabs.filter((t) => getTabKey(t) !== key)
     setOpenTabs(newTabs)
     if (activeTabKey() === key && newTabs.length > 0) {
@@ -318,10 +331,14 @@ export function AgentDetail(props: AgentDetailProps) {
   createEffect(() => {
     const request = pendingResourceRequest()
     const confirmation = confirmingResource()
-    if (request || confirmation) {
+    const completed = completedConfirmation()
+    if (request || confirmation || completed) {
       const connectTab = openTabs().find((t) => t.type === "connect_resource")
       if (!connectTab) {
-        handleSelectItem({ type: "connect_resource", requestId: request?.id ?? confirmation?.requestId ?? "" })
+        handleSelectItem({
+          type: "connect_resource",
+          requestId: request?.id ?? confirmation?.requestId ?? completed?.requestId ?? "",
+        })
       } else {
         setActiveTabKey(getTabKey(connectTab))
       }
@@ -708,6 +725,19 @@ export function AgentDetail(props: AgentDetailProps) {
 
   const handleResourceRequestCancel = async () => {
     const request = pendingResourceRequest()
+    const confirmation = confirmingResource()
+    const completed = completedConfirmation()
+
+    if (completed) {
+      setCompletedConfirmation(null)
+      return
+    }
+
+    if (confirmation) {
+      setSearchParams({ completeResourceRequest: undefined, resourceId: undefined }, { replace: true })
+      return
+    }
+
     if (!request || !props.agent) return
 
     await api.api.agents[":id"].copilot["resource-requests"][":requestId"].cancel.$post({
@@ -730,6 +760,7 @@ export function AgentDetail(props: AgentDetailProps) {
     if (!completeRes.ok) throw new Error("Failed to complete resource request")
 
     setSearchParams({ completeResourceRequest: undefined, resourceId: undefined }, { replace: true })
+    setCompletedConfirmation({ requestId, resourceId })
     setPendingResourceRequest(null)
   }
 
@@ -911,6 +942,7 @@ export function AgentDetail(props: AgentDetailProps) {
                         onResourceRequestCancel={handleResourceRequestCancel}
                         creatingResource={creatingResource()}
                         confirmingResource={confirmingResource()}
+                        completedConfirmation={completedConfirmation()}
                         onConfirmationComplete={handleResourceConfirmationComplete}
                         pendingTriggerRequest={pendingTriggerRequest()}
                         onTriggerRequestApprove={handleTriggerRequestApprove}
