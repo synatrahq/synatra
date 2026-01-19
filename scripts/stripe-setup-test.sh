@@ -177,7 +177,7 @@ echo "Creating Meter for Run Usage..."
 METER_RUN_RESPONSE=$($STRIPE_CMD billing meters create \
   --display-name "Run Executions" \
   --event-name "run.completed" \
-  --default-aggregation.formula sum 2>&1)
+  -d "default_aggregation[formula]"=sum 2>&1)
 
 if ! echo "$METER_RUN_RESPONSE" | jq -e . >/dev/null 2>&1; then
     echo "Error creating run meter:"
@@ -186,6 +186,11 @@ if ! echo "$METER_RUN_RESPONSE" | jq -e . >/dev/null 2>&1; then
 fi
 
 METER_RUN_ID=$(echo "$METER_RUN_RESPONSE" | jq -r '.id')
+if [ "$METER_RUN_ID" = "null" ] || [ -z "$METER_RUN_ID" ]; then
+    echo "Error: Failed to get run meter ID from response:"
+    echo "$METER_RUN_RESPONSE" | jq .
+    exit 1
+fi
 echo "✓ Created Meter (Run): $METER_RUN_ID"
 echo ""
 
@@ -193,8 +198,8 @@ echo "Creating Meter for Managed LLM Usage..."
 METER_LLM_RESPONSE=$($STRIPE_CMD billing meters create \
   --display-name "Managed LLM Usage" \
   --event-name "llm.run" \
-  --default-aggregation.formula sum \
-  --value-settings.event-payload-key value 2>&1)
+  -d "default_aggregation[formula]"=sum \
+  -d "value_settings[event_payload_key]"=value 2>&1)
 
 if ! echo "$METER_LLM_RESPONSE" | jq -e . >/dev/null 2>&1; then
     echo "Error creating LLM meter:"
@@ -203,6 +208,11 @@ if ! echo "$METER_LLM_RESPONSE" | jq -e . >/dev/null 2>&1; then
 fi
 
 METER_LLM_ID=$(echo "$METER_LLM_RESPONSE" | jq -r '.id')
+if [ "$METER_LLM_ID" = "null" ] || [ -z "$METER_LLM_ID" ]; then
+    echo "Error: Failed to get LLM meter ID from response:"
+    echo "$METER_LLM_RESPONSE" | jq .
+    exit 1
+fi
 echo "✓ Created Meter (LLM): $METER_LLM_ID"
 echo ""
 
