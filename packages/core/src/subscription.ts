@@ -210,6 +210,7 @@ export async function createCheckoutSession(raw: z.input<typeof CreateCheckoutSe
       subscription_data: {
         billing_cycle_anchor: billingCycleAnchor,
         proration_behavior: "create_prorations",
+        billing_mode: { type: "flexible" },
       },
     },
     { idempotencyKey: randomUUID() },
@@ -427,6 +428,24 @@ export async function changeSubscriptionPlan(raw: z.input<typeof ChangeSubscript
     { idempotencyKey: randomUUID() },
   )
 
+  const currentPhase = schedule.phases[0]
+  const extractDiscountId = (d: {
+    discount?: string | { id: string } | null
+    coupon?: string | { id: string } | null
+  }) => {
+    if (d.discount) return { discount: typeof d.discount === "string" ? d.discount : d.discount.id }
+    if (d.coupon) return { coupon: typeof d.coupon === "string" ? d.coupon : d.coupon.id }
+    return {}
+  }
+  const phaseDiscounts = currentPhase.discounts?.length
+    ? currentPhase.discounts.map(extractDiscountId).filter((d) => d.discount || d.coupon)
+    : undefined
+  const phaseTaxRates = currentPhase.default_tax_rates?.length
+    ? currentPhase.default_tax_rates.map((t) => (typeof t === "string" ? t : t.id))
+    : undefined
+  const phaseMetadata =
+    currentPhase.metadata && Object.keys(currentPhase.metadata).length > 0 ? currentPhase.metadata : undefined
+
   const [updated, updateErr] = await stripe.subscriptionSchedules
     .update(
       schedule.id,
@@ -435,11 +454,17 @@ export async function changeSubscriptionPlan(raw: z.input<typeof ChangeSubscript
         phases: [
           {
             items: [{ price: licenseItem.price.id, quantity: 1 }, { price: overageItem.price.id }],
-            start_date: schedule.phases[0].start_date,
+            start_date: currentPhase.start_date,
             end_date: licenseItem.current_period_end,
+            ...(phaseDiscounts && { discounts: phaseDiscounts }),
+            ...(phaseTaxRates && { default_tax_rates: phaseTaxRates }),
+            ...(phaseMetadata && { metadata: phaseMetadata }),
           },
           {
             items: [{ price: newPrices.license, quantity: 1 }, { price: newPrices.overage }],
+            ...(phaseDiscounts && { discounts: phaseDiscounts }),
+            ...(phaseTaxRates && { default_tax_rates: phaseTaxRates }),
+            ...(phaseMetadata && { metadata: phaseMetadata }),
           },
         ],
       },

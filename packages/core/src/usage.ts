@@ -109,23 +109,6 @@ export async function usageHistory(input: z.input<typeof UsageHistorySchema>) {
   return { periods }
 }
 
-export async function resetUsageMonth(): Promise<void> {
-  const organizationId = principal.orgId()
-  const ym = currentYearMonth()
-
-  await withDb((db) =>
-    db
-      .update(UsageMonthTable)
-      .set({
-        runCount: 0,
-        runsUser: 0,
-        runsTrigger: 0,
-        runsSubagent: 0,
-      })
-      .where(and(eq(UsageMonthTable.organizationId, organizationId), eq(UsageMonthTable.yearMonth, ym))),
-  )
-}
-
 export async function checkUsageLimit(input: z.input<typeof CheckUsageLimitSchema>) {
   const data = CheckUsageLimitSchema.parse(input)
   const usage = await currentUsage({})
