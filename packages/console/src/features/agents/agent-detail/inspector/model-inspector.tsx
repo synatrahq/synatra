@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/solid-query"
 import { PencilSimple, ListBullets, Warning } from "phosphor-solid-js"
 import type { AgentModelConfig, ModelProvider, ReasoningConfig } from "@synatra/core/types"
 import { Input, Select, CollapsibleSection, FormField, Tooltip } from "../../../../ui"
-import { api } from "../../../../app"
+import { api, activeOrg } from "../../../../app"
 import { providerOptions, modelPresets, approvalTimeoutOptions, effortOptions, levelOptions } from "./constants"
 
 export type ExecutionLimits = {
@@ -24,13 +24,14 @@ export function ModelInspector(props: {
   const [customMode, setCustomMode] = createSignal(false)
 
   const synatraAiQuery = useQuery(() => ({
-    queryKey: ["resources", "managed", "synatra_ai"],
+    queryKey: ["resources", "managed", "synatra_ai", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.resources.managed[":type"].$get({ param: { type: "synatra_ai" } })
       if (!res.ok) throw new Error("Failed to fetch synatra_ai resource")
       return res.json()
     },
     staleTime: 60000,
+    enabled: !!activeOrg()?.id,
   }))
 
   const configuredProviders = createMemo(() => {

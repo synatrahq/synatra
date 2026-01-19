@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/solid-query"
 import { Warning, ArrowRight } from "phosphor-solid-js"
 import type { LlmProvider, APISynatraAiConfig } from "@synatra/core/types"
 import { GlobalNav } from "./global-nav"
-import { pendingCount, fetchPendingCount, api } from "../app"
+import { pendingCount, fetchPendingCount, api, activeOrg } from "../app"
 import type { Environments, Resources } from "../app/api"
 import { LlmSetupModal } from "../features/onboarding/llm-setup-modal"
 
@@ -18,23 +18,25 @@ export function Shell(props: ShellProps) {
   })
 
   const environmentsQuery = useQuery(() => ({
-    queryKey: ["environments"],
+    queryKey: ["environments", activeOrg()?.id],
     queryFn: async (): Promise<Environments> => {
       const res = await api.api.environments.$get()
       if (!res.ok) return []
       return res.json()
     },
     staleTime: 60000,
+    enabled: !!activeOrg()?.id,
   }))
 
   const resourcesQuery = useQuery(() => ({
-    queryKey: ["resources"],
+    queryKey: ["resources", activeOrg()?.id],
     queryFn: async (): Promise<Resources> => {
       const res = await api.api.resources.$get()
       if (!res.ok) return []
       return res.json()
     },
     staleTime: 60000,
+    enabled: !!activeOrg()?.id,
   }))
 
   const productionEnv = createMemo(() => environmentsQuery.data?.find((e) => e.slug === "production"))
