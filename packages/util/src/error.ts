@@ -211,3 +211,17 @@ export const fromUnknown = (input: unknown): AppError => {
   const message = typeof input === "string" ? input : "Unknown error"
   return createError("UnknownError", { message }, { cause: input })
 }
+
+export const extractErrorMessage = (problem: ProblemDetails): string => {
+  if (!problem.data || typeof problem.data !== "object") return problem.title
+  const data = problem.data as Record<string, unknown>
+  if (typeof data.message === "string") return data.message
+  if (problem.name === "NotFoundError" && typeof data.type === "string") {
+    return data.id ? `${data.type} "${data.id}" not found` : `${data.type} not found`
+  }
+  if (problem.name === "ResourceLimitError") {
+    const d = data as { resource: string; limit: number; plan: string }
+    return `${d.resource} limit (${d.limit}) exceeded on ${d.plan} plan`
+  }
+  return problem.title
+}

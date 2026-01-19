@@ -19,6 +19,7 @@ import {
   Spinner,
   Select,
   FormField,
+  FormError,
 } from "../../ui"
 import { ResourceIcon, AppIcon } from "../../components"
 import { RESOURCE_TYPE_META } from "./types"
@@ -137,13 +138,17 @@ export function ResourceCreateModal(props: ResourceCreateModalProps) {
     }
 
     const needsAppAccount = selectedType() === "github" || selectedType() === "intercom"
-    await props.onSave({
-      name: name().trim(),
-      slug: slug().trim() || undefined,
-      description: description().trim() || undefined,
-      type: selectedType(),
-      appAccountId: needsAppAccount ? (selectedAppAccountId() ?? undefined) : undefined,
-    })
+    try {
+      await props.onSave({
+        name: name().trim(),
+        slug: slug().trim() || undefined,
+        description: description().trim() || undefined,
+        type: selectedType(),
+        appAccountId: needsAppAccount ? (selectedAppAccountId() ?? undefined) : undefined,
+      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create resource")
+    }
   }
 
   const canCreate = () => {
@@ -329,12 +334,7 @@ export function ResourceCreateModal(props: ResourceCreateModalProps) {
                 </span>
               </FormField>
 
-              {/* Error */}
-              <Show when={error()}>
-                <div class="rounded-md border border-danger bg-danger-soft px-2.5 py-1.5 text-xs text-danger">
-                  {error()}
-                </div>
-              </Show>
+              <FormError message={error()} />
             </>
           </ModalBody>
           <ModalFooter>

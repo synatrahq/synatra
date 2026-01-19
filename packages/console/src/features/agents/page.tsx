@@ -70,7 +70,6 @@ export default function AgentsPage() {
     queryKey: ["agents", activeOrg()?.id],
     queryFn: async (): Promise<Agents> => {
       const res = await api.api.agents.$get()
-      if (!res.ok) throw new Error("Failed to fetch agents")
       return res.json()
     },
     enabled: !!activeOrg()?.id,
@@ -80,7 +79,6 @@ export default function AgentsPage() {
     queryKey: ["environments", activeOrg()?.id],
     queryFn: async (): Promise<Environments> => {
       const res = await api.api.environments.$get()
-      if (!res.ok) throw new Error("Failed to fetch environments")
       return res.json()
     },
     enabled: !!activeOrg()?.id,
@@ -109,7 +107,6 @@ export default function AgentsPage() {
       queryFn: async (): Promise<Agent | null> => {
         if (!agent) return null
         const res = await api.api.agents[":id"].$get({ param: { id: agent.id } })
-        if (!res.ok) throw new Error("Failed to fetch agent detail")
         return res.json()
       },
       enabled: !!agent,
@@ -124,7 +121,6 @@ export default function AgentsPage() {
       queryFn: async (): Promise<AgentReleases> => {
         if (!agent) return []
         const res = await api.api.agents[":id"].releases.$get({ param: { id: agent.id } })
-        if (!res.ok) throw new Error("Failed to fetch releases")
         return res.json()
       },
       enabled: !!agent,
@@ -138,7 +134,6 @@ export default function AgentsPage() {
       queryFn: async (): Promise<AgentWorkingCopy | null> => {
         if (!agent) return null
         const res = await api.api.agents[":id"]["working-copy"].$get({ param: { id: agent.id } })
-        if (!res.ok) throw new Error("Failed to fetch working copy")
         return res.json()
       },
       enabled: !!agent,
@@ -148,7 +143,6 @@ export default function AgentsPage() {
   const createMutate = useMutation(() => ({
     mutationFn: async (data: AgentCreateInput) => {
       const res = await api.api.agents.$post({ json: data })
-      if (!res.ok) throw new Error("Failed to create agent")
       return { agent: await res.json(), fromTemplate: !!data.templateId }
     },
     onSuccess: ({ agent, fromTemplate }) => {
@@ -162,7 +156,6 @@ export default function AgentsPage() {
     mutationFn: async (data: { id: string } & AgentUpdateInput) => {
       const { id, ...json } = data
       const res = await api.api.agents[":id"].$patch({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to update agent")
       return res.json()
     },
     onSuccess: (_, variables) => {
@@ -175,8 +168,7 @@ export default function AgentsPage() {
 
   const deleteMutate = useMutation(() => ({
     mutationFn: async (id: string) => {
-      const res = await api.api.agents[":id"].$delete({ param: { id } })
-      if (!res.ok) throw new Error("Failed to delete agent")
+      await api.api.agents[":id"].$delete({ param: { id } })
     },
     onSuccess: (_, id) => {
       const agent = deletingAgent()
@@ -193,7 +185,6 @@ export default function AgentsPage() {
     mutationFn: async (data: { agentId: string } & AgentDeployInput) => {
       const { agentId, ...json } = data
       const res = await api.api.agents[":id"].deploy.$post({ param: { id: agentId }, json })
-      if (!res.ok) throw new Error("Failed to deploy")
       return res.json()
     },
     onSuccess: (_, variables) => {
@@ -204,11 +195,10 @@ export default function AgentsPage() {
 
   const adoptMutate = useMutation(() => ({
     mutationFn: async (data: { agentId: string; releaseId: string }) => {
-      const res = await api.api.agents[":id"].releases[":releaseId"].adopt.$post({
+      await api.api.agents[":id"].releases[":releaseId"].adopt.$post({
         param: { id: data.agentId, releaseId: data.releaseId },
         json: {},
       })
-      if (!res.ok) throw new Error("Failed to adopt release")
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["agents"] })
@@ -218,11 +208,10 @@ export default function AgentsPage() {
 
   const checkoutMutate = useMutation(() => ({
     mutationFn: async (data: { agentId: string; releaseId: string }) => {
-      const res = await api.api.agents[":id"].releases[":releaseId"].checkout.$post({
+      await api.api.agents[":id"].releases[":releaseId"].checkout.$post({
         param: { id: data.agentId, releaseId: data.releaseId },
         json: {},
       })
-      if (!res.ok) throw new Error("Failed to checkout release")
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["agent", variables.agentId, "workingCopy"] })
@@ -233,7 +222,6 @@ export default function AgentsPage() {
     mutationFn: async (data: { id: string } & AgentWorkingCopySaveInput) => {
       const { id, ...json } = data
       const res = await api.api.agents[":id"]["working-copy"].save.$post({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to save working copy")
       return res.json()
     },
     onSuccess: (result, variables) => {

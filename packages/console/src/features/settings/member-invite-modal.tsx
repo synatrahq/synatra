@@ -12,6 +12,7 @@ import {
   Select,
   FormField,
   Spinner,
+  FormError,
 } from "../../ui"
 import type { SelectOption } from "../../ui"
 import { checkUserLimit } from "../../utils/subscription-limits"
@@ -111,11 +112,7 @@ export function MemberInviteModal(props: MemberInviteModalProps) {
             <Select value={role()} options={roleOptions} onChange={setRole} placeholder="Select role" />
           </FormField>
 
-          <Show when={error()}>
-            <div class="rounded-md border border-danger bg-danger-soft px-2.5 py-1.5 text-2xs text-danger">
-              {error()}
-            </div>
-          </Show>
+          <FormError message={error()} />
 
           <Show when={limitError()}>
             <div class="rounded-md border border-warning bg-warning/5 px-2.5 py-1.5 text-2xs text-warning">

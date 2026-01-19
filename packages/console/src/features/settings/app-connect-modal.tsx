@@ -1,6 +1,17 @@
 import { createSignal, createEffect, Show, For } from "solid-js"
 import { ComingSoonAppId } from "@synatra/core/types"
-import { Modal, ModalContainer, ModalHeader, ModalBody, ModalFooter, Button, Input, FormField, Spinner } from "../../ui"
+import {
+  Modal,
+  ModalContainer,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Button,
+  Input,
+  FormField,
+  Spinner,
+  FormError,
+} from "../../ui"
 import { AppIcon } from "../../components"
 
 type AppConnectModalProps = {
@@ -96,11 +107,7 @@ export function AppConnectModal(props: AppConnectModalProps) {
                 placeholder={`My ${appInfo()?.name ?? "App"}`}
               />
             </FormField>
-            <Show when={error()}>
-              <div class="mt-2 rounded-md border border-danger bg-danger-soft px-2.5 py-1.5 text-2xs text-danger">
-                {error()}
-              </div>
-            </Show>
+            <FormError message={error()} class="mt-2" />
           </Show>
         </ModalBody>
         <Show when={!showAppSelection()}>

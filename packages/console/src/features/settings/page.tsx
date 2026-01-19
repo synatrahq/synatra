@@ -106,7 +106,6 @@ export default function SettingsPage() {
     queryKey: ["settings", "environments", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.environments.$get()
-      if (!res.ok) throw new Error("Failed to fetch environments")
       return res.json() as Promise<Environment[]>
     },
     enabled: !!activeOrg()?.id,
@@ -147,7 +146,6 @@ export default function SettingsPage() {
     queryKey: ["settings", "connectors", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.connectors.$get()
-      if (!res.ok) throw new Error("Failed to fetch connectors")
       return res.json() as Promise<Connector[]>
     },
     enabled: !!activeOrg()?.id,
@@ -157,7 +155,6 @@ export default function SettingsPage() {
     queryKey: ["settings", "app-accounts", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api["app-accounts"].$get()
-      if (!res.ok) throw new Error("Failed to fetch app accounts")
       return res.json() as Promise<AppAccount[]>
     },
     enabled: !!activeOrg()?.id,
@@ -167,7 +164,6 @@ export default function SettingsPage() {
     queryKey: ["settings", "usage", "current", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.usage.current.$get()
-      if (!res.ok) throw new Error("Failed to fetch usage")
       return res.json() as Promise<UsageCurrent>
     },
     enabled: !!activeOrg()?.id,
@@ -177,7 +173,6 @@ export default function SettingsPage() {
     queryKey: ["settings", "usage", "history", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.usage.history.$get({ query: { months: "6" } })
-      if (!res.ok) throw new Error("Failed to fetch usage history")
       return res.json() as Promise<{ periods: UsagePeriod[] }>
     },
     enabled: !!activeOrg()?.id,
@@ -187,7 +182,6 @@ export default function SettingsPage() {
     queryKey: ["settings", "subscription", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api.subscriptions.current.$get()
-      if (!res.ok) throw new Error("Failed to fetch subscription")
       return res.json() as Promise<SubscriptionCurrent>
     },
     enabled: !!activeOrg()?.id,
@@ -196,7 +190,6 @@ export default function SettingsPage() {
   const envCreateMutate = useMutation(() => ({
     mutationFn: async (data: EnvironmentCreateInput) => {
       const res = await api.api.environments.$post({ json: data })
-      if (!res.ok) throw new Error("Failed to create environment")
       return res.json()
     },
     onSuccess: () => {
@@ -210,7 +203,6 @@ export default function SettingsPage() {
     mutationFn: async (data: { id: string } & EnvironmentUpdateInput) => {
       const { id, ...json } = data
       const res = await api.api.environments[":id"].$patch({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to update environment")
       return res.json()
     },
     onSuccess: () => {
@@ -223,8 +215,7 @@ export default function SettingsPage() {
 
   const envDeleteMutate = useMutation(() => ({
     mutationFn: async (id: string) => {
-      const res = await api.api.environments[":id"].$delete({ param: { id } })
-      if (!res.ok) throw new Error("Failed to delete environment")
+      await api.api.environments[":id"].$delete({ param: { id } })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings", "environments"] })
@@ -239,10 +230,6 @@ export default function SettingsPage() {
       const res = await api.api.organizations.invitations.bulk.$post({
         json: { emails: data.emails, role: data.role },
       })
-      if (!res.ok) {
-        const error = (await res.json()) as { message?: string }
-        throw new Error(error.message || "Failed to invite users")
-      }
       return res.json()
     },
     onSuccess: () => {
@@ -278,7 +265,6 @@ export default function SettingsPage() {
   const connectorCreateMutate = useMutation(() => ({
     mutationFn: async (data: ConnectorCreateInput) => {
       const res = await api.api.connectors.$post({ json: data })
-      if (!res.ok) throw new Error("Failed to create connector")
       return res.json()
     },
     onSuccess: (result) => {
@@ -293,7 +279,6 @@ export default function SettingsPage() {
   const connectorRegenerateMutate = useMutation(() => ({
     mutationFn: async (id: string) => {
       const res = await api.api.connectors[":id"]["regenerate-token"].$post({ param: { id } })
-      if (!res.ok) throw new Error("Failed to regenerate token")
       return res.json()
     },
     onSuccess: (result) => {
@@ -304,8 +289,7 @@ export default function SettingsPage() {
 
   const connectorDeleteMutate = useMutation(() => ({
     mutationFn: async (id: string) => {
-      const res = await api.api.connectors[":id"].$delete({ param: { id } })
-      if (!res.ok) throw new Error("Failed to delete connector")
+      await api.api.connectors[":id"].$delete({ param: { id } })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings", "connectors"] })
@@ -317,8 +301,7 @@ export default function SettingsPage() {
 
   const appDeleteMutate = useMutation(() => ({
     mutationFn: async (id: string) => {
-      const res = await api.api["app-accounts"][":id"].$delete({ param: { id } })
-      if (!res.ok) throw new Error("Failed to delete app account")
+      await api.api["app-accounts"][":id"].$delete({ param: { id } })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["settings", "app-accounts"] })
@@ -335,7 +318,6 @@ export default function SettingsPage() {
 
       if (subscription()?.stripeSubscriptionId) {
         const res = await api.api.subscriptions["change-plan"].$post({ json: { plan: typedPlan } })
-        if (!res.ok) throw new Error("Failed to change plan")
         return { type: "change" as const, data: await res.json() }
       }
 
@@ -346,7 +328,6 @@ export default function SettingsPage() {
           cancelUrl: `${window.location.origin}/settings/billing?cancelled=true`,
         },
       })
-      if (!res.ok) throw new Error("Failed to create checkout session")
       return { type: "checkout" as const, data: await res.json() }
     },
     onSuccess: (result) => {
@@ -358,7 +339,6 @@ export default function SettingsPage() {
   const cancelScheduleMutate = useMutation(() => ({
     mutationFn: async () => {
       const res = await api.api.subscriptions["cancel-schedule"].$post()
-      if (!res.ok) throw new Error("Failed to cancel scheduled plan change")
       return res.json()
     },
     onSuccess: () => {
@@ -371,7 +351,6 @@ export default function SettingsPage() {
       const res = await api.api.subscriptions["billing-portal"].$post({
         json: { returnUrl: window.location.href },
       })
-      if (!res.ok) throw new Error("Failed to open billing portal")
       return res.json()
     },
     onSuccess: (result) => {
@@ -382,7 +361,6 @@ export default function SettingsPage() {
   const cancelSubscriptionMutate = useMutation(() => ({
     mutationFn: async () => {
       const res = await api.api.subscriptions.cancel.$post()
-      if (!res.ok) throw new Error("Failed to cancel subscription")
       return res.json()
     },
     onSuccess: () => {
@@ -393,7 +371,6 @@ export default function SettingsPage() {
   const resumeSubscriptionMutate = useMutation(() => ({
     mutationFn: async () => {
       const res = await api.api.subscriptions.resume.$post()
-      if (!res.ok) throw new Error("Failed to resume subscription")
       return res.json()
     },
     onSuccess: () => {

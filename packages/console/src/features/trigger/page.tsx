@@ -65,7 +65,6 @@ export default function TriggersPage() {
     queryKey: ["triggers", activeOrg()?.id],
     queryFn: async (): Promise<Triggers> => {
       const res = await api.api.triggers.$get()
-      if (!res.ok) throw new Error("Failed to fetch triggers")
       return res.json()
     },
     enabled: !!activeOrg()?.id,
@@ -75,12 +74,11 @@ export default function TriggersPage() {
     queryKey: ["agents-with-channels", activeOrg()?.id],
     queryFn: async (): Promise<AgentWithChannels[]> => {
       const res = await api.api.agents.$get()
-      if (!res.ok) throw new Error("Failed to fetch agents")
       const data = await res.json()
       const agentsWithChannels = await Promise.all(
         data.map(async (a) => {
           const channelsRes = await api.api.agents[":id"].channels.$get({ param: { id: a.id } })
-          const channelIds = channelsRes.ok ? ((await channelsRes.json()) as string[]) : []
+          const channelIds = (await channelsRes.json()) as string[]
           return {
             id: a.id,
             name: a.name,
@@ -100,7 +98,6 @@ export default function TriggersPage() {
     queryKey: ["prompts", activeOrg()?.id],
     queryFn: async (): Promise<Prompts> => {
       const res = await api.api.prompts.$get()
-      if (!res.ok) throw new Error("Failed to fetch prompts")
       return res.json()
     },
     enabled: !!activeOrg()?.id,
@@ -110,7 +107,6 @@ export default function TriggersPage() {
     queryKey: ["environments", activeOrg()?.id],
     queryFn: async (): Promise<Environments> => {
       const res = await api.api.environments.$get()
-      if (!res.ok) throw new Error("Failed to fetch environments")
       return res.json()
     },
     enabled: !!activeOrg()?.id,
@@ -120,7 +116,6 @@ export default function TriggersPage() {
     queryKey: ["channels", activeOrg()?.id],
     queryFn: async (): Promise<Channels> => {
       const res = await api.api.channels.$get({ query: {} })
-      if (!res.ok) throw new Error("Failed to fetch channels")
       return res.json()
     },
     enabled: !!activeOrg()?.id,
@@ -130,7 +125,6 @@ export default function TriggersPage() {
     queryKey: ["app-accounts", activeOrg()?.id],
     queryFn: async () => {
       const res = await api.api["app-accounts"].$get()
-      if (!res.ok) throw new Error("Failed to fetch app accounts")
       return res.json() as Promise<AppAccountInfo[]>
     },
     enabled: !!activeOrg()?.id,
@@ -148,7 +142,6 @@ export default function TriggersPage() {
       queryFn: async () => {
         if (!trigger) return null
         const res = await api.api.triggers[":id"].$get({ param: { id: trigger.id } })
-        if (!res.ok) throw new Error("Failed to fetch trigger detail")
         const data = await res.json()
         return {
           id: data.id,
@@ -192,7 +185,6 @@ export default function TriggersPage() {
       queryFn: async () => {
         if (!trigger) return null
         const res = await api.api.triggers[":id"]["working-copy"].$get({ param: { id: trigger.id } })
-        if (!res.ok) return null
         return res.json() as Promise<TriggerWorkingCopy>
       },
       enabled: !!trigger,
@@ -206,7 +198,6 @@ export default function TriggersPage() {
       queryFn: async () => {
         if (!trigger) return []
         const res = await api.api.triggers[":id"].releases.$get({ param: { id: trigger.id } })
-        if (!res.ok) return []
         return res.json() as Promise<TriggerRelease[]>
       },
       enabled: !!trigger,
@@ -219,7 +210,6 @@ export default function TriggersPage() {
       const promptId = triggerDetailQuery.data?.promptId
       if (!promptId) return []
       const res = await api.api.prompts[":id"].releases.$get({ param: { id: promptId } })
-      if (!res.ok) throw new Error("Failed to fetch prompt releases")
       return res.json() as Promise<Array<{ id: string; version: string; createdAt: string }>>
     },
     enabled: !!triggerDetailQuery.data?.promptId,
@@ -228,7 +218,6 @@ export default function TriggersPage() {
   const createMutate = useMutation(() => ({
     mutationFn: async (data: TriggerCreateInput) => {
       const res = await api.api.triggers.$post({ json: data })
-      if (!res.ok) throw new Error("Failed to create trigger")
       return res.json()
     },
     onSuccess: (created) => {
@@ -240,8 +229,7 @@ export default function TriggersPage() {
 
   const deleteMutate = useMutation(() => ({
     mutationFn: async (id: string) => {
-      const res = await api.api.triggers[":id"].$delete({ param: { id } })
-      if (!res.ok) throw new Error("Failed to delete trigger")
+      await api.api.triggers[":id"].$delete({ param: { id } })
     },
     onSuccess: () => {
       const trigger = deletingTrigger()
@@ -257,8 +245,7 @@ export default function TriggersPage() {
   const toggleMutate = useMutation(() => ({
     mutationFn: async (data: { id: string } & TriggerToggleInput) => {
       const { id, ...json } = data
-      const res = await api.api.triggers[":id"].toggle.$post({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to toggle trigger")
+      await api.api.triggers[":id"].toggle.$post({ param: { id }, json })
     },
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ["triggers"] })
@@ -270,7 +257,6 @@ export default function TriggersPage() {
     mutationFn: async (data: { id: string } & TriggerUpdateInput) => {
       const { id, ...json } = data
       const res = await api.api.triggers[":id"].$patch({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to update trigger")
       return res.json()
     },
     onSuccess: (_, variables) => {
@@ -282,8 +268,7 @@ export default function TriggersPage() {
   const addAgentToChannelMutate = useMutation(() => ({
     mutationFn: async (data: { channelId: string } & ChannelAgentsAddInput) => {
       const { channelId, ...json } = data
-      const res = await api.api.channels[":channelId"].agents.$post({ param: { channelId }, json })
-      if (!res.ok) throw new Error("Failed to add agent to channel")
+      await api.api.channels[":channelId"].agents.$post({ param: { channelId }, json })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agents-with-channels"] })
@@ -297,7 +282,6 @@ export default function TriggersPage() {
         param: { id: triggerId },
         json,
       })
-      if (!res.ok) throw new Error("Failed to save working copy")
       return res.json()
     },
     onSuccess: (_, variables) => {
@@ -309,7 +293,6 @@ export default function TriggersPage() {
     mutationFn: async (data: { triggerId: string } & TriggerDeployInput) => {
       const { triggerId, ...json } = data
       const res = await api.api.triggers[":id"].deploy.$post({ param: { id: triggerId }, json })
-      if (!res.ok) throw new Error("Failed to deploy")
       return res.json()
     },
     onSuccess: (_, variables) => {
@@ -325,7 +308,6 @@ export default function TriggersPage() {
       const res = await api.api.triggers[":id"].releases[":releaseId"].adopt.$post({
         param: { id: data.triggerId, releaseId: data.releaseId },
       })
-      if (!res.ok) throw new Error("Failed to adopt release")
       return res.json()
     },
     onSuccess: (_, variables) => {
@@ -339,7 +321,6 @@ export default function TriggersPage() {
       const res = await api.api.triggers[":id"].releases[":releaseId"].checkout.$post({
         param: { id: data.triggerId, releaseId: data.releaseId },
       })
-      if (!res.ok) throw new Error("Failed to checkout release")
       return res.json()
     },
     onSuccess: (_, variables) => {
@@ -351,7 +332,6 @@ export default function TriggersPage() {
     mutationFn: async (data: { id: string } & TriggerRegenerateSecretInput) => {
       const { id, ...json } = data
       const res = await api.api.triggers[":id"]["regenerate-secret"].$post({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to regenerate secret")
       return res.json()
     },
     onSuccess: (_, { id }) => {
@@ -364,7 +344,6 @@ export default function TriggersPage() {
       const res = await api.api.triggers[":id"].environments[":environmentId"]["regenerate-debug-secret"].$post({
         param: { id, environmentId },
       })
-      if (!res.ok) throw new Error("Failed to regenerate debug secret")
       return res.json()
     },
     onSuccess: (_, { id }) => {
@@ -376,7 +355,6 @@ export default function TriggersPage() {
     mutationFn: async (data: { id: string } & TriggerEnvironmentAddInput) => {
       const { id, ...json } = data
       const res = await api.api.triggers[":id"].environments.add.$post({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to add environment")
       return res.json()
     },
     onSuccess: (_, { id }) => {
@@ -389,7 +367,6 @@ export default function TriggersPage() {
       const res = await api.api.triggers[":id"].environments[":environmentId"].remove.$post({
         param: { id, environmentId },
       })
-      if (!res.ok) throw new Error("Failed to remove environment")
       return res.json()
     },
     onSuccess: (_, { id }) => {
@@ -404,7 +381,6 @@ export default function TriggersPage() {
         param: { id, environmentId },
         json,
       })
-      if (!res.ok) throw new Error("Failed to update environment")
       return res.json()
     },
     onSuccess: (_, { id }) => {

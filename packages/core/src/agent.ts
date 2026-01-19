@@ -178,65 +178,73 @@ export async function createAgent(input: z.input<typeof CreateAgentSchema>) {
   const sub = await currentSubscription({})
   const limits = PLAN_LIMITS[sub.plan as SubscriptionPlan]
 
-  const agentId = await withTx(async (db) => {
-    await db.select().from(AgentTable).where(eq(AgentTable.organizationId, organizationId)).for("update")
+  let agentId: string
+  try {
+    agentId = await withTx(async (db) => {
+      await db.select().from(AgentTable).where(eq(AgentTable.organizationId, organizationId)).for("update")
 
-    // Agent limit check must be done inside transaction to prevent race conditions
-    // We cannot use Plan.checkAgentLimit here because it uses withDb (non-transactional)
-    if (limits.agentLimit !== null) {
-      const [row] = await db
-        .select({ count: count() })
-        .from(AgentTable)
-        .where(eq(AgentTable.organizationId, organizationId))
-      const current = Number(row?.count ?? 0)
-      if (current + 1 > limits.agentLimit) {
-        throw createError("ResourceLimitError", { resource: "agents", limit: limits.agentLimit, plan: sub.plan })
+      // Agent limit check must be done inside transaction to prevent race conditions
+      // We cannot use Plan.checkAgentLimit here because it uses withDb (non-transactional)
+      if (limits.agentLimit !== null) {
+        const [row] = await db
+          .select({ count: count() })
+          .from(AgentTable)
+          .where(eq(AgentTable.organizationId, organizationId))
+        const current = Number(row?.count ?? 0)
+        if (current + 1 > limits.agentLimit) {
+          throw createError("ResourceLimitError", { resource: "agents", limit: limits.agentLimit, plan: sub.plan })
+        }
       }
-    }
-    const [agent] = await db
-      .insert(AgentTable)
-      .values({
-        organizationId,
-        templateId: data.templateId ?? null,
-        name: data.name,
-        slug: data.slug,
-        description: data.description,
-        icon: data.icon,
-        iconColor: data.iconColor,
-        createdBy: userId,
+      const [agent] = await db
+        .insert(AgentTable)
+        .values({
+          organizationId,
+          templateId: data.templateId ?? null,
+          name: data.name,
+          slug: data.slug,
+          description: data.description,
+          icon: data.icon,
+          iconColor: data.iconColor,
+          createdBy: userId,
+          updatedBy: userId,
+        })
+        .returning()
+
+      const [release] = await db
+        .insert(AgentReleaseTable)
+        .values(
+          releaseValues({
+            agentId: agent.id,
+            version: versionParsed,
+            versionText,
+            description: data.descriptionText,
+            runtimeConfig: config,
+            configHash,
+            userId,
+          }),
+        )
+        .returning()
+
+      await db.insert(AgentWorkingCopyTable).values({
+        agentId: agent.id,
+        runtimeConfig: config,
+        configHash,
         updatedBy: userId,
       })
-      .returning()
 
-    const [release] = await db
-      .insert(AgentReleaseTable)
-      .values(
-        releaseValues({
-          agentId: agent.id,
-          version: versionParsed,
-          versionText,
-          description: data.descriptionText,
-          runtimeConfig: config,
-          configHash,
-          userId,
-        }),
-      )
-      .returning()
+      await db
+        .update(AgentTable)
+        .set({ currentReleaseId: release.id, updatedBy: userId, updatedAt: new Date() })
+        .where(eq(AgentTable.id, agent.id))
 
-    await db.insert(AgentWorkingCopyTable).values({
-      agentId: agent.id,
-      runtimeConfig: config,
-      configHash,
-      updatedBy: userId,
+      return agent.id
     })
-
-    await db
-      .update(AgentTable)
-      .set({ currentReleaseId: release.id, updatedBy: userId, updatedAt: new Date() })
-      .where(eq(AgentTable.id, agent.id))
-
-    return agent.id
-  })
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("agent_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Agent with slug "${data.slug}" already exists` })
+    }
+    throw err
+  }
 
   return findAgentById(agentId)
 }
@@ -259,7 +267,14 @@ export async function updateAgent(input: z.input<typeof UpdateAgentSchema>) {
   }
 
   if (Object.keys(updateData).length === 2) return findAgentById(data.id)
-  await withDb((db) => db.update(AgentTable).set(updateData).where(eq(AgentTable.id, data.id)))
+  try {
+    await withDb((db) => db.update(AgentTable).set(updateData).where(eq(AgentTable.id, data.id)))
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("agent_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Agent with slug "${data.slug}" already exists` })
+    }
+    throw err
+  }
 
   return findAgentById(data.id)
 }

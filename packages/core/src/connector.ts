@@ -1,6 +1,7 @@
 import { z } from "zod"
 import { eq, and } from "drizzle-orm"
 import { createHash, randomBytes } from "crypto"
+import { createError } from "@synatra/util/error"
 import { principal } from "./principal"
 import { withDb, first } from "./database"
 import { ConnectorTable } from "./schema/connector.sql"
@@ -55,20 +56,26 @@ export async function createConnector(input: z.input<typeof CreateConnectorSchem
   const token = generateToken()
   const tokenHash = hashToken(token)
 
-  const [connector] = await withDb((db) =>
-    db
-      .insert(ConnectorTable)
-      .values({
-        organizationId,
-        name: data.name,
-        tokenHash,
-        createdBy: userId,
-        updatedBy: userId,
-      })
-      .returning(),
-  )
-
-  return { connector, token }
+  try {
+    const [connector] = await withDb((db) =>
+      db
+        .insert(ConnectorTable)
+        .values({
+          organizationId,
+          name: data.name,
+          tokenHash,
+          createdBy: userId,
+          updatedBy: userId,
+        })
+        .returning(),
+    )
+    return { connector, token }
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("connector_org_name_idx")) {
+      throw createError("ConflictError", { message: `Connector with name "${data.name}" already exists` })
+    }
+    throw err
+  }
 }
 
 export async function regenerateConnectorToken(id: string) {

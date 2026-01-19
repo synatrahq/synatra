@@ -45,7 +45,6 @@ export default function PromptsPage() {
     queryKey: ["prompts-list", activeOrg()?.id],
     queryFn: async (): Promise<Prompts> => {
       const res = await api.api.prompts.$get()
-      if (!res.ok) throw new Error("Failed to fetch prompts")
       return res.json()
     },
     enabled: !!activeOrg()?.id,
@@ -55,7 +54,6 @@ export default function PromptsPage() {
     queryKey: ["agents", activeOrg()?.id],
     queryFn: async (): Promise<Agents> => {
       const res = await api.api.agents.$get()
-      if (!res.ok) throw new Error("Failed to fetch agents")
       return res.json()
     },
     enabled: !!activeOrg()?.id,
@@ -73,7 +71,6 @@ export default function PromptsPage() {
       queryFn: async (): Promise<Prompt | null> => {
         if (!prompt) return null
         const res = await api.api.prompts[":id"].$get({ param: { id: prompt.id } })
-        if (!res.ok) throw new Error("Failed to fetch prompt detail")
         return res.json()
       },
       enabled: !!prompt,
@@ -87,7 +84,6 @@ export default function PromptsPage() {
       queryFn: async (): Promise<PromptReleases> => {
         if (!prompt) return []
         const res = await api.api.prompts[":id"].releases.$get({ param: { id: prompt.id } })
-        if (!res.ok) throw new Error("Failed to fetch releases")
         return res.json()
       },
       enabled: !!prompt,
@@ -101,7 +97,6 @@ export default function PromptsPage() {
       queryFn: async (): Promise<PromptWorkingCopy | null> => {
         if (!prompt) return null
         const res = await api.api.prompts[":id"]["working-copy"].$get({ param: { id: prompt.id } })
-        if (!res.ok) throw new Error("Failed to fetch working copy")
         return res.json()
       },
       enabled: !!prompt,
@@ -111,7 +106,6 @@ export default function PromptsPage() {
   const createMutate = useMutation(() => ({
     mutationFn: async (data: PromptCreateInput) => {
       const res = await api.api.prompts.$post({ json: data })
-      if (!res.ok) throw new Error("Failed to create prompt")
       return res.json()
     },
     onSuccess: (created) => {
@@ -123,8 +117,7 @@ export default function PromptsPage() {
 
   const deleteMutate = useMutation(() => ({
     mutationFn: async (id: string) => {
-      const res = await api.api.prompts[":id"].$delete({ param: { id } })
-      if (!res.ok) throw new Error("Failed to delete prompt")
+      await api.api.prompts[":id"].$delete({ param: { id } })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["prompts-list"] })
@@ -138,7 +131,6 @@ export default function PromptsPage() {
     mutationFn: async (data: { id: string } & PromptWorkingCopySaveInput) => {
       const { id, ...json } = data
       const res = await api.api.prompts[":id"]["working-copy"].save.$post({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to save working copy")
       return res.json()
     },
     onSuccess: (result, variables) => {
@@ -158,7 +150,6 @@ export default function PromptsPage() {
     mutationFn: async (data: { id: string } & PromptDeployInput) => {
       const { id, ...json } = data
       const res = await api.api.prompts[":id"].deploy.$post({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to deploy")
       return res.json()
     },
     onSuccess: (_, variables) => {
@@ -169,11 +160,10 @@ export default function PromptsPage() {
 
   const adoptMutate = useMutation(() => ({
     mutationFn: async (data: { promptId: string; releaseId: string }) => {
-      const res = await api.api.prompts[":id"].releases[":releaseId"].adopt.$post({
+      await api.api.prompts[":id"].releases[":releaseId"].adopt.$post({
         param: { id: data.promptId, releaseId: data.releaseId },
         json: {},
       })
-      if (!res.ok) throw new Error("Failed to adopt")
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["prompts-list"] })
@@ -183,11 +173,10 @@ export default function PromptsPage() {
 
   const checkoutMutate = useMutation(() => ({
     mutationFn: async (data: { promptId: string; releaseId: string }) => {
-      const res = await api.api.prompts[":id"].releases[":releaseId"].checkout.$post({
+      await api.api.prompts[":id"].releases[":releaseId"].checkout.$post({
         param: { id: data.promptId, releaseId: data.releaseId },
         json: {},
       })
-      if (!res.ok) throw new Error("Failed to checkout")
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["prompt", variables.promptId, "workingCopy"] })
@@ -198,7 +187,6 @@ export default function PromptsPage() {
     mutationFn: async (data: { id: string } & PromptUpdateInput) => {
       const { id, ...json } = data
       const res = await api.api.prompts[":id"].$patch({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to update")
       return res.json()
     },
     onSuccess: (updated) => {

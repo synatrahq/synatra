@@ -692,7 +692,10 @@ export function AgentDetail(props: AgentDetailProps) {
           type: data.type,
         },
       })
-      if (!createRes.ok) throw new Error("Failed to create resource")
+      if (!createRes.ok) {
+        const err = (await createRes.json().catch(() => ({}))) as { data?: { message?: string } }
+        throw new Error(err.data?.message || "Failed to create resource")
+      }
       const resource = await createRes.json()
 
       navigate(`/resources/${resource.id}?returnTo=agent&agentId=${agent.id}&requestId=${request.id}`)

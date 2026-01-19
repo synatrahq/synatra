@@ -138,39 +138,46 @@ export async function createChannel(input: z.input<typeof CreateChannelSchema>) 
   const userId = principal.userId()
   const slug = data.slug?.trim() || generateSlug(data.name) || generateRandomId()
 
-  return withTx(async (tx) => {
-    const [channel] = await tx
-      .insert(ChannelTable)
-      .values({
-        organizationId,
-        name: data.name,
-        slug,
-        description: data.description ?? null,
-        icon: data.icon ?? "Hash",
-        iconColor: data.iconColor ?? "gray",
-        isDefault: false,
-        createdBy: userId,
-        updatedBy: userId,
-      })
-      .returning()
+  try {
+    return await withTx(async (tx) => {
+      const [channel] = await tx
+        .insert(ChannelTable)
+        .values({
+          organizationId,
+          name: data.name,
+          slug,
+          description: data.description ?? null,
+          icon: data.icon ?? "Hash",
+          iconColor: data.iconColor ?? "gray",
+          isDefault: false,
+          createdBy: userId,
+          updatedBy: userId,
+        })
+        .returning()
 
-    const member = await tx
-      .select()
-      .from(MemberTable)
-      .where(and(eq(MemberTable.userId, userId), eq(MemberTable.organizationId, organizationId)))
-      .then(first)
+      const member = await tx
+        .select()
+        .from(MemberTable)
+        .where(and(eq(MemberTable.userId, userId), eq(MemberTable.organizationId, organizationId)))
+        .then(first)
 
-    if (member) {
-      await tx.insert(ChannelMemberTable).values({
-        channelId: channel.id,
-        memberId: member.id,
-        role: "owner",
-        createdBy: userId,
-      })
+      if (member) {
+        await tx.insert(ChannelMemberTable).values({
+          channelId: channel.id,
+          memberId: member.id,
+          role: "owner",
+          createdBy: userId,
+        })
+      }
+
+      return channel
+    })
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("channel_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Channel with slug "${slug}" already exists` })
     }
-
-    return channel
-  })
+    throw err
+  }
 }
 
 export async function createManyChannels(input: z.input<typeof CreateManyChannelsSchema>) {
@@ -227,11 +234,17 @@ export async function updateChannel(input: z.input<typeof UpdateChannelSchema>) 
   if (data.icon !== undefined) updateData.icon = data.icon
   if (data.iconColor !== undefined) updateData.iconColor = data.iconColor
 
-  const [channel] = await withDb((db) =>
-    db.update(ChannelTable).set(updateData).where(eq(ChannelTable.id, data.id)).returning(),
-  )
-
-  return channel
+  try {
+    const [channel] = await withDb((db) =>
+      db.update(ChannelTable).set(updateData).where(eq(ChannelTable.id, data.id)).returning(),
+    )
+    return channel
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("channel_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Channel with slug "${data.slug}" already exists` })
+    }
+    throw err
+  }
 }
 
 export async function archiveChannel(id: string) {

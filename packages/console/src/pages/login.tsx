@@ -1,10 +1,9 @@
 import { createSignal, Show } from "solid-js"
 import { Title, Meta } from "@solidjs/meta"
 import { useSearchParams } from "@solidjs/router"
-import { EnvelopeSimple, WarningCircle, ArrowLeft } from "phosphor-solid-js"
+import { EnvelopeSimple, ArrowLeft } from "phosphor-solid-js"
 import { auth, GuestGuard } from "../app"
-import { Button } from "../ui/button"
-import { Input } from "../ui/input"
+import { Button, Input, FormError } from "../ui"
 
 type Status = "idle" | "pending" | "sent" | "error" | "google-pending"
 
@@ -192,11 +191,8 @@ export default function Login() {
               </Button>
             </div>
 
-            <Show when={status() === "error" && errorMessage()}>
-              <div class="mt-3 flex items-start gap-2 rounded-lg bg-danger-soft p-2">
-                <WarningCircle size={14} weight="fill" class="mt-0.5 shrink-0 text-danger" />
-                <p class="text-xs text-danger">{errorMessage()}</p>
-              </div>
+            <Show when={status() === "error"}>
+              <FormError message={errorMessage()} class="mt-3" />
             </Show>
           </Show>
         </GuestGuard>

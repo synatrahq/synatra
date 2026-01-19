@@ -146,22 +146,28 @@ export async function createAppAccount(input: z.input<typeof CreateAppAccountSch
   const organizationId = principal.orgId()
   const userId = principal.userId()
 
-  const [account] = await withDb((db) =>
-    db
-      .insert(AppAccountTable)
-      .values({
-        organizationId,
-        appId: data.appId,
-        name: data.name,
-        credentials: encryptCredentials(data.credentials),
-        metadata: data.metadata,
-        createdBy: userId,
-        updatedBy: userId,
-      })
-      .returning(),
-  )
-
-  return account
+  try {
+    const [account] = await withDb((db) =>
+      db
+        .insert(AppAccountTable)
+        .values({
+          organizationId,
+          appId: data.appId,
+          name: data.name,
+          credentials: encryptCredentials(data.credentials),
+          metadata: data.metadata,
+          createdBy: userId,
+          updatedBy: userId,
+        })
+        .returning(),
+    )
+    return account
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("app_account_org_name_idx")) {
+      throw createError("ConflictError", { message: `App account with name "${data.name}" already exists` })
+    }
+    throw err
+  }
 }
 
 export async function updateAppAccount(input: z.input<typeof UpdateAppAccountSchema>) {
@@ -177,15 +183,21 @@ export async function updateAppAccount(input: z.input<typeof UpdateAppAccountSch
   if (data.credentials !== undefined) updateData.credentials = encryptCredentials(data.credentials)
   if (data.metadata !== undefined) updateData.metadata = data.metadata
 
-  const [account] = await withDb((db) =>
-    db
-      .update(AppAccountTable)
-      .set(updateData)
-      .where(and(eq(AppAccountTable.id, data.id), eq(AppAccountTable.organizationId, organizationId)))
-      .returning(),
-  )
-
-  return account
+  try {
+    const [account] = await withDb((db) =>
+      db
+        .update(AppAccountTable)
+        .set(updateData)
+        .where(and(eq(AppAccountTable.id, data.id), eq(AppAccountTable.organizationId, organizationId)))
+        .returning(),
+    )
+    return account
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("app_account_org_name_idx")) {
+      throw createError("ConflictError", { message: `App account with name "${data.name}" already exists` })
+    }
+    throw err
+  }
 }
 
 export async function removeAppAccount(id: string) {

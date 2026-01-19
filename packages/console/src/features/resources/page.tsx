@@ -85,7 +85,6 @@ export default function ResourcesPage() {
     queryKey: ["resources", activeOrg()?.id],
     queryFn: async (): Promise<Resources> => {
       const res = await api.api.resources.$get()
-      if (!res.ok) throw new Error("Failed to fetch resources")
       return res.json()
     },
     enabled: !!activeOrg()?.id,
@@ -95,7 +94,6 @@ export default function ResourcesPage() {
     queryKey: ["environments", activeOrg()?.id],
     queryFn: async (): Promise<Environments> => {
       const res = await api.api.environments.$get()
-      if (!res.ok) throw new Error("Failed to fetch environments")
       return res.json()
     },
     enabled: !!activeOrg()?.id,
@@ -105,7 +103,6 @@ export default function ResourcesPage() {
     queryKey: ["connectors", activeOrg()?.id],
     queryFn: async (): Promise<Connectors> => {
       const res = await api.api.connectors.$get()
-      if (!res.ok) throw new Error("Failed to fetch connectors")
       return res.json()
     },
     refetchInterval: 5000,
@@ -116,7 +113,6 @@ export default function ResourcesPage() {
     queryKey: ["app-accounts", activeOrg()?.id],
     queryFn: async (): Promise<AppAccounts> => {
       const res = await api.api["app-accounts"].$get()
-      if (!res.ok) throw new Error("Failed to fetch app accounts")
       return res.json()
     },
     enabled: !!activeOrg()?.id,
@@ -134,7 +130,6 @@ export default function ResourcesPage() {
       queryFn: async (): Promise<Resource | null> => {
         if (!resource) return null
         const res = await api.api.resources[":id"].$get({ param: { id: resource.id } })
-        if (!res.ok) throw new Error("Failed to fetch resource detail")
         return res.json()
       },
       enabled: !!resource,
@@ -161,7 +156,6 @@ export default function ResourcesPage() {
   const createMutate = useMutation(() => ({
     mutationFn: async (data: ResourceCreateInput) => {
       const res = await api.api.resources.$post({ json: { ...data, configs: [] } })
-      if (!res.ok) throw new Error("Failed to create resource")
       return res.json()
     },
     onSuccess: () => {
@@ -171,8 +165,7 @@ export default function ResourcesPage() {
 
   const deleteMutate = useMutation(() => ({
     mutationFn: async (id: string) => {
-      const res = await api.api.resources[":id"].$delete({ param: { id } })
-      if (!res.ok) throw new Error("Failed to delete resource")
+      await api.api.resources[":id"].$delete({ param: { id } })
     },
     onSuccess: (_, id) => {
       const wasSelected = selectedResourceFromList()?.id === id
@@ -189,7 +182,6 @@ export default function ResourcesPage() {
     mutationFn: async (data: { id: string } & ResourceUpdateInput) => {
       const { id, ...json } = data
       const res = await api.api.resources[":id"].$patch({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to update resource")
       return res.json()
     },
     onSuccess: (updated) => {
@@ -222,7 +214,6 @@ export default function ResourcesPage() {
   const connectorCreateMutate = useMutation(() => ({
     mutationFn: async (data: ConnectorCreateInput) => {
       const res = await api.api.connectors.$post({ json: data })
-      if (!res.ok) throw new Error("Failed to create connector")
       return res.json()
     },
     onSuccess: (result) => {

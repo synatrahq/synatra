@@ -77,24 +77,20 @@ export function ComposeModal(props: ComposeModalProps) {
         api.api.channels.$get({ query: {} }),
       ])
 
-      if (envsRes.ok) {
-        const data = await envsRes.json()
-        setEnvironments(data)
-        if (data.length > 0 && !selectedEnvironment()) {
-          setSelectedEnvironment(data[0].id)
-        }
+      const envsData = await envsRes.json()
+      setEnvironments(envsData)
+      if (envsData.length > 0 && !selectedEnvironment()) {
+        setSelectedEnvironment(envsData[0].id)
       }
 
-      if (channelsRes.ok) {
-        const data = await channelsRes.json()
-        setChannels(data)
+      const channelsData = await channelsRes.json()
+      setChannels(channelsData)
 
-        if (props.defaultChannelId) {
-          const defaultChannel = data.find((c) => c.id === props.defaultChannelId)
-          if (defaultChannel) {
-            setSelectedChannel(defaultChannel)
-            await fetchChannelAgents(defaultChannel.id)
-          }
+      if (props.defaultChannelId) {
+        const defaultChannel = channelsData.find((c) => c.id === props.defaultChannelId)
+        if (defaultChannel) {
+          setSelectedChannel(defaultChannel)
+          await fetchChannelAgents(defaultChannel.id)
         }
       }
     } catch (e) {
@@ -105,10 +101,8 @@ export function ComposeModal(props: ComposeModalProps) {
   const fetchChannelAgents = async (channelId: string) => {
     try {
       const res = await api.api.channels[":channelId"].agents.$get({ param: { channelId } })
-      if (res.ok) {
-        const data = await res.json()
-        setAgents(data.map((d) => d.agent))
-      }
+      const data = await res.json()
+      setAgents(data.map((d) => d.agent))
     } catch (e) {
       console.error("Failed to fetch channel agents", e)
     }

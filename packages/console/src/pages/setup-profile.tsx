@@ -1,11 +1,9 @@
 import { createSignal, Show, createEffect } from "solid-js"
 import { useNavigate, useSearchParams } from "@solidjs/router"
-import { Sparkle, WarningCircle } from "phosphor-solid-js"
+import { Sparkle } from "phosphor-solid-js"
 import { generateSlug } from "@synatra/util/identifier"
 import { api, auth, AuthGuard, setUser, setNeedsProfile, user, orgStatus, needsProfile, activateOrg } from "../app"
-import { Button } from "../ui/button"
-import { Input } from "../ui/input"
-import { FormField } from "../ui/form-field"
+import { Button, Input, FormField, FormError } from "../ui"
 
 type Status = "idle" | "pending" | "error"
 
@@ -156,12 +154,7 @@ export default function SetupProfile() {
             </Button>
           </div>
 
-          <Show when={error()}>
-            <div class="mt-3 flex items-start gap-2 rounded-lg bg-danger-soft p-2">
-              <WarningCircle size={14} weight="fill" class="mt-0.5 shrink-0 text-danger" />
-              <p class="text-xs text-danger">{error()}</p>
-            </div>
-          </Show>
+          <FormError message={error()} class="mt-3" />
         </div>
       </AuthGuard>
     </main>

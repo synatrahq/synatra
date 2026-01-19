@@ -218,56 +218,64 @@ export async function createPrompt(input: z.input<typeof CreatePromptSchema>) {
   const versionText = stringifyVersion(versionParsed)
   const contentHashValue = hashContent(mode, content, script, data.inputSchema)
 
-  const promptId = await withTx(async (db) => {
-    const [prompt] = await db
-      .insert(PromptTable)
-      .values({
-        organizationId,
-        agentId: data.agentId,
-        name: data.name,
-        slug,
-        description: data.description ?? null,
-        createdBy: userId,
-        updatedBy: userId,
-      })
-      .returning()
+  let promptId: string
+  try {
+    promptId = await withTx(async (db) => {
+      const [prompt] = await db
+        .insert(PromptTable)
+        .values({
+          organizationId,
+          agentId: data.agentId,
+          name: data.name,
+          slug,
+          description: data.description ?? null,
+          createdBy: userId,
+          updatedBy: userId,
+        })
+        .returning()
 
-    const [release] = await db
-      .insert(PromptReleaseTable)
-      .values({
+      const [release] = await db
+        .insert(PromptReleaseTable)
+        .values({
+          promptId: prompt.id,
+          version: versionText,
+          versionMajor: versionParsed.major,
+          versionMinor: versionParsed.minor,
+          versionPatch: versionParsed.patch,
+          description: data.descriptionText ?? "Initial release",
+          mode,
+          content,
+          script,
+          inputSchema: data.inputSchema ?? null,
+          contentHash: contentHashValue,
+          publishedAt: new Date(),
+          createdBy: userId,
+        })
+        .returning()
+
+      await db.insert(PromptWorkingCopyTable).values({
         promptId: prompt.id,
-        version: versionText,
-        versionMajor: versionParsed.major,
-        versionMinor: versionParsed.minor,
-        versionPatch: versionParsed.patch,
-        description: data.descriptionText ?? "Initial release",
         mode,
         content,
         script,
         inputSchema: data.inputSchema ?? null,
         contentHash: contentHashValue,
-        publishedAt: new Date(),
-        createdBy: userId,
+        updatedBy: userId,
       })
-      .returning()
 
-    await db.insert(PromptWorkingCopyTable).values({
-      promptId: prompt.id,
-      mode,
-      content,
-      script,
-      inputSchema: data.inputSchema ?? null,
-      contentHash: contentHashValue,
-      updatedBy: userId,
+      await db
+        .update(PromptTable)
+        .set({ currentReleaseId: release.id, updatedBy: userId, updatedAt: new Date() })
+        .where(eq(PromptTable.id, prompt.id))
+
+      return prompt.id
     })
-
-    await db
-      .update(PromptTable)
-      .set({ currentReleaseId: release.id, updatedBy: userId, updatedAt: new Date() })
-      .where(eq(PromptTable.id, prompt.id))
-
-    return prompt.id
-  })
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("prompt_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Prompt with slug "${slug}" already exists` })
+    }
+    throw err
+  }
 
   return findPromptById(promptId)
 }
@@ -281,18 +289,25 @@ export async function updatePrompt(input: z.input<typeof UpdatePromptSchema>) {
   if (data.name === undefined && data.slug === undefined && data.description === undefined)
     return findPromptById(data.id)
 
-  await withDb((db) =>
-    db
-      .update(PromptTable)
-      .set({
-        updatedAt: new Date(),
-        updatedBy: principal.userId(),
-        ...(data.name !== undefined && { name: data.name }),
-        ...(data.slug !== undefined && { slug: data.slug }),
-        ...(data.description !== undefined && { description: data.description }),
-      })
-      .where(eq(PromptTable.id, data.id)),
-  )
+  try {
+    await withDb((db) =>
+      db
+        .update(PromptTable)
+        .set({
+          updatedAt: new Date(),
+          updatedBy: principal.userId(),
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.slug !== undefined && { slug: data.slug }),
+          ...(data.description !== undefined && { description: data.description }),
+        })
+        .where(eq(PromptTable.id, data.id)),
+    )
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("prompt_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Prompt with slug "${data.slug}" already exists` })
+    }
+    throw err
+  }
   return findPromptById(data.id)
 }
 
