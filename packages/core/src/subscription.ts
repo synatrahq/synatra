@@ -267,6 +267,9 @@ export async function cancelSubscription(raw?: z.input<typeof CancelSubscription
   if (!sub.stripeSubscriptionId) {
     throw createError("BadRequestError", { message: "No active subscription found" })
   }
+  if (sub.status === "cancelled") {
+    throw createError("BadRequestError", { message: "Subscription is already cancelled" })
+  }
   if (sub.cancelAt) {
     throw createError("BadRequestError", { message: "Subscription is already scheduled to cancel" })
   }
