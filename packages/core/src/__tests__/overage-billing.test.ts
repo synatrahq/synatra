@@ -49,7 +49,7 @@ describe("Overage Billing", () => {
 
   describe("run limit thresholds", () => {
     test("80% threshold warning for free plan", () => {
-      const threshold = Math.floor(PLAN_LIMITS.free.runLimit * 0.8)
+      const threshold = Math.floor(PLAN_LIMITS.free.runLimit! * 0.8)
       expect(threshold).toBe(120)
     })
 

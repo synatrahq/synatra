@@ -35,6 +35,8 @@ import { UsageList } from "./usage-list"
 import { BillingList } from "./billing-list"
 import { PlanChangeModal } from "./plan-change-modal"
 import { CancelScheduleModal } from "./cancel-schedule-modal"
+import { CancelSubscriptionModal } from "./cancel-subscription-modal"
+import { ResumeSubscriptionModal } from "./resume-subscription-modal"
 import { PLAN_HIERARCHY, type SubscriptionPlan } from "@synatra/core/types"
 
 const noop = () => {}
@@ -95,6 +97,8 @@ export default function SettingsPage() {
   const [planChangeModalOpen, setPlanChangeModalOpen] = createSignal(false)
   const [targetPlan, setTargetPlan] = createSignal<string | null>(null)
   const [cancelScheduleModalOpen, setCancelScheduleModalOpen] = createSignal(false)
+  const [cancelSubscriptionModalOpen, setCancelSubscriptionModalOpen] = createSignal(false)
+  const [resumeSubscriptionModalOpen, setResumeSubscriptionModalOpen] = createSignal(false)
 
   const currentTab = createMemo(() => params.tab ?? "users")
 
@@ -368,6 +372,28 @@ export default function SettingsPage() {
     },
   }))
 
+  const cancelSubscriptionMutate = useMutation(() => ({
+    mutationFn: async () => {
+      const res = await api.api.subscriptions.cancel.$post()
+      if (!res.ok) throw new Error("Failed to cancel subscription")
+      return res.json()
+    },
+    onSuccess: () => {
+      void subscriptionQuery.refetch()
+    },
+  }))
+
+  const resumeSubscriptionMutate = useMutation(() => ({
+    mutationFn: async () => {
+      const res = await api.api.subscriptions.resume.$post()
+      if (!res.ok) throw new Error("Failed to resume subscription")
+      return res.json()
+    },
+    onSuccess: () => {
+      void subscriptionQuery.refetch()
+    },
+  }))
+
   const handlePlanChangeRequest = (plan: string) => {
     setTargetPlan(plan)
     setPlanChangeModalOpen(true)
@@ -530,6 +556,10 @@ export default function SettingsPage() {
               cancellingSchedule={cancelScheduleMutate.isPending}
               onManageBilling={() => billingPortalMutate.mutate()}
               managingBilling={billingPortalMutate.isPending}
+              onCancelSubscription={() => setCancelSubscriptionModalOpen(true)}
+              cancellingSubscription={cancelSubscriptionMutate.isPending}
+              onResumeSubscription={() => setResumeSubscriptionModalOpen(true)}
+              resumingSubscription={resumeSubscriptionMutate.isPending}
             />
           </Show>
         </Shell>
@@ -679,6 +709,35 @@ export default function SettingsPage() {
             onClose={() => setCancelScheduleModalOpen(false)}
             onConfirm={handleCancelScheduleConfirm}
             cancelling={cancelScheduleMutate.isPending}
+          />
+        </Show>
+
+        <Show when={cancelSubscriptionModalOpen() && subscription()?.currentPeriodEnd}>
+          <CancelSubscriptionModal
+            open={cancelSubscriptionModalOpen()}
+            cancelDate={new Date(subscription()!.currentPeriodEnd!).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
+            onClose={() => setCancelSubscriptionModalOpen(false)}
+            onConfirm={async () => {
+              await cancelSubscriptionMutate.mutateAsync()
+              setCancelSubscriptionModalOpen(false)
+            }}
+            cancelling={cancelSubscriptionMutate.isPending}
+          />
+        </Show>
+
+        <Show when={resumeSubscriptionModalOpen()}>
+          <ResumeSubscriptionModal
+            open={resumeSubscriptionModalOpen()}
+            onClose={() => setResumeSubscriptionModalOpen(false)}
+            onConfirm={async () => {
+              await resumeSubscriptionMutate.mutateAsync()
+              setResumeSubscriptionModalOpen(false)
+            }}
+            resuming={resumeSubscriptionMutate.isPending}
           />
         </Show>
       </AdminGuard>

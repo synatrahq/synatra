@@ -27,7 +27,7 @@ import { AgentTemplateTable } from "./agent-template.sql"
 import { RunTable } from "./run.sql"
 import { OutputItemTable } from "./output-item.sql"
 import { HumanRequestTable, HumanResponseTable } from "./human-request.sql"
-import { UsagePeriodTable } from "./usage.sql"
+import { UsageMonthTable } from "./usage.sql"
 import { SubscriptionTable } from "./subscription.sql"
 import { StripeEventTable } from "./stripe-event.sql"
 
@@ -123,7 +123,7 @@ export const schema = {
   HumanRequestStatus,
   HumanResponseStatus,
   LlmProvider,
-  usagePeriod: UsagePeriodTable,
+  usageMonth: UsageMonthTable,
   subscription: SubscriptionTable,
   stripeEvent: StripeEventTable,
 }

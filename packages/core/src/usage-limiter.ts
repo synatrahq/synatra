@@ -2,15 +2,16 @@ import { eq, and, sql } from "drizzle-orm"
 import { z } from "zod"
 import { principal } from "./principal"
 import { withDb, withTx } from "./database"
-import { UsagePeriodTable } from "./schema"
-import { UsageRunType } from "./types"
+import { UsageMonthTable } from "./schema"
+import { UsageRunType, PLAN_LIMITS, SubscriptionPlan } from "./types"
 import { currentSubscription } from "./subscription"
-import { currentUsage, getUsageCurrentPeriod } from "./usage"
+import { currentUsage } from "./usage"
 
 export interface CheckAndIncrementResult {
   allowed: boolean
   current: number
   limit: number | null
+  yearMonth: number
   error?: string
   overage?: boolean
   overageRate?: string | null
@@ -21,97 +22,100 @@ export const CheckAndIncrementRunUsageLimiterSchema = z.object({
   mode: z.enum(["soft", "hard"]).default("soft"),
 })
 
-export const DecrementRunUsageLimiterSchema = z.object({ runType: z.enum(UsageRunType) })
+export const DecrementRunUsageLimiterSchema = z.object({
+  runType: z.enum(UsageRunType),
+  yearMonth: z.number(),
+})
 
 export async function checkAndIncrementRunUsageLimiter(
   input: z.input<typeof CheckAndIncrementRunUsageLimiterSchema>,
 ): Promise<CheckAndIncrementResult> {
   const data = CheckAndIncrementRunUsageLimiterSchema.parse(input)
   const organizationId = principal.orgId()
-  const { start } = await getUsageCurrentPeriod()
+  const usage = await currentUsage({})
+  const ym = usage.yearMonth
 
   return withTx(async (db) => {
-    await currentUsage({})
-
     const [locked] = await db
       .select()
-      .from(UsagePeriodTable)
-      .where(and(eq(UsagePeriodTable.organizationId, organizationId), eq(UsagePeriodTable.periodStart, start)))
+      .from(UsageMonthTable)
+      .where(and(eq(UsageMonthTable.organizationId, organizationId), eq(UsageMonthTable.yearMonth, ym)))
       .for("update")
       .limit(1)
 
-    if (!locked) throw new Error("Usage period not found")
+    if (!locked) throw new Error("Usage month not found")
 
-    const withinLimit = locked.runLimit === null || locked.runCount < locked.runLimit
+    const sub = await currentSubscription({})
+    const plan = sub.plan as SubscriptionPlan
+    const { runLimit, overageRate } = PLAN_LIMITS[plan]
 
-    let sub: Awaited<ReturnType<typeof currentSubscription>> | null = null
+    const withinLimit = runLimit === null || locked.runCount < runLimit
 
     if (!withinLimit) {
       if (data.mode === "hard") {
         return {
           allowed: false,
           current: locked.runCount,
-          limit: locked.runLimit,
+          limit: runLimit,
+          yearMonth: ym,
           error: "Run limit exceeded. Upgrade your plan to continue.",
         }
       }
 
-      sub = await currentSubscription({})
-      if (sub.plan === "free") {
+      if (plan === "free") {
         return {
           allowed: false,
           current: locked.runCount,
-          limit: locked.runLimit,
+          limit: runLimit,
+          yearMonth: ym,
           error: "Run limit exceeded. Upgrade to a paid plan to continue.",
         }
       }
     }
 
     const [result] = await db
-      .update(UsagePeriodTable)
+      .update(UsageMonthTable)
       .set({
-        runCount: sql`${UsagePeriodTable.runCount} + 1`,
-        ...(data.runType === "user" ? { runsUser: sql`${UsagePeriodTable.runsUser} + 1` } : {}),
-        ...(data.runType === "trigger" ? { runsTrigger: sql`${UsagePeriodTable.runsTrigger} + 1` } : {}),
-        ...(data.runType === "subagent" ? { runsSubagent: sql`${UsagePeriodTable.runsSubagent} + 1` } : {}),
+        runCount: sql`${UsageMonthTable.runCount} + 1`,
+        ...(data.runType === "user" ? { runsUser: sql`${UsageMonthTable.runsUser} + 1` } : {}),
+        ...(data.runType === "trigger" ? { runsTrigger: sql`${UsageMonthTable.runsTrigger} + 1` } : {}),
+        ...(data.runType === "subagent" ? { runsSubagent: sql`${UsageMonthTable.runsSubagent} + 1` } : {}),
         updatedAt: new Date(),
       })
-      .where(and(eq(UsagePeriodTable.organizationId, organizationId), eq(UsagePeriodTable.periodStart, start)))
+      .where(and(eq(UsageMonthTable.organizationId, organizationId), eq(UsageMonthTable.yearMonth, ym)))
       .returning()
 
     if (!result) throw new Error("Failed to increment run count")
 
-    if (sub) {
+    if (!withinLimit) {
       return {
         allowed: true,
         current: result.runCount,
-        limit: result.runLimit,
+        limit: runLimit,
+        yearMonth: ym,
         overage: true,
-        overageRate: sub.overageRate,
+        overageRate,
       }
     }
 
-    return { allowed: true, current: result.runCount, limit: result.runLimit }
+    return { allowed: true, current: result.runCount, limit: runLimit, yearMonth: ym }
   })
 }
 
 export async function decrementRunUsageLimiter(input: z.input<typeof DecrementRunUsageLimiterSchema>) {
   const data = DecrementRunUsageLimiterSchema.parse(input)
   const organizationId = principal.orgId()
-  const { start } = await getUsageCurrentPeriod()
 
   await withDb((db) =>
     db
-      .update(UsagePeriodTable)
+      .update(UsageMonthTable)
       .set({
-        runCount: sql`GREATEST(0, ${UsagePeriodTable.runCount} - 1)`,
-        ...(data.runType === "user" ? { runsUser: sql`GREATEST(0, ${UsagePeriodTable.runsUser} - 1)` } : {}),
-        ...(data.runType === "trigger" ? { runsTrigger: sql`GREATEST(0, ${UsagePeriodTable.runsTrigger} - 1)` } : {}),
-        ...(data.runType === "subagent"
-          ? { runsSubagent: sql`GREATEST(0, ${UsagePeriodTable.runsSubagent} - 1)` }
-          : {}),
+        runCount: sql`GREATEST(0, ${UsageMonthTable.runCount} - 1)`,
+        ...(data.runType === "user" ? { runsUser: sql`GREATEST(0, ${UsageMonthTable.runsUser} - 1)` } : {}),
+        ...(data.runType === "trigger" ? { runsTrigger: sql`GREATEST(0, ${UsageMonthTable.runsTrigger} - 1)` } : {}),
+        ...(data.runType === "subagent" ? { runsSubagent: sql`GREATEST(0, ${UsageMonthTable.runsSubagent} - 1)` } : {}),
         updatedAt: new Date(),
       })
-      .where(and(eq(UsagePeriodTable.organizationId, organizationId), eq(UsagePeriodTable.periodStart, start))),
+      .where(and(eq(UsageMonthTable.organizationId, organizationId), eq(UsageMonthTable.yearMonth, data.yearMonth))),
   )
 }

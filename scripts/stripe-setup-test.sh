@@ -206,8 +206,26 @@ METER_LLM_ID=$(echo "$METER_LLM_RESPONSE" | jq -r '.id')
 echo "✓ Created Meter (LLM): $METER_LLM_ID"
 echo ""
 
-echo "Creating Price: Starter (\$49/month, 1,000 runs included)..."
-PRICE_STARTER_RESPONSE=$($STRIPE_CMD prices create \
+echo "Creating Starter Plan Prices..."
+echo "  Creating Starter License Fee (\$49/month)..."
+PRICE_STARTER_LICENSE_RESPONSE=$($STRIPE_CMD prices create \
+  --product "$PRODUCT_ID" \
+  --currency usd \
+  --unit-amount 4900 \
+  --recurring.interval month \
+  --recurring.usage-type licensed 2>&1)
+
+if ! echo "$PRICE_STARTER_LICENSE_RESPONSE" | jq -e . >/dev/null 2>&1; then
+    echo "Error creating Starter license price:"
+    echo "$PRICE_STARTER_LICENSE_RESPONSE"
+    exit 1
+fi
+
+PRICE_STARTER_LICENSE=$(echo "$PRICE_STARTER_LICENSE_RESPONSE" | jq -r '.id')
+echo "  ✓ Created Starter License: $PRICE_STARTER_LICENSE"
+
+echo "  Creating Starter Overage (1,000 included, \$0.08/run after)..."
+PRICE_STARTER_OVERAGE_RESPONSE=$($STRIPE_CMD prices create \
   --product "$PRODUCT_ID" \
   --currency usd \
   --recurring.interval month \
@@ -216,22 +234,40 @@ PRICE_STARTER_RESPONSE=$($STRIPE_CMD prices create \
   --tiers-mode graduated \
   --recurring.meter "$METER_RUN_ID" \
   -d 'tiers[0][up_to]=1000' \
-  -d 'tiers[0][flat_amount]=4900' \
+  -d 'tiers[0][unit_amount]=0' \
   -d 'tiers[1][up_to]=inf' \
   -d 'tiers[1][unit_amount]=8' 2>&1)
 
-if ! echo "$PRICE_STARTER_RESPONSE" | jq -e . >/dev/null 2>&1; then
-    echo "Error creating Starter price:"
-    echo "$PRICE_STARTER_RESPONSE"
+if ! echo "$PRICE_STARTER_OVERAGE_RESPONSE" | jq -e . >/dev/null 2>&1; then
+    echo "Error creating Starter overage price:"
+    echo "$PRICE_STARTER_OVERAGE_RESPONSE"
     exit 1
 fi
 
-PRICE_STARTER=$(echo "$PRICE_STARTER_RESPONSE" | jq -r '.id')
-echo "✓ Created Price (Starter): $PRICE_STARTER"
+PRICE_STARTER_OVERAGE=$(echo "$PRICE_STARTER_OVERAGE_RESPONSE" | jq -r '.id')
+echo "  ✓ Created Starter Overage: $PRICE_STARTER_OVERAGE"
 echo ""
 
-echo "Creating Price: Pro (\$149/month, 2,500 runs included)..."
-PRICE_PRO_RESPONSE=$($STRIPE_CMD prices create \
+echo "Creating Pro Plan Prices..."
+echo "  Creating Pro License Fee (\$149/month)..."
+PRICE_PRO_LICENSE_RESPONSE=$($STRIPE_CMD prices create \
+  --product "$PRODUCT_ID" \
+  --currency usd \
+  --unit-amount 14900 \
+  --recurring.interval month \
+  --recurring.usage-type licensed 2>&1)
+
+if ! echo "$PRICE_PRO_LICENSE_RESPONSE" | jq -e . >/dev/null 2>&1; then
+    echo "Error creating Pro license price:"
+    echo "$PRICE_PRO_LICENSE_RESPONSE"
+    exit 1
+fi
+
+PRICE_PRO_LICENSE=$(echo "$PRICE_PRO_LICENSE_RESPONSE" | jq -r '.id')
+echo "  ✓ Created Pro License: $PRICE_PRO_LICENSE"
+
+echo "  Creating Pro Overage (2,500 included, \$0.06/run after)..."
+PRICE_PRO_OVERAGE_RESPONSE=$($STRIPE_CMD prices create \
   --product "$PRODUCT_ID" \
   --currency usd \
   --recurring.interval month \
@@ -240,22 +276,40 @@ PRICE_PRO_RESPONSE=$($STRIPE_CMD prices create \
   --tiers-mode graduated \
   --recurring.meter "$METER_RUN_ID" \
   -d 'tiers[0][up_to]=2500' \
-  -d 'tiers[0][flat_amount]=14900' \
+  -d 'tiers[0][unit_amount]=0' \
   -d 'tiers[1][up_to]=inf' \
   -d 'tiers[1][unit_amount]=6' 2>&1)
 
-if ! echo "$PRICE_PRO_RESPONSE" | jq -e . >/dev/null 2>&1; then
-    echo "Error creating Pro price:"
-    echo "$PRICE_PRO_RESPONSE"
+if ! echo "$PRICE_PRO_OVERAGE_RESPONSE" | jq -e . >/dev/null 2>&1; then
+    echo "Error creating Pro overage price:"
+    echo "$PRICE_PRO_OVERAGE_RESPONSE"
     exit 1
 fi
 
-PRICE_PRO=$(echo "$PRICE_PRO_RESPONSE" | jq -r '.id')
-echo "✓ Created Price (Pro): $PRICE_PRO"
+PRICE_PRO_OVERAGE=$(echo "$PRICE_PRO_OVERAGE_RESPONSE" | jq -r '.id')
+echo "  ✓ Created Pro Overage: $PRICE_PRO_OVERAGE"
 echo ""
 
-echo "Creating Price: Business (\$299/month, 6,000 runs included)..."
-PRICE_BUSINESS_RESPONSE=$($STRIPE_CMD prices create \
+echo "Creating Business Plan Prices..."
+echo "  Creating Business License Fee (\$299/month)..."
+PRICE_BUSINESS_LICENSE_RESPONSE=$($STRIPE_CMD prices create \
+  --product "$PRODUCT_ID" \
+  --currency usd \
+  --unit-amount 29900 \
+  --recurring.interval month \
+  --recurring.usage-type licensed 2>&1)
+
+if ! echo "$PRICE_BUSINESS_LICENSE_RESPONSE" | jq -e . >/dev/null 2>&1; then
+    echo "Error creating Business license price:"
+    echo "$PRICE_BUSINESS_LICENSE_RESPONSE"
+    exit 1
+fi
+
+PRICE_BUSINESS_LICENSE=$(echo "$PRICE_BUSINESS_LICENSE_RESPONSE" | jq -r '.id')
+echo "  ✓ Created Business License: $PRICE_BUSINESS_LICENSE"
+
+echo "  Creating Business Overage (6,000 included, \$0.05/run after)..."
+PRICE_BUSINESS_OVERAGE_RESPONSE=$($STRIPE_CMD prices create \
   --product "$PRODUCT_ID" \
   --currency usd \
   --recurring.interval month \
@@ -264,18 +318,18 @@ PRICE_BUSINESS_RESPONSE=$($STRIPE_CMD prices create \
   --tiers-mode graduated \
   --recurring.meter "$METER_RUN_ID" \
   -d 'tiers[0][up_to]=6000' \
-  -d 'tiers[0][flat_amount]=29900' \
+  -d 'tiers[0][unit_amount]=0' \
   -d 'tiers[1][up_to]=inf' \
   -d 'tiers[1][unit_amount]=5' 2>&1)
 
-if ! echo "$PRICE_BUSINESS_RESPONSE" | jq -e . >/dev/null 2>&1; then
-    echo "Error creating Business price:"
-    echo "$PRICE_BUSINESS_RESPONSE"
+if ! echo "$PRICE_BUSINESS_OVERAGE_RESPONSE" | jq -e . >/dev/null 2>&1; then
+    echo "Error creating Business overage price:"
+    echo "$PRICE_BUSINESS_OVERAGE_RESPONSE"
     exit 1
 fi
 
-PRICE_BUSINESS=$(echo "$PRICE_BUSINESS_RESPONSE" | jq -r '.id')
-echo "✓ Created Price (Business): $PRICE_BUSINESS"
+PRICE_BUSINESS_OVERAGE=$(echo "$PRICE_BUSINESS_OVERAGE_RESPONSE" | jq -r '.id')
+echo "  ✓ Created Business Overage: $PRICE_BUSINESS_OVERAGE"
 echo ""
 
 # Output summary
@@ -285,20 +339,32 @@ echo "   Stripe Sandbox Setup Complete"
 echo "   Environment: $ENV_NAME"
 echo "==================================="
 echo ""
-echo "Product ID:          $PRODUCT_ID"
-echo "Run Meter ID:        $METER_RUN_ID"
-echo "LLM Meter ID:        $METER_LLM_ID"
-echo "Starter Price ID:    $PRICE_STARTER"
-echo "Pro Price ID:        $PRICE_PRO"
-echo "Business Price ID:   $PRICE_BUSINESS"
+echo "Product ID:                  $PRODUCT_ID"
+echo "Run Meter ID:                $METER_RUN_ID"
+echo "LLM Meter ID:                $METER_LLM_ID"
+echo ""
+echo "Starter Plan:"
+echo "  License Price ID:          $PRICE_STARTER_LICENSE"
+echo "  Overage Price ID:          $PRICE_STARTER_OVERAGE"
+echo ""
+echo "Pro Plan:"
+echo "  License Price ID:          $PRICE_PRO_LICENSE"
+echo "  Overage Price ID:          $PRICE_PRO_OVERAGE"
+echo ""
+echo "Business Plan:"
+echo "  License Price ID:          $PRICE_BUSINESS_LICENSE"
+echo "  Overage Price ID:          $PRICE_BUSINESS_OVERAGE"
 echo ""
 echo "Add these to your .env (or .env.$ENV_NAME) file:"
 echo ""
 echo "STRIPE_RUN_METER_ID=$METER_RUN_ID"
 echo "STRIPE_LLM_METER_ID=$METER_LLM_ID"
-echo "STRIPE_PRICE_STARTER=$PRICE_STARTER"
-echo "STRIPE_PRICE_PRO=$PRICE_PRO"
-echo "STRIPE_PRICE_BUSINESS=$PRICE_BUSINESS"
+echo "STRIPE_PRICE_STARTER_LICENSE=$PRICE_STARTER_LICENSE"
+echo "STRIPE_PRICE_STARTER_OVERAGE=$PRICE_STARTER_OVERAGE"
+echo "STRIPE_PRICE_PRO_LICENSE=$PRICE_PRO_LICENSE"
+echo "STRIPE_PRICE_PRO_OVERAGE=$PRICE_PRO_OVERAGE"
+echo "STRIPE_PRICE_BUSINESS_LICENSE=$PRICE_BUSINESS_LICENSE"
+echo "STRIPE_PRICE_BUSINESS_OVERAGE=$PRICE_BUSINESS_OVERAGE"
 echo ""
 echo "To listen for webhooks locally:"
 echo "  stripe listen --project-name $PROJECT_NAME --forward-to localhost:8787/stripe/webhook"

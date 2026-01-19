@@ -1,5 +1,10 @@
 import { z } from "zod"
 
+const PlanPricesSchema = z.object({
+  license: z.string(),
+  overage: z.string(),
+})
+
 const ConfigSchema = z.object({
   database: z.object({
     url: z.url(),
@@ -7,9 +12,9 @@ const ConfigSchema = z.object({
   stripe: z
     .object({
       secretKey: z.string(),
-      priceStarter: z.string().optional(),
-      pricePro: z.string().optional(),
-      priceBusiness: z.string().optional(),
+      priceStarter: PlanPricesSchema.optional(),
+      pricePro: PlanPricesSchema.optional(),
+      priceBusiness: PlanPricesSchema.optional(),
     })
     .optional(),
 })
@@ -28,9 +33,21 @@ export function config(): ConfigType {
     stripe: process.env.STRIPE_SECRET_KEY
       ? {
           secretKey: process.env.STRIPE_SECRET_KEY,
-          priceStarter: process.env.STRIPE_PRICE_STARTER,
-          pricePro: process.env.STRIPE_PRICE_PRO,
-          priceBusiness: process.env.STRIPE_PRICE_BUSINESS,
+          priceStarter:
+            process.env.STRIPE_PRICE_STARTER_LICENSE && process.env.STRIPE_PRICE_STARTER_OVERAGE
+              ? { license: process.env.STRIPE_PRICE_STARTER_LICENSE, overage: process.env.STRIPE_PRICE_STARTER_OVERAGE }
+              : undefined,
+          pricePro:
+            process.env.STRIPE_PRICE_PRO_LICENSE && process.env.STRIPE_PRICE_PRO_OVERAGE
+              ? { license: process.env.STRIPE_PRICE_PRO_LICENSE, overage: process.env.STRIPE_PRICE_PRO_OVERAGE }
+              : undefined,
+          priceBusiness:
+            process.env.STRIPE_PRICE_BUSINESS_LICENSE && process.env.STRIPE_PRICE_BUSINESS_OVERAGE
+              ? {
+                  license: process.env.STRIPE_PRICE_BUSINESS_LICENSE,
+                  overage: process.env.STRIPE_PRICE_BUSINESS_OVERAGE,
+                }
+              : undefined,
         }
       : undefined,
   }

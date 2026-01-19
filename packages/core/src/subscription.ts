@@ -4,13 +4,13 @@ import { z } from "zod"
 import { principal } from "./principal"
 import { withDb } from "./database"
 import { SubscriptionTable } from "./schema"
-import { SubscriptionPlan, SubscriptionStatus, PLAN_HIERARCHY, PLAN_LIMITS } from "./types"
+import { SubscriptionPlan, SubscriptionStatus, PLAN_HIERARCHY } from "./types"
 import { config } from "./config"
 import { getStripe } from "./stripe"
 import { findOrganizationById } from "./organization"
 import { createError } from "@synatra/util/error"
-import { updateUsageCurrentPeriodLimit } from "./usage"
 import { ensureStagingEnvironment } from "./environment"
+import { resetUsageMonth } from "./usage"
 
 export function isUpgradeSubscription(current: SubscriptionPlan, next: SubscriptionPlan): boolean {
   return PLAN_HIERARCHY[next] > PLAN_HIERARCHY[current]
@@ -20,11 +20,13 @@ export function isDowngradeSubscription(current: SubscriptionPlan, next: Subscri
   return PLAN_HIERARCHY[next] < PLAN_HIERARCHY[current]
 }
 
-export function getStripePriceIdSubscription(plan: SubscriptionPlan): string | null {
+type PlanPrices = { license: string; overage: string }
+
+export function getStripePricesSubscription(plan: SubscriptionPlan): PlanPrices | null {
   if (plan === "free") return null
   const stripe = config().stripe
   if (!stripe) return null
-  const prices: Record<string, string | undefined> = {
+  const prices: Record<string, PlanPrices | undefined> = {
     starter: stripe.priceStarter,
     pro: stripe.pricePro,
     business: stripe.priceBusiness,
@@ -36,9 +38,9 @@ export function getPlanFromPriceIdSubscription(priceId: string): SubscriptionPla
   const stripe = config().stripe
   if (!stripe) return null
 
-  if (priceId === stripe.priceStarter) return "starter"
-  if (priceId === stripe.pricePro) return "pro"
-  if (priceId === stripe.priceBusiness) return "business"
+  if (priceId === stripe.priceStarter?.license) return "starter"
+  if (priceId === stripe.pricePro?.license) return "pro"
+  if (priceId === stripe.priceBusiness?.license) return "business"
   return null
 }
 
@@ -56,7 +58,6 @@ export async function currentSubscription(input?: z.input<typeof CurrentSubscrip
   const now = new Date()
   const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
   const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
-  const { runLimit, overageRate } = PLAN_LIMITS.free
 
   const [created] = await withDb((db) =>
     db
@@ -65,8 +66,6 @@ export async function currentSubscription(input?: z.input<typeof CurrentSubscrip
         organizationId,
         plan: "free",
         status: "active",
-        runLimit,
-        overageRate,
         currentPeriodStart: start,
         currentPeriodEnd: end,
       })
@@ -103,16 +102,14 @@ export const UpdateSubscriptionSchema = UpdateStripeInfoSubscriptionSchema.exten
 
 export async function updatePlanSubscription(raw: z.input<typeof UpdatePlanSubscriptionSchema>) {
   const input = UpdatePlanSubscriptionSchema.parse(raw)
-  const { runLimit, overageRate } = PLAN_LIMITS[input.plan]
+  const prices = getStripePricesSubscription(input.plan)
 
   await withDb((db) =>
     db
       .update(SubscriptionTable)
       .set({
         plan: input.plan,
-        runLimit,
-        overageRate,
-        stripePriceId: getStripePriceIdSubscription(input.plan),
+        stripePriceId: prices?.license ?? null,
         updatedAt: new Date(),
       })
       .where(eq(SubscriptionTable.organizationId, principal.orgId())),
@@ -144,12 +141,10 @@ export async function updateStripeInfoSubscription(raw: z.input<typeof UpdateStr
 
 export async function updateSubscription(raw: z.input<typeof UpdateSubscriptionSchema>) {
   const input = UpdateSubscriptionSchema.parse(raw)
-  const { runLimit, overageRate } = PLAN_LIMITS[input.plan]
+  const prices = getStripePricesSubscription(input.plan)
   const updates: Record<string, unknown> = {
     plan: input.plan,
-    runLimit,
-    overageRate,
-    stripePriceId: input.stripePriceId ?? getStripePriceIdSubscription(input.plan),
+    stripePriceId: input.stripePriceId ?? prices?.license ?? null,
     updatedAt: new Date(),
   }
   if (input.stripeCustomerId) updates.stripeCustomerId = input.stripeCustomerId
@@ -182,9 +177,9 @@ export async function createCheckoutSession(raw: z.input<typeof CreateCheckoutSe
     throw createError("BadRequestError", { message: "Invalid plan for checkout" })
   }
 
-  const priceId = getStripePriceIdSubscription(input.plan)
-  if (!priceId) {
-    throw createError("BadRequestError", { message: "Price ID not found for plan" })
+  const prices = getStripePricesSubscription(input.plan)
+  if (!prices) {
+    throw createError("BadRequestError", { message: "Price IDs not found for plan" })
   }
 
   const org = await findOrganizationById(principal.orgId())
@@ -201,14 +196,23 @@ export async function createCheckoutSession(raw: z.input<typeof CreateCheckoutSe
     await updateStripeInfoSubscription({ stripeCustomerId: customerId })
   }
 
+  const now = new Date()
+  const nextMonthFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
+  const billingCycleAnchor = Math.floor(nextMonthFirst.getTime() / 1000)
+
   const session = await stripe.checkout.sessions.create(
     {
       customer: customerId,
       mode: "subscription",
-      line_items: [{ price: priceId }],
+      line_items: [{ price: prices.license, quantity: 1 }, { price: prices.overage }],
       success_url: input.successUrl,
       cancel_url: input.cancelUrl,
       metadata: { organizationId: org.id, plan: input.plan },
+      subscription_data: {
+        billing_cycle_anchor: billingCycleAnchor,
+        proration_behavior: "create_prorations",
+        billing_mode: { type: "flexible" },
+      },
     },
     { idempotencyKey: randomUUID() },
   )
@@ -252,6 +256,73 @@ export async function createBillingPortalSession(raw: z.input<typeof CreateBilli
   )
 
   return { url: session.url }
+}
+
+export const CancelSubscriptionSchema = z.object({}).optional()
+
+export async function cancelSubscription(raw?: z.input<typeof CancelSubscriptionSchema>) {
+  CancelSubscriptionSchema.parse(raw)
+  const sub = await currentSubscription({})
+
+  if (!sub.stripeSubscriptionId) {
+    throw createError("BadRequestError", { message: "No active subscription found" })
+  }
+  if (sub.status === "cancelled") {
+    throw createError("BadRequestError", { message: "Subscription is already cancelled" })
+  }
+  if (sub.cancelAt) {
+    throw createError("BadRequestError", { message: "Subscription is already scheduled to cancel" })
+  }
+
+  const stripe = getStripe()
+  await stripe.subscriptions.update(
+    sub.stripeSubscriptionId,
+    { cancel_at_period_end: true },
+    { idempotencyKey: randomUUID() },
+  )
+
+  const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId)
+  const cancelAt = stripeSub.cancel_at ? new Date(stripeSub.cancel_at * 1000) : null
+
+  await updateStripeInfoSubscription({ cancelAt })
+
+  return { message: "Subscription will be cancelled at period end", cancelAt: cancelAt?.toISOString() }
+}
+
+export const ResumeSubscriptionSchema = z.object({}).optional()
+
+export function canResumeSubscription(sub: {
+  stripeSubscriptionId: string | null
+  cancelAt: Date | null
+  status: string
+}): sub is { stripeSubscriptionId: string; cancelAt: Date; status: string } {
+  return !!sub.stripeSubscriptionId && sub.status !== "cancelled" && !!sub.cancelAt
+}
+
+export async function resumeSubscription(raw?: z.input<typeof ResumeSubscriptionSchema>) {
+  ResumeSubscriptionSchema.parse(raw)
+  const sub = await currentSubscription({})
+
+  if (!canResumeSubscription(sub)) {
+    if (!sub.stripeSubscriptionId) {
+      throw createError("BadRequestError", { message: "No active subscription found" })
+    }
+    if (sub.status === "cancelled") {
+      throw createError("BadRequestError", { message: "Subscription is cancelled" })
+    }
+    throw createError("BadRequestError", { message: "Subscription is not scheduled to cancel" })
+  }
+
+  const stripe = getStripe()
+  await stripe.subscriptions.update(
+    sub.stripeSubscriptionId,
+    { cancel_at_period_end: false },
+    { idempotencyKey: randomUUID() },
+  )
+
+  await updateStripeInfoSubscription({ cancelAt: null })
+
+  return { message: "Subscription cancellation has been reversed" }
 }
 
 export const CancelSubscriptionScheduledPlanSchema = z.object({}).optional()
@@ -310,28 +381,42 @@ export async function changeSubscriptionPlan(raw: z.input<typeof ChangeSubscript
     })
   }
 
-  const priceId = getStripePriceIdSubscription(input.plan)
-  if (!priceId) {
-    throw createError("BadRequestError", { message: "Price ID not found for plan" })
+  const newPrices = getStripePricesSubscription(input.plan)
+  if (!newPrices) {
+    throw createError("BadRequestError", { message: "Price IDs not found for plan" })
   }
 
   const stripe = getStripe()
   const stripeSub = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId)
-  const item = stripeSub.items.data[0]
-  if (!item) {
+  const items = stripeSub.items.data
+  if (items.length === 0) {
     throw createError("InternalError", { message: "Subscription has no items" })
+  }
+
+  const licenseItem = items.find((i) => i.price.recurring?.usage_type === "licensed")
+  const overageItem = items.find((i) => i.price.recurring?.usage_type === "metered")
+
+  if (!licenseItem || !overageItem) {
+    throw createError("InternalError", { message: "Subscription is missing license or overage item" })
   }
 
   if (isUpgradeSubscription(sub.plan as SubscriptionPlan, input.plan)) {
     await stripe.subscriptions.update(
       sub.stripeSubscriptionId,
-      { items: [{ id: item.id, price: priceId }], proration_behavior: "always_invoice" },
+      {
+        items: [
+          { id: licenseItem.id, price: newPrices.license },
+          { id: overageItem.id, price: newPrices.overage },
+        ],
+        proration_behavior: "always_invoice",
+        payment_behavior: "error_if_incomplete",
+      },
       { idempotencyKey: randomUUID() },
     )
 
     await principal.withSystem({ organizationId: sub.organizationId }, async () => {
-      await updateSubscription({ plan: input.plan, stripePriceId: priceId })
-      await updateUsageCurrentPeriodLimit({})
+      await updateSubscription({ plan: input.plan, stripePriceId: newPrices.license })
+      await resetUsageMonth()
 
       if (sub.plan === "free") {
         await ensureStagingEnvironment()
@@ -346,6 +431,24 @@ export async function changeSubscriptionPlan(raw: z.input<typeof ChangeSubscript
     { idempotencyKey: randomUUID() },
   )
 
+  const currentPhase = schedule.phases[0]
+  const extractDiscountId = (d: {
+    discount?: string | { id: string } | null
+    coupon?: string | { id: string } | null
+  }) => {
+    if (d.discount) return { discount: typeof d.discount === "string" ? d.discount : d.discount.id }
+    if (d.coupon) return { coupon: typeof d.coupon === "string" ? d.coupon : d.coupon.id }
+    return {}
+  }
+  const phaseDiscounts = currentPhase.discounts?.length
+    ? currentPhase.discounts.map(extractDiscountId).filter((d) => d.discount || d.coupon)
+    : undefined
+  const phaseTaxRates = currentPhase.default_tax_rates?.length
+    ? currentPhase.default_tax_rates.map((t) => (typeof t === "string" ? t : t.id))
+    : undefined
+  const phaseMetadata =
+    currentPhase.metadata && Object.keys(currentPhase.metadata).length > 0 ? currentPhase.metadata : undefined
+
   const [updated, updateErr] = await stripe.subscriptionSchedules
     .update(
       schedule.id,
@@ -353,11 +456,19 @@ export async function changeSubscriptionPlan(raw: z.input<typeof ChangeSubscript
         end_behavior: "release",
         phases: [
           {
-            items: [{ price: item.price.id }],
-            start_date: schedule.phases[0].start_date,
-            end_date: item.current_period_end,
+            items: [{ price: licenseItem.price.id, quantity: 1 }, { price: overageItem.price.id }],
+            start_date: currentPhase.start_date,
+            end_date: licenseItem.current_period_end,
+            ...(phaseDiscounts && { discounts: phaseDiscounts }),
+            ...(phaseTaxRates && { default_tax_rates: phaseTaxRates }),
+            ...(phaseMetadata && { metadata: phaseMetadata }),
           },
-          { items: [{ price: priceId }] },
+          {
+            items: [{ price: newPrices.license, quantity: 1 }, { price: newPrices.overage }],
+            ...(phaseDiscounts && { discounts: phaseDiscounts }),
+            ...(phaseTaxRates && { default_tax_rates: phaseTaxRates }),
+            ...(phaseMetadata && { metadata: phaseMetadata }),
+          },
         ],
       },
       { idempotencyKey: randomUUID() },
@@ -370,7 +481,7 @@ export async function changeSubscriptionPlan(raw: z.input<typeof ChangeSubscript
     throw updateErr
   }
 
-  const scheduledAt = new Date(item.current_period_end * 1000)
+  const scheduledAt = new Date(licenseItem.current_period_end * 1000)
 
   await principal.withSystem({ organizationId: sub.organizationId }, () =>
     updateStripeInfoSubscription({ stripeScheduleId: updated!.id, scheduledPlan: input.plan, scheduledAt }),

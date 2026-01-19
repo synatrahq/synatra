@@ -128,17 +128,20 @@ function EmptyState() {
 function LimitWarning(props: { usage: UsageCurrent; subscription: SubscriptionCurrent | null }) {
   const plan = () => (props.subscription?.plan || "free") as SubscriptionPlan
   const limits = createMemo(() => getPlanLimits(plan()))
-  const pct = createMemo(() => (limits().runLimit ? (props.usage.runCount / limits().runLimit) * 100 : 0))
+  const runLimit = createMemo(() => limits().runLimit)
+  const pct = createMemo(() => (runLimit() !== null ? (props.usage.runCount / runLimit()!) * 100 : 0))
   const atLimit = createMemo(() => pct() >= 100)
   const nearLimit = createMemo(() => pct() >= 80 && pct() < 100)
   const isFree = createMemo(() => props.subscription?.plan === "free")
 
   const warning = createMemo(() => {
-    const { runLimit, overageRate } = limits()
+    const { overageRate } = limits()
+    const limit = runLimit()
+    if (limit === null) return null
     if (atLimit() && isFree()) {
       return {
         title: "Run limit exceeded",
-        message: `You have reached your monthly limit of ${runLimit.toLocaleString()} runs. Upgrade to a paid plan to continue running agents.`,
+        message: `You have reached your monthly limit of ${limit.toLocaleString()} runs. Upgrade to a paid plan to continue running agents.`,
       }
     }
     if (atLimit()) {
@@ -151,7 +154,7 @@ function LimitWarning(props: { usage: UsageCurrent; subscription: SubscriptionCu
     if (nearLimit()) {
       return {
         title: "Approaching run limit",
-        message: `You have used ${pct().toFixed(0)}% of your monthly run limit (${props.usage.runCount.toLocaleString()} / ${runLimit.toLocaleString()} runs).`,
+        message: `You have used ${pct().toFixed(0)}% of your monthly run limit (${props.usage.runCount.toLocaleString()} / ${limit.toLocaleString()} runs).`,
       }
     }
     return null
@@ -234,8 +237,8 @@ export function UsageList(props: UsageListProps) {
                     />
                   </div>
 
-                  <Show when={runLimit() > 0}>
-                    <ProgressBar used={current().runCount} limit={runLimit()} />
+                  <Show when={runLimit() !== null && runLimit()! > 0}>
+                    <ProgressBar used={current().runCount} limit={runLimit()!} />
                   </Show>
                 </div>
 

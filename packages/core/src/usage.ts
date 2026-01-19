@@ -1,70 +1,56 @@
-import { eq, and, gte, sql } from "drizzle-orm"
+import { eq, and, gte } from "drizzle-orm"
 import { z } from "zod"
 import { principal } from "./principal"
 import { withDb } from "./database"
-import { UsagePeriodTable } from "./schema"
-import { UsageRunType } from "./types"
+import { UsageMonthTable } from "./schema"
+import { PLAN_LIMITS, SubscriptionPlan } from "./types"
 import { currentSubscription } from "./subscription"
 
 export const CurrentUsageSchema = z.object({}).optional()
-
-export const RecordUsageSchema = z.object({ runType: z.enum(UsageRunType) })
-
-export const ResetUsagePeriodSchema = z.object({ periodStart: z.date(), periodEnd: z.date() })
-
-export const UpdateUsageCurrentPeriodLimitSchema = z.object({}).optional()
 
 export const UsageHistorySchema = z.object({ months: z.number().min(1).max(12).optional() })
 
 export const CheckUsageLimitSchema = z.object({ mode: z.enum(["warn", "soft", "hard"]).default("soft") })
 
-function calendarMonth(): { start: Date; end: Date } {
-  const now = new Date()
+export function yearMonthToPeriod(ym: number): { start: Date; end: Date } {
+  const year = Math.floor(ym / 100)
+  const month = ym % 100
   return {
-    start: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)),
-    end: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)),
+    start: new Date(Date.UTC(year, month - 1, 1)),
+    end: new Date(Date.UTC(year, month, 1)),
   }
 }
 
-export async function getUsageCurrentPeriod(): Promise<{ start: Date; end: Date }> {
-  const sub = await currentSubscription({}).catch(() => null)
-  if (sub?.currentPeriodStart && sub?.currentPeriodEnd) {
-    return { start: sub.currentPeriodStart, end: sub.currentPeriodEnd }
-  }
-  return calendarMonth()
+export function currentYearMonth(): number {
+  const now = new Date()
+  return now.getUTCFullYear() * 100 + (now.getUTCMonth() + 1)
 }
-
-const runTypeColumns = {
-  user: UsagePeriodTable.runsUser,
-  trigger: UsagePeriodTable.runsTrigger,
-  subagent: UsagePeriodTable.runsSubagent,
-} as const
 
 export async function currentUsage(input?: z.input<typeof CurrentUsageSchema>) {
   CurrentUsageSchema.parse(input)
   const organizationId = principal.orgId()
-  const { start, end } = await getUsageCurrentPeriod()
+  const ym = currentYearMonth()
 
   const [existing] = await withDb((db) =>
     db
       .select()
-      .from(UsagePeriodTable)
-      .where(and(eq(UsagePeriodTable.organizationId, organizationId), eq(UsagePeriodTable.periodStart, start)))
+      .from(UsageMonthTable)
+      .where(and(eq(UsageMonthTable.organizationId, organizationId), eq(UsageMonthTable.yearMonth, ym)))
       .limit(1),
   )
-  if (existing) return existing
 
-  const sub = await currentSubscription({})
+  if (existing) {
+    const period = yearMonthToPeriod(existing.yearMonth)
+    return { ...existing, periodStart: period.start, periodEnd: period.end }
+  }
 
   const [created] = await withDb((db) =>
     db
-      .insert(UsagePeriodTable)
+      .insert(UsageMonthTable)
       .values({
         organizationId,
-        periodStart: start,
-        periodEnd: end,
+        yearMonth: ym,
         runCount: 0,
-        runLimit: sub.runLimit,
         runsUser: 0,
         runsTrigger: 0,
         runsSubagent: 0,
@@ -72,102 +58,84 @@ export async function currentUsage(input?: z.input<typeof CurrentUsageSchema>) {
       .onConflictDoNothing()
       .returning(),
   )
-  if (created) return created
+
+  if (created) {
+    const period = yearMonthToPeriod(created.yearMonth)
+    return { ...created, periodStart: period.start, periodEnd: period.end }
+  }
 
   const [refetched] = await withDb((db) =>
     db
       .select()
-      .from(UsagePeriodTable)
-      .where(and(eq(UsagePeriodTable.organizationId, organizationId), eq(UsagePeriodTable.periodStart, start)))
+      .from(UsageMonthTable)
+      .where(and(eq(UsageMonthTable.organizationId, organizationId), eq(UsageMonthTable.yearMonth, ym)))
       .limit(1),
   )
-  return refetched
+
+  if (!refetched) throw new Error("Failed to create usage month")
+  const period = yearMonthToPeriod(refetched.yearMonth)
+  return { ...refetched, periodStart: period.start, periodEnd: period.end }
 }
 
-export async function recordUsage(input: z.input<typeof RecordUsageSchema>) {
-  const data = RecordUsageSchema.parse(input)
-  const organizationId = principal.orgId()
-  const { start } = await getUsageCurrentPeriod()
-
-  await currentUsage({})
-
-  await withDb((db) =>
-    db
-      .update(UsagePeriodTable)
-      .set({
-        runCount: sql`${UsagePeriodTable.runCount} + 1`,
-        ...(data.runType === "user" ? { runsUser: sql`${UsagePeriodTable.runsUser} + 1` } : {}),
-        ...(data.runType === "trigger" ? { runsTrigger: sql`${UsagePeriodTable.runsTrigger} + 1` } : {}),
-        ...(data.runType === "subagent" ? { runsSubagent: sql`${UsagePeriodTable.runsSubagent} + 1` } : {}),
-        updatedAt: new Date(),
-      })
-      .where(and(eq(UsagePeriodTable.organizationId, organizationId), eq(UsagePeriodTable.periodStart, start))),
-  )
-}
-
-export async function resetUsagePeriod(input: z.input<typeof ResetUsagePeriodSchema>) {
-  const data = ResetUsagePeriodSchema.parse(input)
-  const organizationId = principal.orgId()
-  const sub = await currentSubscription({})
-
-  await withDb((db) =>
-    db
-      .insert(UsagePeriodTable)
-      .values({
-        organizationId,
-        periodStart: data.periodStart,
-        periodEnd: data.periodEnd,
-        runCount: 0,
-        runLimit: sub.runLimit,
-        runsUser: 0,
-        runsTrigger: 0,
-        runsSubagent: 0,
-      })
-      .onConflictDoUpdate({
-        target: [UsagePeriodTable.organizationId, UsagePeriodTable.periodStart],
-        set: { periodEnd: data.periodEnd, runLimit: sub.runLimit, updatedAt: new Date() },
-      }),
-  )
-}
-
-export async function updateUsageCurrentPeriodLimit(input?: z.input<typeof UpdateUsageCurrentPeriodLimitSchema>) {
-  UpdateUsageCurrentPeriodLimitSchema.parse(input)
-  const organizationId = principal.orgId()
-  const { start } = await getUsageCurrentPeriod()
-  const sub = await currentSubscription({})
-
-  await withDb((db) =>
-    db
-      .update(UsagePeriodTable)
-      .set({ runLimit: sub.runLimit, updatedAt: new Date() })
-      .where(and(eq(UsagePeriodTable.organizationId, organizationId), eq(UsagePeriodTable.periodStart, start))),
-  )
+function subtractMonths(ym: number, months: number): number {
+  const year = Math.floor(ym / 100)
+  const month = ym % 100
+  const totalMonths = year * 12 + (month - 1) - months
+  const newYear = Math.floor(totalMonths / 12)
+  const newMonth = (totalMonths % 12) + 1
+  return newYear * 100 + newMonth
 }
 
 export async function usageHistory(input: z.input<typeof UsageHistorySchema>) {
   const data = UsageHistorySchema.parse(input)
   const organizationId = principal.orgId()
   const months = data.months ?? 6
-  const now = new Date()
-  const startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - months + 1, 1))
+  const currentYm = currentYearMonth()
+  const startYm = subtractMonths(currentYm, months - 1)
 
-  const periods = await withDb((db) =>
+  const rows = await withDb((db) =>
     db
       .select()
-      .from(UsagePeriodTable)
-      .where(and(eq(UsagePeriodTable.organizationId, organizationId), gte(UsagePeriodTable.periodStart, startDate)))
-      .orderBy(UsagePeriodTable.periodStart),
+      .from(UsageMonthTable)
+      .where(and(eq(UsageMonthTable.organizationId, organizationId), gte(UsageMonthTable.yearMonth, startYm)))
+      .orderBy(UsageMonthTable.yearMonth),
   )
 
+  const periods = rows.map((row) => {
+    const period = yearMonthToPeriod(row.yearMonth)
+    return { ...row, periodStart: period.start, periodEnd: period.end }
+  })
+
   return { periods }
+}
+
+export async function resetUsageMonth(): Promise<void> {
+  const organizationId = principal.orgId()
+  const ym = currentYearMonth()
+
+  await withDb((db) =>
+    db
+      .update(UsageMonthTable)
+      .set({
+        runCount: 0,
+        runsUser: 0,
+        runsTrigger: 0,
+        runsSubagent: 0,
+      })
+      .where(and(eq(UsageMonthTable.organizationId, organizationId), eq(UsageMonthTable.yearMonth, ym))),
+  )
 }
 
 export async function checkUsageLimit(input: z.input<typeof CheckUsageLimitSchema>) {
   const data = CheckUsageLimitSchema.parse(input)
   const usage = await currentUsage({})
-  if (!usage.runLimit) return { allowed: true, warning: false, usage }
+  const sub = await currentSubscription({})
+  const plan = sub.plan as SubscriptionPlan
+  const { runLimit, overageRate } = PLAN_LIMITS[plan]
 
-  const pct = (usage.runCount / usage.runLimit) * 100
+  if (runLimit === null) return { allowed: true, warning: false, usage }
+
+  const pct = (usage.runCount / runLimit) * 100
   if (pct < 80) return { allowed: true, warning: false, usage }
   if (pct < 100) return { allowed: true, warning: true, usage }
 
@@ -175,8 +143,7 @@ export async function checkUsageLimit(input: z.input<typeof CheckUsageLimitSchem
     case "hard":
       return { allowed: false, warning: true, usage, error: "Run limit exceeded. Upgrade your plan to continue." }
     case "soft": {
-      const sub = await currentSubscription({})
-      if (sub.plan === "free") {
+      if (plan === "free") {
         return {
           allowed: false,
           warning: true,
@@ -184,7 +151,7 @@ export async function checkUsageLimit(input: z.input<typeof CheckUsageLimitSchem
           error: "Run limit exceeded. Upgrade to a paid plan to continue.",
         }
       }
-      return { allowed: true, warning: true, overage: true, overageRate: sub.overageRate, usage }
+      return { allowed: true, warning: true, overage: true, overageRate, usage }
     }
     default:
       return { allowed: true, warning: true, usage }

@@ -137,7 +137,7 @@ export async function createRun(input: CreateRunInput): Promise<{ runId: string;
         input: input.input ?? {},
       })
     } catch (err) {
-      await decrementRunUsageLimiter({ runType })
+      await decrementRunUsageLimiter({ runType, yearMonth: limitResult.yearMonth })
       throw err
     }
 
