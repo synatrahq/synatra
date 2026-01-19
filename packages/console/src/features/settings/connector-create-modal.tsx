@@ -36,8 +36,11 @@ export function ConnectorCreateModal(props: ConnectorCreateModalProps) {
       setError("Name is required")
       return
     }
-    setError("")
-    await props.onSave({ name: trimmedName })
+    try {
+      await props.onSave({ name: trimmedName })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create connector")
+    }
   }
 
   return (

@@ -344,28 +344,53 @@ export async function createTrigger(input: z.input<typeof CreateTriggerSchema>) 
   }
   const configHashValue = hashConfig(config)
 
-  const triggerId = await withTx(async (db) => {
-    const [trigger] = await db
-      .insert(TriggerTable)
-      .values({
-        organizationId,
-        agentId: data.agentId,
-        name: data.name,
-        slug,
-        createdBy: userId,
-        updatedBy: userId,
-      })
-      .returning()
+  let triggerId: string
+  try {
+    triggerId = await withTx(async (db) => {
+      const [trigger] = await db
+        .insert(TriggerTable)
+        .values({
+          organizationId,
+          agentId: data.agentId,
+          name: data.name,
+          slug,
+          createdBy: userId,
+          updatedBy: userId,
+        })
+        .returning()
 
-    const [release] = await db
-      .insert(TriggerReleaseTable)
-      .values({
+      const [release] = await db
+        .insert(TriggerReleaseTable)
+        .values({
+          triggerId: trigger.id,
+          version: versionText,
+          versionMajor: versionParsed.major,
+          versionMinor: versionParsed.minor,
+          versionPatch: versionParsed.patch,
+          description: data.description ?? "Initial release",
+          agentReleaseId: config.agentReleaseId,
+          agentVersionMode: config.agentVersionMode,
+          promptId: config.promptId,
+          promptReleaseId: config.promptReleaseId,
+          promptVersionMode: config.promptVersionMode,
+          mode: config.mode,
+          template: config.template,
+          script: config.script,
+          payloadSchema: config.payloadSchema,
+          type: config.type,
+          cron: config.cron,
+          timezone: config.timezone,
+          input: config.input,
+          appAccountId: config.appAccountId,
+          appEvents: config.appEvents,
+          configHash: configHashValue,
+          publishedAt: new Date(),
+          createdBy: userId,
+        })
+        .returning()
+
+      await db.insert(TriggerWorkingCopyTable).values({
         triggerId: trigger.id,
-        version: versionText,
-        versionMajor: versionParsed.major,
-        versionMinor: versionParsed.minor,
-        versionPatch: versionParsed.patch,
-        description: data.description ?? "Initial release",
         agentReleaseId: config.agentReleaseId,
         agentVersionMode: config.agentVersionMode,
         promptId: config.promptId,
@@ -382,39 +407,22 @@ export async function createTrigger(input: z.input<typeof CreateTriggerSchema>) 
         appAccountId: config.appAccountId,
         appEvents: config.appEvents,
         configHash: configHashValue,
-        publishedAt: new Date(),
-        createdBy: userId,
+        updatedBy: userId,
       })
-      .returning()
 
-    await db.insert(TriggerWorkingCopyTable).values({
-      triggerId: trigger.id,
-      agentReleaseId: config.agentReleaseId,
-      agentVersionMode: config.agentVersionMode,
-      promptId: config.promptId,
-      promptReleaseId: config.promptReleaseId,
-      promptVersionMode: config.promptVersionMode,
-      mode: config.mode,
-      template: config.template,
-      script: config.script,
-      payloadSchema: config.payloadSchema,
-      type: config.type,
-      cron: config.cron,
-      timezone: config.timezone,
-      input: config.input,
-      appAccountId: config.appAccountId,
-      appEvents: config.appEvents,
-      configHash: configHashValue,
-      updatedBy: userId,
+      await db
+        .update(TriggerTable)
+        .set({ currentReleaseId: release.id, updatedBy: userId, updatedAt: new Date() })
+        .where(eq(TriggerTable.id, trigger.id))
+
+      return trigger.id
     })
-
-    await db
-      .update(TriggerTable)
-      .set({ currentReleaseId: release.id, updatedBy: userId, updatedAt: new Date() })
-      .where(eq(TriggerTable.id, trigger.id))
-
-    return trigger.id
-  })
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("trigger_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Trigger with slug "${slug}" already exists` })
+    }
+    throw err
+  }
 
   return findTriggerById(triggerId)
 }
@@ -427,17 +435,24 @@ export async function updateTrigger(input: z.input<typeof UpdateTriggerSchema>) 
   await getTriggerById(data.id)
   if (data.name === undefined && data.slug === undefined) return findTriggerById(data.id)
 
-  await withDb((db) =>
-    db
-      .update(TriggerTable)
-      .set({
-        updatedAt: new Date(),
-        updatedBy: principal.userId(),
-        ...(data.name !== undefined && { name: data.name }),
-        ...(data.slug !== undefined && { slug: data.slug }),
-      })
-      .where(eq(TriggerTable.id, data.id)),
-  )
+  try {
+    await withDb((db) =>
+      db
+        .update(TriggerTable)
+        .set({
+          updatedAt: new Date(),
+          updatedBy: principal.userId(),
+          ...(data.name !== undefined && { name: data.name }),
+          ...(data.slug !== undefined && { slug: data.slug }),
+        })
+        .where(eq(TriggerTable.id, data.id)),
+    )
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("trigger_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Trigger with slug "${data.slug}" already exists` })
+    }
+    throw err
+  }
   return findTriggerById(data.id)
 }
 

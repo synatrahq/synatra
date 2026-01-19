@@ -148,7 +148,10 @@ export default function AgentsPage() {
   const createMutate = useMutation(() => ({
     mutationFn: async (data: AgentCreateInput) => {
       const res = await api.api.agents.$post({ json: data })
-      if (!res.ok) throw new Error("Failed to create agent")
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { data?: { message?: string } }
+        throw new Error(err.data?.message || "Failed to create agent")
+      }
       return { agent: await res.json(), fromTemplate: !!data.templateId }
     },
     onSuccess: ({ agent, fromTemplate }) => {
@@ -162,7 +165,10 @@ export default function AgentsPage() {
     mutationFn: async (data: { id: string } & AgentUpdateInput) => {
       const { id, ...json } = data
       const res = await api.api.agents[":id"].$patch({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to update agent")
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { data?: { message?: string } }
+        throw new Error(err.data?.message || "Failed to update agent")
+      }
       return res.json()
     },
     onSuccess: (_, variables) => {

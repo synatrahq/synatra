@@ -221,44 +221,48 @@ export function AgentCreateModal(props: AgentCreateModalProps) {
   const handleSave = async () => {
     const template = selectedTemplate()
 
-    if (template) {
+    try {
+      if (template) {
+        await props.onSave({
+          name: template.name,
+          slug: `${generateSlug(template.name)}-${Date.now().toString(36)}`,
+          description: template.description,
+          icon: template.icon,
+          iconColor: template.iconColor as IconColor,
+          templateId: template.id,
+          runtimeConfig: {
+            model: { provider: "anthropic", model: "claude-sonnet-4-20250514", temperature: 0.7 },
+            systemPrompt: "",
+            tools: [],
+          },
+        })
+        return
+      }
+
+      if (!name().trim()) {
+        setError("Name is required")
+        return
+      }
+      if (!slug().trim()) {
+        setError("Slug is required")
+        return
+      }
+
       await props.onSave({
-        name: template.name,
-        slug: `${generateSlug(template.name)}-${Date.now().toString(36)}`,
-        description: template.description,
-        icon: template.icon,
-        iconColor: template.iconColor as IconColor,
-        templateId: template.id,
+        name: name().trim(),
+        slug: slug().trim(),
+        description: description().trim(),
+        icon: selectedIcon(),
+        iconColor: selectedColor(),
         runtimeConfig: {
           model: { provider: "anthropic", model: "claude-sonnet-4-20250514", temperature: 0.7 },
           systemPrompt: "",
           tools: [],
         },
       })
-      return
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create agent")
     }
-
-    if (!name().trim()) {
-      setError("Name is required")
-      return
-    }
-    if (!slug().trim()) {
-      setError("Slug is required")
-      return
-    }
-
-    await props.onSave({
-      name: name().trim(),
-      slug: slug().trim(),
-      description: description().trim(),
-      icon: selectedIcon(),
-      iconColor: selectedColor(),
-      runtimeConfig: {
-        model: { provider: "anthropic", model: "claude-sonnet-4-20250514", temperature: 0.7 },
-        systemPrompt: "",
-        tools: [],
-      },
-    })
   }
 
   const isScratch = () => step() === "configure" && !selectedTemplate()

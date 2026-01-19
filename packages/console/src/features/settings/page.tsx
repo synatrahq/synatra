@@ -196,7 +196,10 @@ export default function SettingsPage() {
   const envCreateMutate = useMutation(() => ({
     mutationFn: async (data: EnvironmentCreateInput) => {
       const res = await api.api.environments.$post({ json: data })
-      if (!res.ok) throw new Error("Failed to create environment")
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { data?: { message?: string } }
+        throw new Error(err.data?.message || "Failed to create environment")
+      }
       return res.json()
     },
     onSuccess: () => {
@@ -210,7 +213,10 @@ export default function SettingsPage() {
     mutationFn: async (data: { id: string } & EnvironmentUpdateInput) => {
       const { id, ...json } = data
       const res = await api.api.environments[":id"].$patch({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to update environment")
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { data?: { message?: string } }
+        throw new Error(err.data?.message || "Failed to update environment")
+      }
       return res.json()
     },
     onSuccess: () => {
@@ -240,8 +246,8 @@ export default function SettingsPage() {
         json: { emails: data.emails, role: data.role },
       })
       if (!res.ok) {
-        const error = (await res.json()) as { message?: string }
-        throw new Error(error.message || "Failed to invite users")
+        const err = (await res.json().catch(() => ({}))) as { data?: { message?: string } }
+        throw new Error(err.data?.message || "Failed to invite users")
       }
       return res.json()
     },
@@ -278,7 +284,10 @@ export default function SettingsPage() {
   const connectorCreateMutate = useMutation(() => ({
     mutationFn: async (data: ConnectorCreateInput) => {
       const res = await api.api.connectors.$post({ json: data })
-      if (!res.ok) throw new Error("Failed to create connector")
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { data?: { message?: string } }
+        throw new Error(err.data?.message || "Failed to create connector")
+      }
       return res.json()
     },
     onSuccess: (result) => {

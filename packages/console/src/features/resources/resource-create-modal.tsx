@@ -138,13 +138,17 @@ export function ResourceCreateModal(props: ResourceCreateModalProps) {
     }
 
     const needsAppAccount = selectedType() === "github" || selectedType() === "intercom"
-    await props.onSave({
-      name: name().trim(),
-      slug: slug().trim() || undefined,
-      description: description().trim() || undefined,
-      type: selectedType(),
-      appAccountId: needsAppAccount ? (selectedAppAccountId() ?? undefined) : undefined,
-    })
+    try {
+      await props.onSave({
+        name: name().trim(),
+        slug: slug().trim() || undefined,
+        description: description().trim() || undefined,
+        type: selectedType(),
+        appAccountId: needsAppAccount ? (selectedAppAccountId() ?? undefined) : undefined,
+      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create resource")
+    }
   }
 
   const canCreate = () => {

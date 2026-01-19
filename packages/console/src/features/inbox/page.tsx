@@ -953,8 +953,8 @@ export default function InboxPage() {
         setChannelCreateOpen(false)
         invalidateChannels()
       } else {
-        const err = await res.json().catch(() => ({ message: "Failed to create channel" }))
-        throw new Error((err as { message?: string }).message || "Failed to create channel")
+        const err = (await res.json().catch(() => ({}))) as { data?: { message?: string } }
+        throw new Error(err.data?.message || "Failed to create channel")
       }
     } finally {
       setCreatingChannel(false)

@@ -92,13 +92,17 @@ export function PromptCreateModal(props: PromptCreateModalProps) {
       return
     }
 
-    await props.onSave({
-      agentId: agent.id,
-      name: name().trim(),
-      slug: slug().trim() || undefined,
-      description: description().trim() || undefined,
-      content: content().trim(),
-    })
+    try {
+      await props.onSave({
+        agentId: agent.id,
+        name: name().trim(),
+        slug: slug().trim() || undefined,
+        description: description().trim() || undefined,
+        content: content().trim(),
+      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create prompt")
+    }
   }
 
   return (

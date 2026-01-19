@@ -161,7 +161,10 @@ export default function ResourcesPage() {
   const createMutate = useMutation(() => ({
     mutationFn: async (data: ResourceCreateInput) => {
       const res = await api.api.resources.$post({ json: { ...data, configs: [] } })
-      if (!res.ok) throw new Error("Failed to create resource")
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { data?: { message?: string } }
+        throw new Error(err.data?.message || "Failed to create resource")
+      }
       return res.json()
     },
     onSuccess: () => {
@@ -189,7 +192,10 @@ export default function ResourcesPage() {
     mutationFn: async (data: { id: string } & ResourceUpdateInput) => {
       const { id, ...json } = data
       const res = await api.api.resources[":id"].$patch({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to update resource")
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { data?: { message?: string } }
+        throw new Error(err.data?.message || "Failed to update resource")
+      }
       return res.json()
     },
     onSuccess: (updated) => {
@@ -222,7 +228,10 @@ export default function ResourcesPage() {
   const connectorCreateMutate = useMutation(() => ({
     mutationFn: async (data: ConnectorCreateInput) => {
       const res = await api.api.connectors.$post({ json: data })
-      if (!res.ok) throw new Error("Failed to create connector")
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { data?: { message?: string } }
+        throw new Error(err.data?.message || "Failed to create connector")
+      }
       return res.json()
     },
     onSuccess: (result) => {

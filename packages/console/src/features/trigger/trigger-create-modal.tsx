@@ -83,11 +83,15 @@ export function TriggerCreateModal(props: TriggerCreateModalProps) {
       return
     }
 
-    await props.onSave({
-      agentId: agent.id,
-      name: name().trim(),
-      slug: slug().trim() || undefined,
-    })
+    try {
+      await props.onSave({
+        agentId: agent.id,
+        name: name().trim(),
+        slug: slug().trim() || undefined,
+      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create trigger")
+    }
   }
 
   const canCreate = () => !!name().trim()

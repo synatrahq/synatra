@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { and, eq } from "drizzle-orm"
+import { createError } from "@synatra/util/error"
 import { principal } from "./principal"
 import { withDb, withTx } from "./database"
 import { OrganizationTable } from "./schema/organization.sql"
@@ -38,24 +39,31 @@ export async function createInvitation(input: z.input<typeof CreateInvitationSch
   const organizationId = principal.orgId()
   const inviterId = principal.userId()
 
-  return withTx(async (tx) => {
-    await tx.select().from(OrganizationTable).where(eq(OrganizationTable.id, organizationId)).for("update")
+  try {
+    return await withTx(async (tx) => {
+      await tx.select().from(OrganizationTable).where(eq(OrganizationTable.id, organizationId)).for("update")
 
-    await checkUserLimit(1)
+      await checkUserLimit(1)
 
-    const [invitation] = await tx
-      .insert(InvitationTable)
-      .values({
-        email: data.email,
-        organizationId,
-        inviterId,
-        role: data.role,
-        expiresAt: data.expiresAt,
-      })
-      .returning()
+      const [invitation] = await tx
+        .insert(InvitationTable)
+        .values({
+          email: data.email,
+          organizationId,
+          inviterId,
+          role: data.role,
+          expiresAt: data.expiresAt,
+        })
+        .returning()
 
-    return invitation
-  })
+      return invitation
+    })
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("invitation_email_org_pending_unique")) {
+      throw createError("ConflictError", { message: `Pending invitation for "${data.email}" already exists` })
+    }
+    throw err
+  }
 }
 
 export async function getInvitationEmailData(input: z.input<typeof GetInvitationEmailDataSchema>) {

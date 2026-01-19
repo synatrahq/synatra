@@ -228,7 +228,10 @@ export default function TriggersPage() {
   const createMutate = useMutation(() => ({
     mutationFn: async (data: TriggerCreateInput) => {
       const res = await api.api.triggers.$post({ json: data })
-      if (!res.ok) throw new Error("Failed to create trigger")
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { data?: { message?: string } }
+        throw new Error(err.data?.message || "Failed to create trigger")
+      }
       return res.json()
     },
     onSuccess: (created) => {
@@ -270,7 +273,10 @@ export default function TriggersPage() {
     mutationFn: async (data: { id: string } & TriggerUpdateInput) => {
       const { id, ...json } = data
       const res = await api.api.triggers[":id"].$patch({ param: { id }, json })
-      if (!res.ok) throw new Error("Failed to update trigger")
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { data?: { message?: string } }
+        throw new Error(err.data?.message || "Failed to update trigger")
+      }
       return res.json()
     },
     onSuccess: (_, variables) => {

@@ -75,12 +75,15 @@ export function EnvironmentCreateModal(props: EnvironmentCreateModalProps) {
       return
     }
 
-    setError("")
-    await props.onSave({
-      name: trimmedName,
-      slug: trimmedSlug || undefined,
-      color: normalizedColor,
-    })
+    try {
+      await props.onSave({
+        name: trimmedName,
+        slug: trimmedSlug || undefined,
+        color: normalizedColor,
+      })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create environment")
+    }
   }
 
   return (

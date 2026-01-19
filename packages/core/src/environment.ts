@@ -115,14 +115,20 @@ export async function createEnvironment(input: z.input<typeof CreateEnvironmentS
   if (isReservedSlug(prepared.slug)) {
     throw createError("BadRequestError", { message: `Slug "${prepared.slug}" is reserved` })
   }
-  const [environment] = await withDb((db) =>
-    db
-      .insert(EnvironmentTable)
-      .values({ ...prepared, organizationId, createdBy: userId, updatedBy: userId })
-      .returning(),
-  )
-
-  return environment
+  try {
+    const [environment] = await withDb((db) =>
+      db
+        .insert(EnvironmentTable)
+        .values({ ...prepared, organizationId, createdBy: userId, updatedBy: userId })
+        .returning(),
+    )
+    return environment
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("environment_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Environment with slug "${prepared.slug}" already exists` })
+    }
+    throw err
+  }
 }
 
 export async function createManyEnvironments(input: z.input<typeof CreateManyEnvironmentsSchema>) {
@@ -168,11 +174,17 @@ export async function updateEnvironment(input: z.input<typeof UpdateEnvironmentS
     if (normalizedColor) updateData.color = normalizedColor
   }
 
-  const [environment] = await withDb((db) =>
-    db.update(EnvironmentTable).set(updateData).where(eq(EnvironmentTable.id, data.id)).returning(),
-  )
-
-  return environment
+  try {
+    const [environment] = await withDb((db) =>
+      db.update(EnvironmentTable).set(updateData).where(eq(EnvironmentTable.id, data.id)).returning(),
+    )
+    return environment
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("environment_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Environment with slug "${data.slug}" already exists` })
+    }
+    throw err
+  }
 }
 
 export async function removeEnvironment(id: string) {
