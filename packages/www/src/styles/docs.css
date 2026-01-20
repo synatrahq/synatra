@@ -360,6 +360,7 @@
   }
 
   .expressive-code {
+    --ec-codePadInl: 0.625rem;
     margin-top: 0.625rem;
   }
 
@@ -439,27 +440,22 @@
   }
 
   .expressive-code .ec-line {
-    padding-left: 0.875rem;
-    padding-right: 2.5rem;
     min-height: 1.4em;
   }
 
   .expressive-code .ec-line.ins {
     background: oklch(0.15 0.04 145 / 0.5);
     border-left: 1px solid oklch(0.55 0.1 145);
-    padding-left: calc(0.875rem - 1px);
   }
 
   .expressive-code .ec-line.del {
     background: oklch(0.15 0.05 25 / 0.5);
     border-left: 1px solid oklch(0.5 0.12 25);
-    padding-left: calc(0.875rem - 1px);
   }
 
   .expressive-code .ec-line.mark {
     background: oklch(0.15 0.03 60 / 0.5);
     border-left: 1px solid oklch(0.6 0.1 60);
-    padding-left: calc(0.875rem - 1px);
   }
 
   [data-theme="light"] .expressive-code .ec-line.ins {

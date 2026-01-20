@@ -28,12 +28,12 @@ Triggers support three modes for generating the initial prompt:
 
 ### Template mode
 
-Use `{{ path.to.value }}` syntax to inject payload data into a static template:
+Use `{{ variable }}` syntax to inject payload data into a static template:
 
 ```
-A new issue was created: {{ payload.issue.title }}
-Repository: {{ payload.repository.name }}
-Author: {{ payload.issue.user.login }}
+A new issue was created: {{ issue.title }}
+Repository: {{ repository.name }}
+Author: {{ issue.user.login }}
 ```
 
 Objects are automatically converted to JSON strings.
@@ -194,7 +194,7 @@ The following global variables are available in scripts:
 | `payload.subject`   | Special: If present, used as thread subject                 |
 | `context.resources` | Connected external resources (e.g., `context.resources.db`) |
 
-In templates, use `{{ payload.xxx }}` syntax to access payload values.
+In templates, use `{{ xxx }}` syntax to access payload values directly (without `payload.` prefix).
 
 ## Best practices
 

@@ -18,13 +18,13 @@ A Prompt provides:
 
 ### Template mode
 
-Templates use `{{ path.to.value }}` syntax to inject input values:
+Templates use `{{ variable }}` syntax to inject input values:
 
 ```
-Generate a report for {{ input.customerName }}.
+Generate a report for {{ customerName }}.
 
-Date range: {{ input.startDate }} to {{ input.endDate }}
-Include metrics: {{ input.metrics }}
+Date range: {{ startDate }} to {{ endDate }}
+Include metrics: {{ metrics }}
 ```
 
 ### Script mode
