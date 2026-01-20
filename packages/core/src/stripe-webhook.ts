@@ -295,7 +295,7 @@ function mapStripeStatus(status: Stripe.Subscription.Status): SubscriptionStatus
   }
 }
 
-function getStripeId(obj: string | { id: string } | null | undefined): string | null {
+export function getStripeId(obj: string | { id: string } | null | undefined): string | null {
   if (!obj) return null
   return typeof obj === "string" ? obj : obj.id
 }

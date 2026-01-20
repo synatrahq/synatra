@@ -11,6 +11,7 @@ import { findOrganizationById } from "./organization"
 import { createError } from "@synatra/util/error"
 import { ensureStagingEnvironment } from "./environment"
 import { resetUsageMonth } from "./usage"
+import { getStripeId } from "./stripe-webhook"
 
 export function isUpgradeSubscription(current: SubscriptionPlan, next: SubscriptionPlan): boolean {
   return PLAN_HIERARCHY[next] > PLAN_HIERARCHY[current]
@@ -245,8 +246,8 @@ export async function verifyCheckoutSession(raw: z.input<typeof VerifyCheckoutSe
     return sub
   }
 
-  const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id
-  const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id
+  const customerId = getStripeId(session.customer)
+  const subscriptionId = getStripeId(session.subscription)
 
   if (!customerId || !subscriptionId) {
     return currentSubscription({})
