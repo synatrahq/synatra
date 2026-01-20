@@ -4,6 +4,7 @@ import { z } from "zod"
 import { principal, getAgentById, getEnvironmentById, listResources } from "@synatra/core"
 import { isManagedResourceType, AgentRuntimeConfigSchema } from "@synatra/core/types"
 import { loadConfig, createCodeExecutor } from "@synatra/service-call"
+import { toErrorMessage } from "@synatra/util/error"
 
 const schema = z.object({
   toolName: z.string(),
@@ -52,7 +53,7 @@ export const executeTool = new Hono().post("/:id/playground/execute-tool", zVali
   if (!result.ok) {
     return c.json({
       ok: false,
-      error: result.error,
+      error: toErrorMessage(result.error),
       logs: [],
       durationMs: Date.now() - start,
     })

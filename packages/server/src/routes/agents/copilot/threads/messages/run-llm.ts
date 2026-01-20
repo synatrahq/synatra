@@ -23,6 +23,7 @@ import {
 import { emitCopilotEvent } from "../stream"
 import { AgentRuntimeConfigSchema, type AgentRuntimeConfig } from "@synatra/core/types"
 import { createResourceGateway, loadConfig, type ColumnInfo } from "@synatra/service-call"
+import { toErrorMessage } from "@synatra/util/error"
 import { searchEndpointsWithLLM, formatSearchResultsForLLM, getApiSummary } from "../../api-search"
 import { buildCopilotSystemPrompt, type TemplateInfo } from "../../copilot-prompt"
 import { getModel } from "../../models"
@@ -221,7 +222,7 @@ User request: ${message}
       const resource = resources.find((r) => r.slug === args.resourceSlug)
       if (!resource) return `Error: Resource "${args.resourceSlug}" not found`
       const result = await gateway.columns(organizationId, resource.id, environmentId, args.tableName)
-      if (!result.ok) return `Error: ${result.error}`
+      if (!result.ok) return `Error: ${toErrorMessage(result.error)}`
       return formatColumnsForLLM(result.data)
     },
   })
@@ -1039,7 +1040,7 @@ User answered questions: ${resultSummary}
       const resource = resources.find((r) => r.slug === args.resourceSlug)
       if (!resource) return `Error: Resource "${args.resourceSlug}" not found`
       const result = await gateway.columns(organizationId, resource.id, environmentId, args.tableName)
-      if (!result.ok) return `Error: ${result.error}`
+      if (!result.ok) return `Error: ${toErrorMessage(result.error)}`
       return formatColumnsForLLM(result.data)
     },
   })

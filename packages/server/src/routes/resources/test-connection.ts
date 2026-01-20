@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator"
 import { z } from "zod"
 import { getResourceById, getResourceConfig, principal } from "@synatra/core"
 import { loadConfig, createResourceGateway } from "@synatra/service-call"
+import { toErrorMessage } from "@synatra/util/error"
 import {
   UserConfigurableResourceType,
   type UserConfigurableResourceType as UserConfigurableResourceTypeType,
@@ -59,7 +60,7 @@ export const testConnection = new Hono().post(
     })
 
     if (!result.ok) {
-      return c.json({ success: false, error: result.error })
+      return c.json({ success: false, error: toErrorMessage(result.error) })
     }
 
     return c.json(result.data)

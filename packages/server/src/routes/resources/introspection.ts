@@ -4,7 +4,7 @@ import { z } from "zod"
 import { getResourceById, principal } from "@synatra/core"
 import { loadConfig, createResourceGateway, type TableInfo, type ColumnInfo } from "@synatra/service-call"
 import { requirePermission } from "../../middleware/principal"
-import { createError } from "@synatra/util/error"
+import { createError, toErrorMessage } from "@synatra/util/error"
 
 export type { TableInfo, ColumnInfo }
 
@@ -44,7 +44,7 @@ export const introspection = new Hono()
         throw createError("BadRequestError", { message: "Resource is not a database" })
       }
       const result = await gateway.tables(organizationId, id, environmentId)
-      if (!result.ok) throw createError("InternalError", { message: result.error })
+      if (!result.ok) throw createError("InternalError", { message: toErrorMessage(result.error) })
       return c.json(result.data)
     },
   )
@@ -62,7 +62,7 @@ export const introspection = new Hono()
         throw createError("BadRequestError", { message: "Resource is not a database" })
       }
       const result = await gateway.columns(organizationId, id, environmentId, table, schema)
-      if (!result.ok) throw createError("InternalError", { message: result.error })
+      if (!result.ok) throw createError("InternalError", { message: toErrorMessage(result.error) })
       return c.json(result.data)
     },
   )

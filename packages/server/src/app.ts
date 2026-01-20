@@ -23,12 +23,15 @@ import { appAccounts, oauthCallback, githubCallback } from "./routes/app-account
 import { usage } from "./routes/usage"
 import { subscriptions, subscriptionsWebhook } from "./routes/subscriptions"
 import { setupStatic } from "./static"
-import { fromUnknown, isAppError } from "@synatra/util/error"
+import { fromUnknown, isAppError, isProblemDetails } from "@synatra/util/error"
 
 initEncryption(config().encryption.key)
 
 export const app = new Hono()
   .onError((err, c) => {
+    if (isProblemDetails(err)) {
+      return c.json(err, err.status as 400)
+    }
     if (!isAppError(err)) {
       console.error("Unhandled error:", err)
     }

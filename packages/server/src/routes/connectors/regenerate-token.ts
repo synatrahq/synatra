@@ -2,7 +2,7 @@ import { Hono } from "hono"
 import { principal, regenerateConnectorToken } from "@synatra/core"
 import { loadConfig, createResourceGateway } from "@synatra/service-call"
 import { requirePermission } from "../../middleware/principal"
-import { createError } from "@synatra/util/error"
+import { createError, toErrorMessage } from "@synatra/util/error"
 
 const serviceConfig = loadConfig("server")
 const gateway = createResourceGateway(serviceConfig)
@@ -20,7 +20,7 @@ export const regenerateToken = new Hono().post(
     const invalidateResult = await gateway.invalidateConnectorToken(organizationId, id)
     const invalidationFailed = !invalidateResult.ok
     if (invalidationFailed) {
-      console.warn(`[Connector] Failed to invalidate token for ${id}: ${invalidateResult.error}`)
+      console.warn(`[Connector] Failed to invalidate token for ${id}: ${toErrorMessage(invalidateResult.error)}`)
     }
     return c.json({
       connector: {
