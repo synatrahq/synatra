@@ -38,7 +38,7 @@ import { stripeOperation, executeStripeOperation } from "./stripe/operations"
 import { githubOperation, executeGitHubOperation } from "./github/operations"
 import { intercomOperation, executeIntercomOperation } from "./intercom/operations"
 import { restapiOperation, executeRestApiOperation } from "./restapi/operations"
-import { createError, fromUnknown, isAppError } from "@synatra/util/error"
+import { createError, fromUnknown, isAppError, isProblemDetails } from "@synatra/util/error"
 
 function isDatabaseResource(config: ExecutionConfig): config is DatabaseResource {
   return config.type === "postgres" || config.type === "mysql"
@@ -77,6 +77,9 @@ const gatewayConfig = config()
 app.use("*", serviceAuth(gatewayConfig.serviceSecret))
 
 app.onError((err, c) => {
+  if (isProblemDetails(err)) {
+    return c.json({ success: false, error: err }, err.status as 400)
+  }
   if (!isAppError(err)) {
     console.error("Unhandled error:", err)
   }

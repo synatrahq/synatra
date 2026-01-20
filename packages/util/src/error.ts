@@ -199,6 +199,17 @@ export const isAppError = (input: unknown): input is AppError => {
   return brand in input
 }
 
+export const isProblemDetails = (input: unknown): input is ProblemDetails => {
+  if (!input || typeof input !== "object") return false
+  const value = input as Record<string, unknown>
+  if (typeof value.type !== "string") return false
+  if (typeof value.title !== "string") return false
+  if (typeof value.status !== "number") return false
+  if (typeof value.name !== "string") return false
+  if (!("data" in value)) return false
+  return true
+}
+
 export const fromUnknown = (input: unknown): AppError => {
   if (isAppError(input)) return input
   if (input instanceof ZodError) {
@@ -210,6 +221,18 @@ export const fromUnknown = (input: unknown): AppError => {
   }
   const message = typeof input === "string" ? input : "Unknown error"
   return createError("UnknownError", { message }, { cause: input })
+}
+
+export const toErrorMessage = (input: unknown): string => {
+  if (isProblemDetails(input)) return extractErrorMessage(input)
+  if (input instanceof Error) return input.message || "Unknown error"
+  if (input && typeof input === "object") {
+    const value = input as Record<string, unknown>
+    if (typeof value.message === "string") return value.message
+    if (typeof value.error === "string") return value.error
+  }
+  if (typeof input === "string") return input
+  return "Unknown error"
 }
 
 export const extractErrorMessage = (problem: ProblemDetails): string => {

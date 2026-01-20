@@ -1,6 +1,7 @@
 import { principal, findAgentByRelease, listResources } from "@synatra/core"
 import { isManagedResourceType, type AgentRuntimeConfig } from "@synatra/core/types"
 import { executeCode } from "./executor-client"
+import { toErrorMessage } from "@synatra/util/error"
 
 export interface ExecuteFunctionInput {
   agentId: string
@@ -64,7 +65,7 @@ export async function executeFunction(input: ExecuteFunctionInput): Promise<Exec
     })
 
     if (!result.ok) {
-      return { ok: false, error: result.error, durationMs: Date.now() - start }
+      return { ok: false, error: toErrorMessage(result.error), durationMs: Date.now() - start }
     }
 
     if (!result.data.success) {

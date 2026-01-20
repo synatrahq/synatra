@@ -1,5 +1,6 @@
 import type { ServiceConfig } from "./config"
 import { serviceFetch, type ServiceResult } from "./fetch"
+import { createError } from "@synatra/util/error"
 import type { ResourceType, UserConfigurableResourceType } from "@synatra/core/types"
 
 export type QueryOperation = {
@@ -91,7 +92,12 @@ export function createResourceGateway(config: ServiceConfig): ResourceGateway {
         organizationId,
       )
       if (!result.ok) return result
-      if (!result.data.success) return { ok: false, error: result.data.message ?? "Unknown error" }
+      if (!result.data.success) {
+        return {
+          ok: false,
+          error: createError("InternalError", { message: result.data.message ?? "Unknown error" }).toProblemDetails(),
+        }
+      }
       return { ok: true, data: result.data.data }
     },
 
@@ -103,7 +109,12 @@ export function createResourceGateway(config: ServiceConfig): ResourceGateway {
         organizationId,
       )
       if (!result.ok) return result
-      if (!result.data.success) return { ok: false, error: result.data.message ?? "Unknown error" }
+      if (!result.data.success) {
+        return {
+          ok: false,
+          error: createError("InternalError", { message: result.data.message ?? "Unknown error" }).toProblemDetails(),
+        }
+      }
       return { ok: true, data: result.data.data }
     },
 
