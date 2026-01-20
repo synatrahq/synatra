@@ -627,7 +627,7 @@ export default function InboxPage() {
 
   const updateThreadInCache = (threadId: string, updates: Partial<ThreadListItem>) => {
     queryClient.setQueryData(
-      ["inbox", "threads", statusFilter(), channelFilter(), agentFilter()],
+      ["inbox", "threads", statusFilter(), channelFilter(), agentFilter(), activeOrg()?.id],
       (
         old:
           | { pages: Array<{ items: ThreadListItem[]; nextCursor: string | null }>; pageParams: unknown[] }
@@ -647,7 +647,7 @@ export default function InboxPage() {
 
   const removeThreadFromCache = (threadId: string) => {
     queryClient.setQueryData(
-      ["inbox", "threads", statusFilter(), channelFilter(), agentFilter()],
+      ["inbox", "threads", statusFilter(), channelFilter(), agentFilter(), activeOrg()?.id],
       (
         old:
           | { pages: Array<{ items: ThreadListItem[]; nextCursor: string | null }>; pageParams: unknown[] }
@@ -667,7 +667,9 @@ export default function InboxPage() {
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    await queryClient.refetchQueries({ queryKey: ["inbox", "threads", statusFilter(), channelFilter(), agentFilter()] })
+    await queryClient.refetchQueries({
+      queryKey: ["inbox", "threads", statusFilter(), channelFilter(), agentFilter(), activeOrg()?.id],
+    })
     invalidateCounts()
     setRefreshing(false)
   }
