@@ -45,10 +45,10 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: "Getting Started",
+          label: "Getting started",
           items: [
             { label: "Introduction", slug: "docs" },
-            { label: "Quick Start", slug: "docs/quick-start" },
+            { label: "Quickstart", slug: "docs/quickstart" },
           ],
         },
         {
@@ -57,11 +57,11 @@ export default defineConfig({
             { label: "Agents", slug: "docs/concepts/agents" },
             { label: "Tools", slug: "docs/concepts/tools" },
             { label: "Resources", slug: "docs/concepts/resources" },
-            { label: "Environments", slug: "docs/concepts/environment" },
+            { label: "Environments", slug: "docs/concepts/environments" },
             { label: "Triggers", slug: "docs/concepts/triggers" },
-            { label: "Prompts", slug: "docs/concepts/prompt" },
-            { label: "Subagents", slug: "docs/concepts/subagent" },
-            { label: "Runs", slug: "docs/concepts/run" },
+            { label: "Prompts", slug: "docs/concepts/prompts" },
+            { label: "Subagents", slug: "docs/concepts/subagents" },
+            { label: "Runs", slug: "docs/concepts/runs" },
             { label: "Inbox", slug: "docs/concepts/inbox" },
           ],
         },
