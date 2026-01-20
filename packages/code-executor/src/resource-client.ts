@@ -1,5 +1,6 @@
 import { loadConfig, createResourceGateway, type QueryOperation } from "@synatra/service-call"
 import type { UserConfigurableResourceType } from "@synatra/core/types"
+import { toErrorMessage } from "@synatra/util/error"
 
 export type { UserConfigurableResourceType, QueryOperation }
 
@@ -31,7 +32,7 @@ export function createResourceClient(
 
       const result = await gateway.query(organizationId, mapping.resourceId, environmentId, operation)
       if (!result.ok) {
-        throw new Error(result.error)
+        throw new Error(toErrorMessage(result.error))
       }
 
       if (!result.data.success) {
