@@ -131,7 +131,6 @@ function CharacterPicker(props: CharacterPickerProps) {
 
 type WorkingIndicatorProps = {
   status: AgentStatus
-  threadId?: string
 }
 
 export function WorkingIndicator(props: WorkingIndicatorProps) {

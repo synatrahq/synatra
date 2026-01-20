@@ -399,7 +399,6 @@ type AgentMessageProps = {
   subagentWorks?: SubagentWork[]
   summary?: string
   humanRequests?: HumanRequestItem[]
-  threadId?: string
 }
 
 export function AgentMessage(props: AgentMessageProps) {
@@ -515,7 +514,7 @@ export function AgentMessage(props: AgentMessageProps) {
         </Show>
 
         <Show when={isActive()}>
-          <WorkingIndicator status={props.status!} threadId={props.threadId} />
+          <WorkingIndicator status={props.status!} />
         </Show>
       </div>
     </div>
