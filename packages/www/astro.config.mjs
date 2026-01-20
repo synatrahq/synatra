@@ -12,11 +12,30 @@ export default defineConfig({
     starlight({
       title: "Synatra",
       description: "The AI workspace for human-AI collaboration",
-      logo: {
-        light: "./src/assets/logo-light.svg",
-        dark: "./src/assets/logo-dark.svg",
-        replacesTitle: true,
-      },
+      head: [
+        {
+          tag: "link",
+          attrs: {
+            rel: "preconnect",
+            href: "https://fonts.googleapis.com",
+          },
+        },
+        {
+          tag: "link",
+          attrs: {
+            rel: "preconnect",
+            href: "https://fonts.gstatic.com",
+            crossorigin: true,
+          },
+        },
+        {
+          tag: "link",
+          attrs: {
+            rel: "stylesheet",
+            href: "https://fonts.googleapis.com/css2?family=Outfit:wght@600&display=swap",
+          },
+        },
+      ],
       social: [
         {
           icon: "github",
@@ -41,7 +60,7 @@ export default defineConfig({
           ],
         },
       ],
-      customCss: ["./src/styles/global.css"],
+      customCss: ["./src/styles/global.css", "./src/styles/docs.css"],
     }),
   ],
   vite: {
