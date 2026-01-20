@@ -1,8 +1,8 @@
 @layer starlight {
   :root {
-    --sl-color-accent-low: oklch(0.18 0.02 145);
-    --sl-color-accent: oklch(0.65 0.15 145);
-    --sl-color-accent-high: oklch(0.85 0.1 145);
+    --sl-color-accent-low: oklch(0.18 0.03 230);
+    --sl-color-accent: oklch(0.65 0.14 230);
+    --sl-color-accent-high: oklch(0.85 0.08 230);
     --sl-color-white: #e8e8e8;
     --sl-color-gray-1: #d4d4d4;
     --sl-color-gray-2: #a3a3a3;
@@ -21,7 +21,9 @@
     --sl-color-hairline-shade: #1a1a1a;
 
     --sl-color-text: #e8e8e8;
-    --sl-color-text-accent: oklch(0.75 0.12 145);
+    --sl-color-text-accent: oklch(0.72 0.12 230);
+
+    --sl-color-header-bg: oklch(0.03 0 0 / 0.9);
 
     --sl-font: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, monospace;
     --sl-font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, monospace;
@@ -53,28 +55,30 @@
   }
 
   [data-theme="light"] {
-    --sl-color-accent-low: oklch(0.95 0.02 145);
-    --sl-color-accent: oklch(0.45 0.15 145);
-    --sl-color-accent-high: oklch(0.25 0.1 145);
-    --sl-color-white: #171717;
-    --sl-color-gray-1: #262626;
-    --sl-color-gray-2: #404040;
+    --sl-color-accent-low: oklch(0.95 0.03 230);
+    --sl-color-accent: oklch(0.5 0.16 230);
+    --sl-color-accent-high: oklch(0.3 0.12 230);
+    --sl-color-white: #141414;
+    --sl-color-gray-1: #1f1f1f;
+    --sl-color-gray-2: #525252;
     --sl-color-gray-3: #737373;
-    --sl-color-gray-4: #a3a3a3;
+    --sl-color-gray-4: #a1a1a1;
     --sl-color-gray-5: #d4d4d4;
-    --sl-color-gray-6: #f0f0f0;
-    --sl-color-gray-7: #fafafa;
-    --sl-color-black: #ffffff;
+    --sl-color-gray-6: #ebebeb;
+    --sl-color-gray-7: #f5f5f5;
+    --sl-color-black: #fafafa;
 
-    --sl-color-bg: #ffffff;
+    --sl-color-bg: #fafafa;
     --sl-color-bg-nav: #fafafa;
     --sl-color-bg-sidebar: #fafafa;
-    --sl-color-bg-inline-code: #f0f0f0;
-    --sl-color-hairline-light: #e5e5e5;
+    --sl-color-bg-inline-code: #ebebeb;
+    --sl-color-hairline-light: #e0e0e0;
     --sl-color-hairline-shade: #d4d4d4;
 
-    --sl-color-text: #171717;
-    --sl-color-text-accent: oklch(0.4 0.12 145);
+    --sl-color-text: #141414;
+    --sl-color-text-accent: oklch(0.45 0.14 230);
+
+    --sl-color-header-bg: oklch(0.98 0 0 / 0.9);
   }
 
   html {
@@ -84,6 +88,12 @@
 
   body {
     font-feature-settings: "liga" 0;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-shadow: none !important;
   }
 
   starlight-menu-button {
@@ -133,8 +143,8 @@
 
   .top-level > li > details > ul {
     margin-top: 0.25rem;
-    padding-left: 0;
-    border-left: 1px solid var(--sl-color-hairline-shade);
+    padding-left: 0.75rem;
+    border-left: none;
     margin-left: 0;
   }
 
@@ -142,7 +152,7 @@
   ul ul > li > a {
     font-size: var(--sl-text-sm);
     font-weight: 400;
-    padding: 0.25rem 0 0.25rem 0.75rem;
+    padding: 0.25rem 0;
     color: var(--sl-color-gray-3);
     transition: color 0.1s;
   }
@@ -155,10 +165,8 @@
   .top-level > li > details > ul > li > a[aria-current="page"],
   ul ul > li > a[aria-current="page"] {
     color: var(--sl-color-text-accent);
-    font-weight: 400;
+    font-weight: 500;
     background: transparent;
-    border-left: 1px solid var(--sl-color-accent);
-    margin-left: -1px;
   }
 
   .content-panel {
@@ -189,8 +197,8 @@
     letter-spacing: 0;
     line-height: var(--sl-line-height-headings);
     margin-top: 2.5rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--sl-color-hairline-shade);
+    padding-bottom: 0;
+    border-bottom: none;
   }
 
   .sl-markdown-content h3 {
@@ -338,8 +346,8 @@
   }
 
   .expressive-code .ec-line.ins {
-    background: oklch(0.2 0.06 145 / 0.4);
-    border-left: 2px solid oklch(0.6 0.15 145);
+    background: oklch(0.2 0.05 145 / 0.4);
+    border-left: 2px solid oklch(0.6 0.12 145);
     padding-left: calc(1rem - 2px);
   }
 
@@ -353,6 +361,21 @@
     background: oklch(0.2 0.04 60 / 0.4);
     border-left: 2px solid oklch(0.7 0.12 60);
     padding-left: calc(1rem - 2px);
+  }
+
+  [data-theme="light"] .expressive-code .ec-line.ins {
+    background: oklch(0.95 0.06 145 / 0.6);
+    border-left: 2px solid oklch(0.5 0.14 145);
+  }
+
+  [data-theme="light"] .expressive-code .ec-line.del {
+    background: oklch(0.93 0.06 25 / 0.6);
+    border-left: 2px solid oklch(0.55 0.16 25);
+  }
+
+  [data-theme="light"] .expressive-code .ec-line.mark {
+    background: oklch(0.95 0.04 60 / 0.6);
+    border-left: 2px solid oklch(0.65 0.14 60);
   }
 
   .sl-markdown-content table {
@@ -406,14 +429,11 @@
     border: 1px solid var(--sl-color-hairline-shade);
     border-radius: 0;
     padding: 0.75rem 1rem;
-    transition:
-      border-color 0.1s,
-      background 0.1s;
+    transition: border-color 0.1s;
   }
 
   .sl-link-card:hover {
     border-color: var(--sl-color-gray-4);
-    background: var(--sl-color-gray-7);
   }
 
   .sl-link-card .title {
@@ -447,7 +467,7 @@
   }
 
   .starlight-aside--tip {
-    border-left-color: oklch(0.6 0.15 145);
+    border-left-color: oklch(0.6 0.14 230);
   }
 
   .starlight-aside--caution {
@@ -456,6 +476,18 @@
 
   .starlight-aside--danger {
     border-left-color: oklch(0.55 0.15 25);
+  }
+
+  [data-theme="light"] .starlight-aside--tip {
+    border-left-color: oklch(0.5 0.16 230);
+  }
+
+  [data-theme="light"] .starlight-aside--caution {
+    border-left-color: oklch(0.6 0.14 60);
+  }
+
+  [data-theme="light"] .starlight-aside--danger {
+    border-left-color: oklch(0.5 0.16 25);
   }
 
   .starlight-aside .starlight-aside__title {
@@ -469,7 +501,7 @@
   }
 
   .starlight-aside--tip .starlight-aside__title {
-    color: oklch(0.7 0.15 145);
+    color: oklch(0.7 0.14 230);
   }
 
   .starlight-aside--caution .starlight-aside__title {
@@ -478,6 +510,18 @@
 
   .starlight-aside--danger .starlight-aside__title {
     color: oklch(0.6 0.15 25);
+  }
+
+  [data-theme="light"] .starlight-aside--tip .starlight-aside__title {
+    color: oklch(0.45 0.16 230);
+  }
+
+  [data-theme="light"] .starlight-aside--caution .starlight-aside__title {
+    color: oklch(0.55 0.14 60);
+  }
+
+  [data-theme="light"] .starlight-aside--danger .starlight-aside__title {
+    color: oklch(0.5 0.16 25);
   }
 
   .starlight-aside p {
@@ -623,8 +667,8 @@
   }
 
   header.header {
-    backdrop-filter: blur(8px);
-    background: oklch(0.03 0 0 / 0.9);
+    backdrop-filter: blur(12px);
+    background: var(--sl-color-header-bg);
     border-bottom: 1px solid var(--sl-color-hairline-shade);
   }
 
@@ -710,8 +754,12 @@
   }
 
   ::selection {
-    background: oklch(0.5 0.12 145 / 0.3);
+    background: oklch(0.5 0.12 230 / 0.3);
     color: var(--sl-color-text);
+  }
+
+  [data-theme="light"] ::selection {
+    background: oklch(0.7 0.14 230 / 0.35);
   }
 
   ::-webkit-scrollbar {
