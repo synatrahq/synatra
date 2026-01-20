@@ -85,6 +85,25 @@ export function setupStatic(app: Hono) {
   }
 
   app.get(
+    "/blog",
+    serveStatic({
+      root: WWW_DIR,
+      path: "/blog/index.html",
+      onFound: (_, c) => c.header("Cache-Control", ONE_HOUR),
+    }),
+  )
+
+  app.get("/blog/*", (c) => {
+    const p = c.req.path
+    const file = path.resolve(WWW_DIR, "." + p, "index.html")
+    if (!file.startsWith(WWW_DIR + path.sep) || !fs.existsSync(file)) {
+      return c.html(fs.readFileSync(path.join(WWW_DIR, "404.html"), "utf-8"), 404)
+    }
+    c.header("Cache-Control", ONE_HOUR)
+    return c.html(fs.readFileSync(file, "utf-8"))
+  })
+
+  app.get(
     "/docs",
     serveStatic({
       root: WWW_DIR,
@@ -96,7 +115,7 @@ export function setupStatic(app: Hono) {
   app.get("/docs/*", (c) => {
     const p = c.req.path
     const file = path.resolve(WWW_DIR, "." + p, "index.html")
-    if (!file.startsWith(WWW_DIR) || !fs.existsSync(file)) {
+    if (!file.startsWith(WWW_DIR + path.sep) || !fs.existsSync(file)) {
       return c.html(fs.readFileSync(path.join(WWW_DIR, "404.html"), "utf-8"), 404)
     }
     c.header("Cache-Control", ONE_HOUR)

@@ -1,0 +1,47 @@
+---
+import "../../styles/global.css"
+import Header from "../../components/Header.astro"
+import Footer from "../../components/Footer.astro"
+import { Content } from "../../content/blog/internal-tools-paradox.md"
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Every dashboard you build is debt. Every admin panel is a future meeting about the admin panel. The internal tools paradox, and how to escape it." />
+    <meta property="og:title" content="The internal tools paradox | Synatra" />
+    <meta property="og:description" content="Every dashboard you build is debt. Every admin panel is a future meeting about the admin panel." />
+    <meta property="og:type" content="article" />
+    <meta property="og:url" content="https://synatrahq.com/blog/internal-tools-paradox" />
+    <meta property="og:image" content="https://synatrahq.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="Synatra" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://synatrahq.com/og-image.png" />
+    <meta name="twitter:title" content="The internal tools paradox | Synatra" />
+    <meta name="twitter:description" content="Every dashboard you build is debt. Every admin panel is a future meeting about the admin panel." />
+    <link rel="canonical" href="https://synatrahq.com/blog/internal-tools-paradox" />
+    <meta name="theme-color" content="#111111" />
+    <meta name="color-scheme" content="dark" />
+    <title>The internal tools paradox | Synatra</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600&display=swap" rel="stylesheet" />
+  </head>
+  <body class="min-h-screen bg-surface-bg antialiased" style="font-family: 'Spectral', Georgia, serif;">
+    <main class="mx-auto max-w-2xl px-6">
+      <Header />
+
+      <article class="prose prose-invert pb-12">
+        <Content />
+      </article>
+
+      <Footer />
+    </main>
+  </body>
+</html>

@@ -1,0 +1,61 @@
+---
+import "../../styles/global.css"
+import Header from "../../components/Header.astro"
+import Footer from "../../components/Footer.astro"
+
+const posts = [
+  {
+    slug: "internal-tools-paradox",
+    title: "The internal tools paradox",
+    description: "Every dashboard you build is debt. Every admin panel is a future meeting about the admin panel.",
+  },
+]
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Blog posts from Synatra - thoughts on AI, internal tools, and the future of work." />
+    <meta property="og:title" content="Blog | Synatra" />
+    <meta property="og:description" content="Thoughts on AI, internal tools, and the future of work." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://synatrahq.com/blog" />
+    <meta property="og:image" content="https://synatrahq.com/og-image.png" />
+    <meta property="og:site_name" content="Synatra" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Blog | Synatra" />
+    <meta name="twitter:description" content="Thoughts on AI, internal tools, and the future of work." />
+    <link rel="canonical" href="https://synatrahq.com/blog" />
+    <meta name="theme-color" content="#111111" />
+    <meta name="color-scheme" content="dark" />
+    <title>Blog | Synatra</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600&display=swap" rel="stylesheet" />
+  </head>
+  <body class="min-h-screen bg-surface-bg antialiased" style="font-family: 'Spectral', Georgia, serif;">
+    <main class="mx-auto max-w-2xl px-6">
+      <Header />
+
+      <section class="pb-12">
+        <h1 class="text-3xl font-medium text-text-primary mb-8">Blog</h1>
+        <div class="space-y-6">
+          {posts.map((post) => (
+            <a href={`/blog/${post.slug}`} class="block group">
+              <article class="border-b border-surface-border-muted pb-6">
+                <h2 class="text-xl font-medium text-text-primary group-hover:text-text-secondary transition-colors">{post.title}</h2>
+                <p class="text-text-muted mt-2">{post.description}</p>
+              </article>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <Footer />
+    </main>
+  </body>
+</html>
