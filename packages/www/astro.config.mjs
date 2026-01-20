@@ -11,7 +11,11 @@ export default defineConfig({
     sitemap(),
     starlight({
       title: "Synatra",
-      description: "The AI workspace for human-AI collaboration",
+      logo: {
+        light: "./src/assets/logo-light.svg",
+        dark: "./src/assets/logo-dark.svg",
+      },
+      description: "The AI workspace",
       head: [
         {
           tag: "link",

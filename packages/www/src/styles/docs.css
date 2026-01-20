@@ -128,6 +128,11 @@
     color: var(--sl-color-gray-3);
   }
 
+  .site-title img {
+    width: 15px;
+    height: 15px;
+  }
+
   .sidebar-content {
     padding-top: 0.125rem;
   }
