@@ -1,3 +1,5 @@
+import { MAX_SUBAGENT_DEPTH } from "./types/system-tool"
+
 export type SystemToolDefinition = {
   name: string
   description: string
@@ -211,7 +213,7 @@ export interface SubagentConfig {
 
 export function getSystemTools(
   depth: number = 0,
-  maxSubagentDepth: number = 1,
+  maxSubagentDepth: number = MAX_SUBAGENT_DEPTH,
   subagents: SubagentConfig[] = [],
 ): SystemToolDefinition[] {
   const tools: SystemToolDefinition[] = []

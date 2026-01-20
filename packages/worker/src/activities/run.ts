@@ -10,7 +10,7 @@ import {
   findAgentById,
 } from "@synatra/core"
 import type { Run } from "@synatra/core/schema"
-import type { RunStatus, UsageRunType } from "@synatra/core/types"
+import { type RunStatus, type UsageRunType, MAX_SUBAGENT_DEPTH } from "@synatra/core/types"
 import { streamingEnabled, emitThreadEvent, type ThreadEventType } from "./thread-streaming"
 
 export function getRunType(run: Run, thread: { triggerId: string | null }): UsageRunType {
@@ -94,10 +94,11 @@ export interface FailRunInput {
 export async function createRun(input: CreateRunInput): Promise<{ runId: string; run: unknown }> {
   return principal.withSystem({ organizationId: input.organizationId }, async () => {
     const depth = input.depth ?? 0
-    const maxDepth = 1
 
-    if (depth >= maxDepth) {
-      throw new Error(`Maximum run depth exceeded (${depth} >= ${maxDepth}). Cannot create subagent at this depth.`)
+    if (depth > MAX_SUBAGENT_DEPTH) {
+      throw new Error(
+        `Maximum run depth exceeded (${depth} > ${MAX_SUBAGENT_DEPTH}). Cannot create subagent at this depth.`,
+      )
     }
 
     const thread = await getThreadById(input.threadId)

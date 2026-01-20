@@ -10,7 +10,13 @@ import {
 import { createOpenAI } from "@ai-sdk/openai"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { createGoogleGenerativeAI } from "@ai-sdk/google"
-import type { AgentModelConfig, AgentRuntimeConfig, ModelProvider, ToolCallRecord } from "@synatra/core/types"
+import {
+  type AgentModelConfig,
+  type AgentRuntimeConfig,
+  type ModelProvider,
+  type ToolCallRecord,
+  MAX_SUBAGENT_DEPTH,
+} from "@synatra/core/types"
 import { getSystemTools, type SubagentConfig } from "@synatra/core/system-tools"
 
 export interface ResolvedLlmConfig {
@@ -133,8 +139,8 @@ When your task is complete, call \`return_to_parent\` with structured result dat
 **NEVER return plain text to ask questions.** Use \`human_request\` with question or form fields.
 `
 
-function buildDelegationInstructions(subagents: SubagentConfig[]): string {
-  if (subagents.length === 0) return ""
+function buildDelegationInstructions(subagents: SubagentConfig[], depth: number): string {
+  if (subagents.length === 0 || depth >= MAX_SUBAGENT_DEPTH) return ""
 
   const toolList = subagents.map((s) => `- \`delegate_to_${s.alias}\`: ${s.description}`).join("\n")
 
@@ -153,7 +159,7 @@ export async function callLLM(input: CallLLMInput): Promise<CallLLMResult> {
   const model = getModel(agentConfig.model.provider, agentConfig.model.model, llmConfig)
   const tools = buildTools(agentConfig, depth, subagents)
   const aiMessages = convertMessages(messages)
-  const delegationInstructions = buildDelegationInstructions(subagents)
+  const delegationInstructions = buildDelegationInstructions(subagents, depth)
   const systemInstructions = depth === 0 ? PARENT_SYSTEM_INSTRUCTIONS : SUBAGENT_SYSTEM_INSTRUCTIONS
   const systemPrompt = agentConfig.systemPrompt + "\n" + systemInstructions + delegationInstructions
 
@@ -345,7 +351,7 @@ function buildTools(agentConfig: AgentRuntimeConfig, depth: number, subagents: S
     })
   }
 
-  const systemTools = getSystemTools(depth, 1, subagents)
+  const systemTools = getSystemTools(depth, MAX_SUBAGENT_DEPTH, subagents)
   for (const st of systemTools) {
     tools[st.name] = tool({
       description: st.description,
