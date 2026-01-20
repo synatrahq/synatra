@@ -1,6 +1,6 @@
 import { createSignal, createEffect, Show, createMemo } from "solid-js"
 import { Title, Meta } from "@solidjs/meta"
-import { useParams, useNavigate } from "@solidjs/router"
+import { useParams, useNavigate, useSearchParams } from "@solidjs/router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/solid-query"
 import { api, AdminGuard, auth, activeOrg } from "../../app"
 import { Shell } from "../../components"
@@ -66,7 +66,18 @@ function PageSkeleton() {
 export default function SettingsPage() {
   const params = useParams<{ tab?: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
+
+  createEffect(() => {
+    const sessionId = searchParams.session_id
+    if (!sessionId || typeof sessionId !== "string") return
+
+    api.api.subscriptions["verify-checkout"]
+      .$post({ json: { sessionId } })
+      .then(() => queryClient.invalidateQueries({ queryKey: ["settings", "subscription"] }))
+      .finally(() => setSearchParams({ session_id: undefined }, { replace: true }))
+  })
 
   const [envCreateModalOpen, setEnvCreateModalOpen] = createSignal(false)
   const [envEditModalOpen, setEnvEditModalOpen] = createSignal(false)
@@ -324,7 +335,7 @@ export default function SettingsPage() {
       const res = await api.api.subscriptions["create-checkout"].$post({
         json: {
           plan: typedPlan,
-          successUrl: `${window.location.origin}/settings/billing?success=true`,
+          successUrl: `${window.location.origin}/settings/billing?session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${window.location.origin}/settings/billing?cancelled=true`,
         },
       })

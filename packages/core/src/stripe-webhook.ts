@@ -77,6 +77,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
     })
   }
 
+  const stripe = getStripe()
+  await stripe.customers.update(customerId, { metadata: { organizationId } })
+
   const owner = await findOwnerMember({ organizationId })
   if (!owner) {
     throw createError("NotFoundError", { type: "organization owner", id: organizationId })
@@ -292,7 +295,7 @@ function mapStripeStatus(status: Stripe.Subscription.Status): SubscriptionStatus
   }
 }
 
-function getStripeId(obj: string | { id: string } | null | undefined): string | null {
+export function getStripeId(obj: string | { id: string } | null | undefined): string | null {
   if (!obj) return null
   return typeof obj === "string" ? obj : obj.id
 }
