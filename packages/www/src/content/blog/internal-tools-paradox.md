@@ -1,6 +1,6 @@
 # The internal tools paradox
 
-Every dashboard you build is debt. Every admin panel is a future meeting about the admin panel.
+Every dashboard you build is debt. Every admin panel is a meeting you haven't scheduled yet.
 
 ---
 
@@ -12,7 +12,7 @@ Six months later. "Can we add a filter by region?" "Can we see week-over-week?" 
 
 This isn't failure. This is what winning at internal tools looks like.
 
-## The low-code promise
+## The construction fallacy
 
 Low-code was supposed to fix this. Build faster! Drag and drop!
 
@@ -23,7 +23,7 @@ But building was never the hard part. Maintaining is. Updating is. Onboarding ne
 Low-code made construction faster.
 The problem was construction itself.
 
-## The vibe coding plot twist
+## Then came the vibe coders
 
 Then came Cursor, Copilot, and the era of "just ask AI to build it."
 
@@ -41,7 +41,7 @@ No dashboard to maintain. No quarterly review. No "can we add a filter?" No "the
 
 The answer exists for the moment you need it. Then it leaves.
 
-## Arm it, don't dress it
+## Don't build interfaces. Define capabilities.
 
 You don't build dashboards. You define what the AI can do.
 
@@ -49,12 +49,7 @@ Fetch a customer. Process a refund. Query the database. Each capability is a sma
 
 ```javascript
 if (params.amount > 10000) {
-  throw new Error("Refund exceeds maximum allowed amount")
-}
-
-const payment = await context.stripe.paymentIntents.retrieve(params.paymentId)
-if (payment.status !== "succeeded") {
-  throw new Error("Cannot refund a payment that hasn't succeeded")
+  throw new Error("Refund exceeds limit")
 }
 
 return context.stripe.refunds.create({
@@ -77,7 +72,7 @@ Synatra is designed for teams. Channels for different departments. Shared agents
 
 AI should feel like a colleague. One that works in the background, asks before doing anything risky, and doesn't require a dedicated "AI ops" person to babysit.
 
-## The uncomfortable question
+## The question
 
 Most internal tools exist because "build a dashboard" was the only answer.
 
