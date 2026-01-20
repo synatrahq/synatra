@@ -45,6 +45,15 @@ export function setupStatic(app: Hono) {
     }),
   )
 
+  app.use(
+    "/images/*",
+    serveStatic({
+      root: WWW_DIR,
+      rewriteRequestPath: (p) => p,
+      onFound: (_, c) => c.header("Cache-Control", ONE_DAY),
+    }),
+  )
+
   const wwwFiles = [
     "/favicon.svg",
     "/sitemap-index.xml",

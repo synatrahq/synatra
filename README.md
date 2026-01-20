@@ -2,6 +2,8 @@
 
 The AI workspace where you collaborate with AI agents like colleagues. Stop building internal tools. Just chat with AI that handles the work, generates the UI, and asks when it needs you.
 
+[![Watch the demo](https://synatrahq.com/videos/demo-poster.webp)](https://synatrahq.com)
+
 ## What is Synatra?
 
 Synatra replaces internal tools with AI agents that:
