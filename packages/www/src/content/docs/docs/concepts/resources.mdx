@@ -26,7 +26,7 @@ All resource credentials are:
 - Decrypted only in the Resource Gateway
 - Never exposed to user code directly
 
-## Creating a Resource
+## Creating a resource
 
 1. Navigate to **Resources** in the Console
 2. Click **New Resource**
@@ -34,7 +34,7 @@ All resource credentials are:
 4. Enter connection details
 5. Test the connection
 
-## Using Resources in Tools
+## Using resources in tools
 
 Resources are available in tool code via the `context.resources` object:
 
@@ -59,7 +59,7 @@ const issues = await context.resources.github.request("GET", "/repos/myorg/myrep
 const conversations = await context.resources.intercom.request("GET", "/conversations")
 ```
 
-## Connection Modes
+## Connection modes
 
 Resources can connect in two modes:
 
@@ -68,7 +68,7 @@ Resources can connect in two modes:
 
 PostgreSQL, MySQL, and REST API support both connection modes.
 
-## Resource Gateway
+## Resource gateway
 
 The Resource Gateway is an internal service that:
 
@@ -109,7 +109,7 @@ The Connector enables secure access to resources in private networks without exp
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Security Model
+### Security model
 
 **Outbound-Only Connection**
 
@@ -157,14 +157,14 @@ The Connector supports:
 | MySQL         | Query, Introspect, Connection Test  |
 | REST API      | HTTP requests (GET, POST, PUT, etc) |
 
-### High Availability
+### High availability
 
 - Automatic reconnection with exponential backoff
 - Connection pooling for database resources
 - 30-second command timeout
 - Graceful shutdown handling
 
-### When to Use Connector Mode
+### When to use Connector mode
 
 Use Connector mode when:
 

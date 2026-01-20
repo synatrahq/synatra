@@ -27,7 +27,7 @@ For example, if you configure a subagent with alias `data_analyst`, the parent c
 - `task`: Description of what the subagent should do
 - `dependsOn`: Optional list of previous subagent results to include as context
 
-## Execution Flow
+## Execution flow
 
 ```
 Thread
@@ -57,13 +57,13 @@ delegate_to_code_reviewer({
 
 The code reviewer will see the data analyst's task and result in its context.
 
-## Completion Tools
+## Completion tools
 
 | Tool               | Used by       | Purpose                              |
 | ------------------ | ------------- | ------------------------------------ |
 | `task_complete`    | Parent only   | End the thread with a summary        |
 | `return_to_parent` | Subagent only | Return result to parent and complete |
 
-## Depth Limit
+## Depth limit
 
 By default, subagents cannot delegate to other subagents (max depth = 1). This prevents runaway delegation chains.

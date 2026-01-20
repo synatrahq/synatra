@@ -14,9 +14,9 @@ A Prompt provides:
 - **Agent binding**: Each prompt belongs to a specific agent
 - **Versioning**: Releases with semantic versioning
 
-## Prompt Modes
+## Prompt modes
 
-### Template Mode
+### Template mode
 
 Templates use `{{ path.to.value }}` syntax to inject input values:
 
@@ -27,7 +27,7 @@ Date range: {{ input.startDate }} to {{ input.endDate }}
 Include metrics: {{ input.metrics }}
 ```
 
-### Script Mode
+### Script mode
 
 Scripts execute JavaScript to generate prompts dynamically. The `input` and `context` variables are available globally:
 
@@ -42,7 +42,7 @@ Generate a comprehensive report for ${input.customerName}.
 - Date range: ${dateRange}
 - Metrics: ${metrics}
 
-## Additional Context
+## Additional context
 ${input.notes || "No additional notes provided."}
 `
 
@@ -57,7 +57,7 @@ if (!input.customerName) {
 }
 ```
 
-## Input Schema
+## Input schema
 
 Define input parameters using JSON Schema:
 
@@ -95,7 +95,7 @@ The Console generates a form based on this schema, making it easy for users to p
 
 Prompts use the same versioning model as agents:
 
-### Working Copy
+### Working copy
 
 The draft state where you iterate on the prompt configuration:
 
@@ -112,7 +112,7 @@ Published, immutable versions with semantic versioning:
 - `1.1.0` - Minor (new optional input)
 - `2.0.0` - Major (breaking schema change)
 
-### Version Control
+### Version control
 
 ```
 Prompt "customer-report"
@@ -122,9 +122,9 @@ Prompt "customer-report"
 └── Release 1.0.0
 ```
 
-## Using Prompts
+## Using prompts
 
-### In the Console
+### In the console
 
 1. Navigate to a channel
 2. Click "New Thread"
@@ -133,7 +133,7 @@ Prompt "customer-report"
 5. Fill in the input form
 6. Start the thread
 
-### Via Triggers
+### Via triggers
 
 Prompts can be referenced in trigger configurations:
 
@@ -151,7 +151,7 @@ This allows triggers to use structured prompts instead of inline templates.
 | Input source | Form in Console         | Webhook/schedule/app payload |
 | Use case     | Reusable user workflows | Automated reactions          |
 
-## Script Variables
+## Script variables
 
 Scripts have access to these global variables:
 
@@ -160,7 +160,7 @@ Scripts have access to these global variables:
 | `input`             | The user-provided input values                              |
 | `context.resources` | Connected external resources (e.g., `context.resources.db`) |
 
-## Best Practices
+## Best practices
 
 1. **Use descriptive names**: Make prompts easy to identify in the UI
 2. **Document inputs**: Add descriptions to input schema properties

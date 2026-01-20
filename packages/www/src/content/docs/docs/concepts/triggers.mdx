@@ -14,7 +14,7 @@ A Trigger defines:
 - **Which channel** the thread appears in
 - **What prompt** to send to the agent
 
-## Trigger Types
+## Trigger types
 
 | Type      | Description                        | Use Case                            |
 | --------- | ---------------------------------- | ----------------------------------- |
@@ -22,11 +22,11 @@ A Trigger defines:
 | Webhook   | HTTP endpoint for external systems | Payment events, CI/CD notifications |
 | App Event | Events from connected apps         | GitHub issues, Intercom messages    |
 
-## Prompt Modes
+## Prompt modes
 
 Triggers support three modes for generating the initial prompt:
 
-### Template Mode
+### Template mode
 
 Use `{{ path.to.value }}` syntax to inject payload data into a static template:
 
@@ -38,7 +38,7 @@ Author: {{ payload.issue.user.login }}
 
 Objects are automatically converted to JSON strings.
 
-### Script Mode
+### Script mode
 
 Execute JavaScript to dynamically generate the prompt or skip the thread. The `payload` and `context` variables are available globally:
 
@@ -61,11 +61,11 @@ Scripts can access resources via `context.resources` (e.g., `context.resources.d
 - `{ action: "run", prompt: string }` - Start the thread with this prompt
 - `{ action: "skip", reason?: string }` - Skip this trigger execution
 
-### Prompt Mode
+### Prompt mode
 
 Reference a reusable Prompt resource instead of inline content.
 
-## Schedule Triggers
+## Schedule triggers
 
 Schedule triggers use cron expressions:
 
@@ -79,7 +79,7 @@ Schedule triggers use cron expressions:
 
 The timezone is configurable per-trigger.
 
-## Webhook Triggers
+## Webhook triggers
 
 Webhook triggers provide an HTTP endpoint:
 
@@ -97,7 +97,7 @@ Content-Type: application/json
 
 The entire request body is available as `payload` in templates and scripts.
 
-### Webhook Security
+### Webhook security
 
 Webhooks are secured with Bearer token authentication:
 
@@ -109,7 +109,7 @@ Content-Type: application/json
 
 The webhook secret is generated when you activate a trigger for an environment. Include it in the `Authorization` header as a Bearer token.
 
-## App Event Triggers
+## App event triggers
 
 App event triggers respond to events from connected resources:
 
@@ -142,7 +142,7 @@ App event triggers respond to events from connected resources:
 
 The event payload structure matches the respective app's webhook format.
 
-## Version Modes
+## Version modes
 
 Triggers support two version modes for the target agent:
 
@@ -153,7 +153,7 @@ Triggers support two version modes for the target agent:
 
 Use fixed mode for production stability when you don't want agent changes to immediately affect automated workflows.
 
-## Trigger Releases
+## Trigger releases
 
 Like agents and prompts, triggers have versioned releases:
 
@@ -165,7 +165,7 @@ Each release can target a different environment, allowing you to:
 1. Test triggers against staging
 2. Deploy to production when ready
 
-## Environment Binding
+## Environment binding
 
 Trigger releases are bound to specific environments:
 
@@ -176,7 +176,7 @@ Trigger "daily-report"
 └── Working Copy → (any environment for testing)
 ```
 
-## Debug Mode
+## Debug mode
 
 Triggers can be fired in debug mode for testing:
 
@@ -184,7 +184,7 @@ Triggers can be fired in debug mode for testing:
 - Appears in the normal thread list with a debug indicator
 - Useful for testing prompt templates and scripts
 
-## Script Variables
+## Script variables
 
 The following global variables are available in scripts:
 
@@ -196,7 +196,7 @@ The following global variables are available in scripts:
 
 In templates, use `{{ payload.xxx }}` syntax to access payload values.
 
-## Best Practices
+## Best practices
 
 1. **Use scripts for complex logic**: Scripts can skip events, transform data, and generate dynamic prompts
 2. **Set appropriate timeouts**: Configure agent timeouts based on expected task duration

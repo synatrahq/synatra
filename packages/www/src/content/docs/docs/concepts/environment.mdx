@@ -5,7 +5,7 @@ description: Deployment contexts for resource isolation.
 
 Environments provide isolated deployment contexts within an organization. Use them to separate production workloads from testing.
 
-## Default Environments
+## Default environments
 
 Every organization starts with two protected environments:
 
@@ -16,7 +16,7 @@ Every organization starts with two protected environments:
 
 Protected environments cannot be deleted.
 
-## Resource Isolation
+## Resource isolation
 
 Each resource can have different configurations per environment. For example, a PostgreSQL resource might connect to different databases:
 
@@ -25,7 +25,7 @@ Each resource can have different configurations per environment. For example, a 
 
 This ensures production threads never accidentally access staging databases, and vice versa.
 
-## How Environments Work
+## How environments work
 
 **Threads** are bound to an environment at creation. The environment determines which resource configurations are used during execution.
 

@@ -14,7 +14,7 @@ Runs provide:
 - **Audit trail**: Complete record of agent activities
 - **Resource accounting**: Token usage for billing
 
-## Run Status
+## Run status
 
 | Status               | Description                                |
 | -------------------- | ------------------------------------------ |
@@ -26,7 +26,7 @@ Runs provide:
 | Cancelled            | Execution was cancelled                    |
 | Rejected             | Required approval was rejected             |
 
-## Status Transitions
+## Status transitions
 
 ```
            ┌───────────────────────────────────┐
@@ -48,7 +48,7 @@ Runs provide:
 └────────────────────────────────────────────────┘
 ```
 
-## Run Lifecycle
+## Run lifecycle
 
 ### 1. Creation
 
@@ -77,7 +77,7 @@ Run ends with one of:
 - Cancelled: User cancelled
 - Rejected: Approval was rejected
 
-## Hierarchical Runs
+## Hierarchical runs
 
 Threads can contain multiple runs at different depths:
 
@@ -92,7 +92,7 @@ Thread
     └── completed: { final: "..." }
 ```
 
-### Depth Levels
+### Depth levels
 
 | Depth | Description                                   |
 | ----- | --------------------------------------------- |
@@ -101,7 +101,7 @@ Thread
 
 Currently, the maximum depth is 1. Subagents cannot delegate to other subagents.
 
-### Parent-Child Relationship
+### Parent-child relationship
 
 When a parent delegates:
 
@@ -111,7 +111,7 @@ When a parent delegates:
 4. Child completes → parent resumes
 5. Parent run status → Running
 
-## Multiple Runs in a Thread
+## Multiple runs in a thread
 
 A thread can have multiple root-level runs:
 
@@ -125,7 +125,7 @@ Thread
 
 Each user message after completion creates a new run.
 
-## Token Usage Tracking
+## Token usage tracking
 
 Runs track token consumption for billing:
 
@@ -134,7 +134,7 @@ Runs track token consumption for billing:
 
 Token usage is aggregated per run and per organization.
 
-## Run Limits
+## Run limits
 
 Agents can configure execution limits:
 
@@ -147,7 +147,7 @@ Agents can configure execution limits:
 
 When limits are exceeded, the run fails with an appropriate error message.
 
-## Run vs Thread Status
+## Run vs Thread status
 
 | Scenario               | Thread Status     | Run Status                    |
 | ---------------------- | ----------------- | ----------------------------- |
@@ -159,7 +159,7 @@ When limits are exceeded, the run fails with an appropriate error message.
 
 Thread status reflects the overall state; run status tracks individual executions.
 
-## Best Practices
+## Best practices
 
 1. **Monitor run duration**: Long runs may indicate issues
 2. **Track token usage**: Identify expensive operations
