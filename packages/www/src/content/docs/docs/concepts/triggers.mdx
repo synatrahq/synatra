@@ -84,7 +84,8 @@ The timezone is configurable per-trigger.
 Webhook triggers provide an HTTP endpoint:
 
 ```
-POST https://api.synatra.dev/webhooks/{webhook-id}
+POST https://synatrahq.com/api/webhooks/{orgSlug}/{envSlug}/{triggerSlug}
+Authorization: Bearer {webhook-secret}
 Content-Type: application/json
 
 {
@@ -98,21 +99,46 @@ The entire request body is available as `payload` in templates and scripts.
 
 ### Webhook Security
 
-Webhooks can be secured with:
+Webhooks are secured with Bearer token authentication:
 
-- Secret token validation (custom header)
-- IP allowlisting
-- Request signature verification
+```
+POST https://synatrahq.com/api/webhooks/{orgSlug}/{envSlug}/{triggerSlug}
+Authorization: Bearer {webhook-secret}
+Content-Type: application/json
+```
+
+The webhook secret is generated when you activate a trigger for an environment. Include it in the `Authorization` header as a Bearer token.
 
 ## App Event Triggers
 
 App event triggers respond to events from connected resources:
 
-| App      | Events                                                                       |
-| -------- | ---------------------------------------------------------------------------- |
-| GitHub   | issue.opened, issue.closed, pull_request.opened, pull_request.merged, push   |
-| Stripe   | payment_intent.failed, customer.subscription.deleted, invoice.payment_failed |
-| Intercom | conversation.created, conversation.user.replied                              |
+### GitHub Events
+
+| Event                                   | Description                       |
+| --------------------------------------- | --------------------------------- |
+| `push`                                  | Commits pushed to a branch        |
+| `pull_request.opened`                   | Pull request created              |
+| `pull_request.merged`                   | Pull request merged               |
+| `pull_request.closed`                   | Pull request closed without merge |
+| `pull_request.synchronize`              | New commits pushed to PR          |
+| `pull_request.ready_for_review`         | Draft PR marked ready             |
+| `issues.opened`                         | Issue created                     |
+| `issues.closed`                         | Issue closed                      |
+| `issue_comment.created`                 | Comment on issue                  |
+| `pull_request_comment.created`          | Comment on pull request           |
+| `pull_request_review.approved`          | PR approved                       |
+| `pull_request_review.changes_requested` | Changes requested on PR           |
+| `release.published`                     | Release published                 |
+
+### Intercom Events
+
+| Event                        | Description                        |
+| ---------------------------- | ---------------------------------- |
+| `conversation.user.created`  | Customer starts a new conversation |
+| `conversation.user.replied`  | Customer sends a message           |
+| `conversation.admin.replied` | Admin sends a message              |
+| `conversation.admin.closed`  | Admin closes a conversation        |
 
 The event payload structure matches the respective app's webhook format.
 
