@@ -1,0 +1,167 @@
+---
+title: Runs
+description: Execution units that track agent invocations within threads.
+---
+
+A Run represents a single execution unit within a thread. Each time an agent processes messages, a new Run is created to track that execution.
+
+## Overview
+
+Runs provide:
+
+- **Execution tracking**: Status, duration, token usage
+- **Hierarchical structure**: Parent-child relationships for subagents
+- **Audit trail**: Complete record of agent activities
+- **Resource accounting**: Token usage for billing
+
+## Run Status
+
+| Status               | Description                                |
+| -------------------- | ------------------------------------------ |
+| Running              | Agent is actively processing               |
+| Waiting for input    | Waiting for user approval or response      |
+| Waiting for subagent | Parent waiting for child agent to complete |
+| Completed            | Execution finished successfully            |
+| Failed               | Execution encountered an error             |
+| Cancelled            | Execution was cancelled                    |
+| Rejected             | Required approval was rejected             |
+
+## Status Transitions
+
+```
+           ┌───────────────────────────────────┐
+           │                                   │
+           ▼                                   │
+┌─────────────────┐     ┌──────────────────┐   │
+│     Running     │────▶│ Waiting for input│───┘
+└────────┬────────┘     └──────────────────┘
+         │
+         │              ┌────────────────────┐
+         ├─────────────▶│ Waiting for subagent│───┐
+         │              └────────────────────┘    │
+         │                                        │
+         │◀───────────────────────────────────────┘
+         │
+         ▼
+┌────────────────────────────────────────────────┐
+│ Completed │ Failed │ Cancelled │ Rejected     │
+└────────────────────────────────────────────────┘
+```
+
+## Run Lifecycle
+
+### 1. Creation
+
+A run is created when:
+
+- A user starts a new thread
+- A user sends a follow-up message
+- A trigger fires
+- A parent agent delegates to a subagent
+
+### 2. Execution
+
+The agent loop processes:
+
+1. Sends messages to LLM
+2. Receives response (text or tool calls)
+3. Executes tools if needed
+4. Repeats until completion or limit
+
+### 3. Completion
+
+Run ends with one of:
+
+- Completed: Agent returned a result
+- Failed: Error occurred
+- Cancelled: User cancelled
+- Rejected: Approval was rejected
+
+## Hierarchical Runs
+
+Threads can contain multiple runs at different depths:
+
+```
+Thread
+├── Run A (root, agent: coordinator)
+│   ├── Run B (child, agent: researcher)
+│   │   └── completed: { findings: [...] }
+│   └── Run C (child, agent: writer)
+│       └── completed: { draft: "..." }
+└── Run D (root, agent: coordinator)  // follow-up message
+    └── completed: { final: "..." }
+```
+
+### Depth Levels
+
+| Depth | Description                                   |
+| ----- | --------------------------------------------- |
+| 0     | Root-level execution (user/trigger initiated) |
+| 1     | First-level subagent                          |
+| 2+    | Nested subagent (if allowed)                  |
+
+### Parent-Child Relationship
+
+When a parent delegates:
+
+1. Parent run status → Waiting for subagent
+2. Child run created
+3. Child executes independently
+4. Child completes → parent resumes
+5. Parent run status → Running
+
+## Multiple Runs in a Thread
+
+A thread can have multiple root-level runs:
+
+```
+Thread
+├── Run 1: Initial conversation → completed
+├── Run 2: User follow-up → completed
+├── Run 3: Another follow-up → waiting for input
+└── ...
+```
+
+Each user message after completion creates a new run.
+
+## Token Usage Tracking
+
+Runs track token consumption for billing:
+
+- Input tokens (sent to LLM)
+- Output tokens (received from LLM)
+
+Token usage is aggregated per run, per thread, per environment, and per organization.
+
+## Run Limits
+
+Agents can configure execution limits:
+
+| Limit                 | Description                           | Default    |
+| --------------------- | ------------------------------------- | ---------- |
+| Max iterations        | Maximum LLM calls per run             | 10         |
+| Max tool calls        | Max parallel tool calls per iteration | 10         |
+| Max active time       | Maximum execution time                | 10 minutes |
+| Human request timeout | Max wait for human input              | 72 hours   |
+
+When limits are exceeded, the run fails with an appropriate error message.
+
+## Run vs Thread Status
+
+| Scenario               | Thread Status     | Run Status                    |
+| ---------------------- | ----------------- | ----------------------------- |
+| Agent processing       | Running           | Running                       |
+| Waiting for approval   | Waiting for input | Waiting for input             |
+| Subagent executing     | Running           | Waiting for subagent (parent) |
+| Successfully completed | Completed         | Completed                     |
+| Error occurred         | Failed            | Failed                        |
+
+Thread status reflects the overall state; run status tracks individual executions.
+
+## Best Practices
+
+1. **Monitor run duration**: Long runs may indicate issues
+2. **Track token usage**: Identify expensive operations
+3. **Review failed runs**: Error messages help debugging
+4. **Use depth limits**: Prevent infinite delegation
+5. **Set appropriate timeouts**: Balance between completion and resource usage

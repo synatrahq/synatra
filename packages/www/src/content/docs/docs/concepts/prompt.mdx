@@ -1,0 +1,172 @@
+---
+title: Prompts
+description: Reusable templates for starting agent conversations.
+---
+
+Prompts are reusable templates that define how to start agent conversations. They allow users to initiate threads with structured input parameters instead of writing free-form messages.
+
+## Overview
+
+A Prompt provides:
+
+- **Structured input**: JSON Schema-validated parameters
+- **Dynamic content**: Template or script-based prompt generation
+- **Agent binding**: Each prompt belongs to a specific agent
+- **Versioning**: Releases with semantic versioning
+
+## Prompt Modes
+
+### Template Mode
+
+Templates use `{{ path.to.value }}` syntax to inject input values:
+
+```
+Generate a report for {{ input.customerName }}.
+
+Date range: {{ input.startDate }} to {{ input.endDate }}
+Include metrics: {{ input.metrics }}
+```
+
+### Script Mode
+
+Scripts execute JavaScript to generate prompts dynamically:
+
+```javascript
+const { input, context } = params
+
+const metrics = input.metrics.join(", ")
+const dateRange = `${input.startDate} to ${input.endDate}`
+
+const prompt = `
+Generate a comprehensive report for ${input.customerName}.
+
+## Parameters
+- Date range: ${dateRange}
+- Metrics: ${metrics}
+
+## Additional Context
+${input.notes || "No additional notes provided."}
+`
+
+return { action: "run", prompt }
+```
+
+Scripts can also skip execution:
+
+```javascript
+if (!input.customerName) {
+  return { action: "skip", reason: "Customer name is required" }
+}
+```
+
+## Input Schema
+
+Define input parameters using JSON Schema:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "customerName": {
+      "type": "string",
+      "description": "Name of the customer"
+    },
+    "startDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Report start date"
+    },
+    "endDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Report end date"
+    },
+    "metrics": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Metrics to include in the report"
+    }
+  },
+  "required": ["customerName", "startDate", "endDate"]
+}
+```
+
+The Console generates a form based on this schema, making it easy for users to provide the required inputs.
+
+## Versioning
+
+Prompts use the same versioning model as agents:
+
+### Working Copy
+
+The draft state where you iterate on the prompt configuration:
+
+- Edit template or script
+- Modify input schema
+- Test with different inputs
+
+### Releases
+
+Published, immutable versions with semantic versioning:
+
+- `1.0.0` - Initial release
+- `1.0.1` - Patch (content fix)
+- `1.1.0` - Minor (new optional input)
+- `2.0.0` - Major (breaking schema change)
+
+### Version Control
+
+```
+Prompt "customer-report"
+├── Working Copy (draft)
+├── Release 2.0.0 (current)
+├── Release 1.1.0
+└── Release 1.0.0
+```
+
+## Using Prompts
+
+### In the Console
+
+1. Navigate to a channel
+2. Click "New Thread"
+3. Select an agent
+4. Choose a prompt (if available)
+5. Fill in the input form
+6. Start the thread
+
+### Via Triggers
+
+Prompts can be referenced in trigger configurations:
+
+```
+Trigger → Prompt → Agent → Thread
+```
+
+This allows triggers to use structured prompts instead of inline templates.
+
+## Prompt vs Trigger
+
+| Feature      | Prompt                  | Trigger                      |
+| ------------ | ----------------------- | ---------------------------- |
+| Initiated by | User action             | External event               |
+| Input source | Form in Console         | Webhook/schedule/app payload |
+| Use case     | Reusable user workflows | Automated reactions          |
+
+## Script Context
+
+Scripts have access to:
+
+| Variable            | Description                    |
+| ------------------- | ------------------------------ |
+| `input`             | The user-provided input values |
+| `context.resources` | Connected external resources   |
+
+## Best Practices
+
+1. **Use descriptive names**: Make prompts easy to identify in the UI
+2. **Document inputs**: Add descriptions to input schema properties
+3. **Set required fields**: Mark essential inputs as required
+4. **Use defaults**: Provide sensible defaults for optional fields
+5. **Test thoroughly**: Use the playground to test prompts before deploying
+6. **Version carefully**: Bump major version for breaking schema changes

@@ -55,6 +55,12 @@ export default defineConfig({
           label: "Concepts",
           items: [
             { label: "Agents", slug: "docs/concepts/agents" },
+            { label: "Inbox", slug: "docs/concepts/inbox" },
+            { label: "Runs", slug: "docs/concepts/run" },
+            { label: "Triggers", slug: "docs/concepts/triggers" },
+            { label: "Prompts", slug: "docs/concepts/prompt" },
+            { label: "Subagents", slug: "docs/concepts/subagent" },
+            { label: "Environments", slug: "docs/concepts/environment" },
             { label: "Tools", slug: "docs/concepts/tools" },
             { label: "Resources", slug: "docs/concepts/resources" },
           ],
