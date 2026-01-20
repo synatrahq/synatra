@@ -10,19 +10,20 @@ BOX="box=1:boxcolor=white@0.85:boxborderw=12"
 
 ffmpeg -y -i "$INPUT" -vf "\
 scale=-2:1080,\
-drawtext=text='First, connect your data source.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-60:enable='between(t,0,6)',\
-drawtext=text='Works with Postgres, MySQL, GitHub, Stripe, and more.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-60:enable='between(t,6,11)',\
-drawtext=text='Next, build an Agent. Copilot writes the code.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-60:enable='between(t,11,18)',\
-drawtext=text='Review the changes. Deploy.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-60:enable='between(t,18,23)',\
-drawtext=text='Tools are written in JS and run in a secure sandbox.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-60:enable='between(t,23,28)',\
-drawtext=text='Next, create a Trigger. This one runs daily at 9 AM.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-60:enable='between(t,28,35)',\
-drawtext=text='Set a prompt for the Trigger.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-60:enable='between(t,35,43)',\
-drawtext=text='Triggers also work with Webhooks and Events.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-60:enable='between(t,43,48)',\
-drawtext=text='Next morning, 9 AM...':fontfile=$FONT:fontsize=48:fontcolor=black:$BOX:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,49,52)',\
-drawtext=text='Check your inbox.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-60:enable='between(t,52,55)',\
-drawtext=text='The report arrived.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-60:enable='between(t,54,57)',\
-drawtext=text='Ask the Agent for more.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-60:enable='between(t,57,62)',\
-drawtext=text='For important actions, the Agent asks you first.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-60:enable='between(t,62,69)'\
+drawtext=text='First, connect your data source.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-100:enable='between(t,0,6)',\
+drawtext=text='Works with Postgres, MySQL, GitHub, Stripe, and more.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-100:enable='between(t,6,11)',\
+drawtext=text='Next, build an Agent.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-100:enable='between(t,11,15)',\
+drawtext=text='Copilot builds the Agent for you.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-100:enable='between(t,15,17)',\
+drawtext=text='Tools are written in JS and run in a secure sandbox.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-100:enable='between(t,17,21)',\
+drawtext=text='Review the changes. Deploy.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-100:enable='between(t,21,25)',\
+drawtext=text='Next, create a Trigger. This one runs daily at 9 AM.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-100:enable='between(t,25,31)',\
+drawtext=text='Set a prompt for the Trigger.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-100:enable='between(t,31,35)',\
+drawtext=text='Triggers also work with Webhooks and App events.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-100:enable='between(t,35,42)',\
+drawtext=text='Next morning, 9 AM...':fontfile=$FONT:fontsize=48:fontcolor=black:$BOX:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,42,44)',\
+drawtext=text='Check your inbox.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-100:enable='between(t,44,46)',\
+drawtext=text='The report arrived.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-100:enable='between(t,46,50)',\
+drawtext=text='Ask follow-up questions.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-100:enable='between(t,50,53)',\
+drawtext=text='For important actions, the Agent asks you first.':fontfile=$FONT:fontsize=36:fontcolor=black:$BOX:x=(w-text_w)/2:y=h-100:enable='between(t,53,60)'\
 " -c:a copy "$OUTPUT"
 
 echo "Output: $OUTPUT"
