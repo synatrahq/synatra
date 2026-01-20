@@ -1,3 +1,5 @@
+export const MAX_SUBAGENT_DEPTH = 1
+
 export type SystemToolType = "task_complete"
 
 export type CompleteParams = {

@@ -1,16 +1,17 @@
 import { condition, upsertSearchAttributes, executeChild } from "@temporalio/workflow"
 import { getSystemTools, isSystemTool, isOutputTool, isHumanTool, isDelegationTool } from "@synatra/core/system-tools"
-import type {
-  ThreadKind,
-  ThreadStatus,
-  RunStatus,
-  AgentRuntimeConfig,
-  ToolCallRecord,
-  OutputKind,
-  MessageType,
-  ApprovalAuthority,
-  HumanRequestStatus,
-  LlmProvider,
+import {
+  type ThreadKind,
+  type ThreadStatus,
+  type RunStatus,
+  type AgentRuntimeConfig,
+  type ToolCallRecord,
+  type OutputKind,
+  type MessageType,
+  type ApprovalAuthority,
+  type HumanRequestStatus,
+  type LlmProvider,
+  MAX_SUBAGENT_DEPTH,
 } from "@synatra/core/types"
 import type { ConversationMessage, ResolvedSubagent, ResolvedLlmConfig } from "./types"
 
@@ -718,7 +719,7 @@ async function handleSystemTools(
   const subagents = context.resolvedSubagents ?? []
 
   for (const call of orderedSystemCalls) {
-    const systemTool = getSystemTools(depth, 1, subagents).find((tool) => tool.name === call.name)
+    const systemTool = getSystemTools(depth, MAX_SUBAGENT_DEPTH, subagents).find((tool) => tool.name === call.name)
     if (!systemTool) {
       await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
       await persistence.addMessage({
@@ -907,7 +908,7 @@ async function handleHumanTool(
 
   const depth = context.depth ?? 0
   const subagents = context.resolvedSubagents ?? []
-  const systemTool = getSystemTools(depth, 1, subagents).find((tool) => tool.name === primary.name)
+  const systemTool = getSystemTools(depth, MAX_SUBAGENT_DEPTH, subagents).find((tool) => tool.name === primary.name)
   if (!systemTool) {
     await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: primary })
     await persistence.addMessage({
@@ -1238,7 +1239,7 @@ async function handleDelegationTool(
 
   const depth = context.depth ?? 0
   const subagents = context.resolvedSubagents ?? []
-  const systemTool = getSystemTools(depth, 1, subagents).find((tool) => tool.name === primary.name)
+  const systemTool = getSystemTools(depth, MAX_SUBAGENT_DEPTH, subagents).find((tool) => tool.name === primary.name)
   if (!systemTool) {
     await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: primary })
     await persistence.addMessage({
