@@ -160,9 +160,14 @@
 
   .top-level > li > details > ul {
     margin-top: 0.375rem;
-    padding-left: 0.625rem;
-    border-left: 1px solid var(--sl-color-hairline-shade);
-    margin-left: 0.125rem;
+    padding-left: 0.75rem;
+    border-left: none;
+    margin-left: 0;
+  }
+
+  ul ul ul {
+    border-left: none;
+    padding-left: 0.75rem;
   }
 
   .top-level > li > details > ul > li > a,
@@ -204,7 +209,7 @@
   }
 
   .sl-markdown-content h1 {
-    font-size: var(--sl-text-xl);
+    font-size: var(--sl-text-2xl);
     font-weight: 500;
     letter-spacing: -0.015em;
     line-height: var(--sl-line-height-headings);
@@ -216,7 +221,7 @@
 
   .sl-markdown-content h2 {
     position: relative;
-    font-size: var(--sl-text-base);
+    font-size: var(--sl-text-lg);
     font-weight: 500;
     letter-spacing: -0.01em;
     line-height: var(--sl-line-height-headings);
@@ -229,7 +234,7 @@
 
   .sl-markdown-content h3 {
     position: relative;
-    font-size: var(--sl-text-sm);
+    font-size: var(--sl-text-base);
     font-weight: 500;
     letter-spacing: 0;
     line-height: var(--sl-line-height-headings);
@@ -255,10 +260,10 @@
   .sl-markdown-content h4 a.sl-link-button,
   .sl-markdown-content h5 a.sl-link-button,
   .sl-markdown-content h6 a.sl-link-button {
-    position: absolute;
-    left: -1.25rem;
-    top: 50%;
-    transform: translateY(-50%);
+    position: relative;
+    display: inline-block;
+    margin-left: 0.375rem;
+    vertical-align: middle;
     opacity: 0;
     font-size: 0.75em;
     color: var(--sl-color-gray-4);
@@ -756,35 +761,69 @@
   }
 
   .pagination-links {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
     margin-top: 2rem;
     padding-top: 0.875rem;
     border-top: 1px solid var(--sl-color-hairline-shade);
   }
 
   .pagination-links a {
-    display: flex;
-    flex-direction: column;
-    gap: 0.0625rem;
-    padding: 0.5rem 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0;
     background: transparent;
-    border: 1px solid var(--sl-color-hairline-shade);
+    border: none;
     border-radius: 0;
-    transition: border-color 0.15s;
+    transition: color 0.15s;
+    flex: 0 1 auto;
+    max-width: 45%;
   }
 
   .pagination-links a:hover {
-    border-color: var(--sl-color-gray-4);
+    color: var(--sl-color-text);
+  }
+
+  .pagination-links a:hover .link-title {
+    color: var(--sl-color-text);
+  }
+
+  .pagination-links a svg {
+    flex-shrink: 0;
+    width: 0.875rem;
+    height: 0.875rem;
+    color: var(--sl-color-gray-5);
+    transition: color 0.15s;
+  }
+
+  .pagination-links a:hover svg {
+    color: var(--sl-color-gray-3);
+  }
+
+  .pagination-links a[rel="prev"] {
+    flex-direction: row;
+  }
+
+  .pagination-links a[rel="next"] {
+    flex-direction: row-reverse;
+    margin-left: auto;
+    text-align: right;
   }
 
   .pagination-links .link-title {
     font-size: var(--sl-text-sm);
     font-weight: 400;
-    color: var(--sl-color-text);
+    color: var(--sl-color-gray-3);
+    transition: color 0.15s;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .pagination-links .link-subtitle {
-    font-size: var(--sl-text-xs);
-    color: var(--sl-color-gray-5);
+    display: none;
   }
 
   header.header {
@@ -806,16 +845,6 @@
   @media (min-width: 50rem) {
     .sidebar-pane {
       border-right: 1px solid var(--sl-color-hairline-shade);
-    }
-
-    .sl-markdown-content h1,
-    .sl-markdown-content h2,
-    .sl-markdown-content h3,
-    .sl-markdown-content h4,
-    .sl-markdown-content h5,
-    .sl-markdown-content h6 {
-      padding-left: 1.25rem;
-      margin-left: -1.25rem;
     }
   }
 
@@ -903,6 +932,10 @@
     background: oklch(0.65 0.1 230 / 0.3);
   }
 
+  starlight-theme-select label svg {
+    display: none;
+  }
+
   starlight-theme-select select {
     font-family: var(--sl-font-mono);
     font-size: var(--sl-text-sm);
@@ -925,6 +958,10 @@
   starlight-theme-select select:focus {
     outline: 1px solid var(--sl-color-text-accent);
     outline-offset: 2px;
+  }
+
+  starlight-lang-select label svg {
+    display: none;
   }
 
   starlight-lang-select select {
