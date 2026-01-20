@@ -25,7 +25,7 @@ The problem was construction itself.
 
 ## Then came the vibe coders
 
-Then came Cursor, Copilot, and the era of "just ask AI to build it."
+Cursor, Copilot, the era of "just ask AI to build it."
 
 Now anyone can spin up an admin panel in an afternoon. A metrics dashboard before lunch. Three internal tools by end of week.
 
@@ -60,9 +60,9 @@ return context.stripe.refunds.create({
 
 That's it. No screens to design. No buttons to place. The AI takes these capabilities and generates whatever interface each person needs, in the moment they need it. Then it's gone.
 
-And because it's code, AI can write it too. Synatra has a built-in Copilot that understands your connected resources. Just tell it what you want to do.
+And because it's code, AI can write it too. Synatra's Copilot understands your connected resources.
 
-We handle the rest. Approval workflows, permissions, audit logs, team access. You focus on what the agent should do. We make sure it does it safely.
+Approval workflows, permissions, audit logs—we handle the safety. You handle the intent.
 
 ## A workspace, not a toy
 
@@ -70,7 +70,7 @@ This isn't a chatbot you demo once and forget.
 
 Synatra is designed for teams. Channels for different departments. Shared agents with versioned releases. Role-based access. The kind of infrastructure that doesn't fall apart when you hire your tenth employee.
 
-AI should feel like a colleague. One that works in the background, asks before doing anything risky, and doesn't require a dedicated "AI ops" person to babysit.
+AI should feel like a colleague. One that handles things quietly, asks before doing anything risky, and never needs hand-holding.
 
 ## The question
 
@@ -78,7 +78,7 @@ Most internal tools exist because "build a dashboard" was the only answer.
 
 Now it's not.
 
-The question isn't "how do we [retool](https://retool.com) our admin panel with AI?" It's "do we need an admin panel at all, or do we just need things done?"
+The question isn't "how do we [Retool](https://retool.com) our admin panel with AI?" It's "do we need an admin panel at all, or do we just need things done?"
 
 ---
 
