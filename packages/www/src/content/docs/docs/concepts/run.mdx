@@ -137,12 +137,12 @@ Token usage is aggregated per run, per thread, per environment, and per organiza
 
 Agents can configure execution limits:
 
-| Limit                 | Description                           | Default    |
-| --------------------- | ------------------------------------- | ---------- |
-| Max iterations        | Maximum LLM calls per run             | 10         |
-| Max tool calls        | Max parallel tool calls per iteration | 10         |
-| Max active time       | Maximum execution time                | 10 minutes |
-| Human request timeout | Max wait for human input              | 72 hours   |
+| Limit                 | Description                           | Default    | Max    |
+| --------------------- | ------------------------------------- | ---------- | ------ |
+| Max iterations        | Maximum LLM calls per run             | 10         | 100    |
+| Max tool calls        | Max parallel tool calls per iteration | 10         | 50     |
+| Max active time       | Maximum execution time                | 10 minutes | 1 hour |
+| Human request timeout | Max wait for human input              | 72 hours   | 7 days |
 
 When limits are exceeded, the run fails with an appropriate error message.
 

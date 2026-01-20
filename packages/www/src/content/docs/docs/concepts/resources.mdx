@@ -7,15 +7,16 @@ Resources represent external systems that tools can interact with.
 
 ## Overview
 
-Synatra supports five resource types:
+Synatra supports six resource types:
 
 | Resource Type | Description                     | Connection Mode     |
 | ------------- | ------------------------------- | ------------------- |
 | PostgreSQL    | Connect to PostgreSQL databases | Direct or Connector |
 | MySQL         | Connect to MySQL databases      | Direct or Connector |
+| REST API      | Connect to any REST API         | Direct or Connector |
 | Stripe        | Access Stripe payment APIs      | Direct only         |
 | GitHub        | Access GitHub repository APIs   | Direct only (OAuth) |
-| Intercom      | Access Intercom APIs            | Direct only (OAuth) |
+| Intercom      | Access Intercom APIs            | Coming soon         |
 
 ## Security
 
@@ -44,6 +45,10 @@ const result = await context.resources.db.query("SELECT * FROM users WHERE id = 
 // MySQL
 const result = await context.resources.db.query("SELECT * FROM orders WHERE customer_id = ?", [customerId])
 
+// REST API
+const data = await context.resources.api.request("GET", "/users")
+const created = await context.resources.api.request("POST", "/users", { name: "John" })
+
 // Stripe
 const customer = await context.resources.stripe.request("GET", `/v1/customers/${customerId}`)
 
@@ -59,7 +64,9 @@ const conversations = await context.resources.intercom.request("GET", "/conversa
 Resources can connect in two modes:
 
 - **Direct**: Resource Gateway connects directly using stored credentials
-- **Connector**: Queries routed through a Connector running in your network (for databases in private VPCs)
+- **Connector**: Queries routed through a Connector running in your network (for databases in private VPCs or internal REST APIs)
+
+PostgreSQL, MySQL, and REST API support both connection modes.
 
 ## Resource Gateway
 
@@ -70,3 +77,98 @@ The Resource Gateway is an internal service that:
 - Enforces rate limits
 - Logs all external access
 - Provides network isolation
+
+## Connector
+
+The Connector enables secure access to resources in private networks without exposing them to the internet.
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Your Network                             │
+│                                                                 │
+│  ┌───────────┐      ┌───────────┐      ┌──────────────────┐    │
+│  │ Connector │─────▶│ Database  │      │ Internal REST API│    │
+│  │           │      │ (Private) │      │    (Private)     │    │
+│  └─────┬─────┘      └───────────┘      └──────────────────┘    │
+│        │                                        ▲               │
+│        │                                        │               │
+│        └────────────────────────────────────────┘               │
+│        │                                                        │
+└────────┼────────────────────────────────────────────────────────┘
+         │ Outbound WebSocket (TLS)
+         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     Synatra Cloud                               │
+│                                                                 │
+│  ┌──────────────────┐      ┌─────────────────┐                 │
+│  │ Resource Gateway │◀────▶│ Agent Execution │                 │
+│  └──────────────────┘      └─────────────────┘                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Security Model
+
+**Outbound-Only Connection**
+
+The Connector initiates an outbound WebSocket connection to Synatra Cloud. No inbound ports need to be opened in your firewall, eliminating common attack vectors.
+
+**Credentials Stay Local**
+
+When using Connector mode, database credentials and API keys are sent to the Connector at connection time—they are never stored in Synatra Cloud. The Connector decrypts and uses them locally.
+
+**Token-Based Authentication**
+
+Each Connector authenticates using a unique token generated in the Console. Tokens can be revoked at any time, immediately disconnecting the Connector.
+
+**Continuous Validation**
+
+The connection is validated continuously:
+
+- Heartbeat every 25 seconds
+- Token validity checked on each heartbeat
+- Automatic disconnection if token is revoked
+
+### Deployment
+
+The Connector can run anywhere with network access to your resources:
+
+- Docker container
+- Kubernetes pod
+- VM or bare metal server
+- Cloud instance in your VPC
+
+**Environment Variables**
+
+| Variable          | Description                            |
+| ----------------- | -------------------------------------- |
+| `GATEWAY_URL`     | Synatra Resource Gateway WebSocket URL |
+| `CONNECTOR_TOKEN` | Authentication token from Console      |
+
+### Capabilities
+
+The Connector supports:
+
+| Resource Type | Operations                          |
+| ------------- | ----------------------------------- |
+| PostgreSQL    | Query, Introspect, Connection Test  |
+| MySQL         | Query, Introspect, Connection Test  |
+| REST API      | HTTP requests (GET, POST, PUT, etc) |
+
+### High Availability
+
+- Automatic reconnection with exponential backoff
+- Connection pooling for database resources
+- 30-second command timeout
+- Graceful shutdown handling
+
+### When to Use Connector Mode
+
+Use Connector mode when:
+
+- Your database is in a private VPC without public access
+- You have internal REST APIs that shouldn't be exposed
+- Corporate firewall policies prohibit inbound connections
+- You want credentials to remain within your network

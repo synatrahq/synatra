@@ -42,17 +42,27 @@ When you're ready to deploy an agent:
 
 Releases are immutable and use semantic versioning (major.minor.patch). To make changes, update the working copy and create a new release.
 
-## UI Widgets
+## Outputs
 
-Agents can generate dynamic UI widgets to interact with users:
+Agents can generate structured outputs displayed to users:
 
-| Widget Type  | Description                             |
-| ------------ | --------------------------------------- |
-| Form         | Input forms with JSON Schema validation |
-| Table        | Sortable tables with row selection      |
-| Chart        | Line, bar, and pie charts               |
-| Markdown     | Formatted text content                  |
-| Confirmation | Approve/reject dialogs                  |
-| Key-Value    | Display structured data                 |
+| Output Type | Description               |
+| ----------- | ------------------------- |
+| Table       | Sortable data tables      |
+| Chart       | Line, bar, and pie charts |
+| Markdown    | Formatted text content    |
+| Key-Value   | Display structured data   |
 
-Widgets can wait for user input before the agent continues, allowing for interactive approval flows and data collection.
+## Human Requests
+
+Agents can pause execution and request user input:
+
+| Request Type | Description                                   |
+| ------------ | --------------------------------------------- |
+| Form         | Input forms with JSON Schema validation       |
+| Select Rows  | Table with row selection (single or multiple) |
+| Confirm      | Simple approve/reject dialogs                 |
+| Approval     | Tool call approval with action details        |
+| Question     | Multiple choice questions with options        |
+
+Human requests can wait for user input before the agent continues, allowing for interactive approval flows and data collection.

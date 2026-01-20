@@ -29,11 +29,9 @@ Include metrics: {{ input.metrics }}
 
 ### Script Mode
 
-Scripts execute JavaScript to generate prompts dynamically:
+Scripts execute JavaScript to generate prompts dynamically. The `input` and `context` variables are available globally:
 
 ```javascript
-const { input, context } = params
-
 const metrics = input.metrics.join(", ")
 const dateRange = `${input.startDate} to ${input.endDate}`
 
@@ -153,14 +151,14 @@ This allows triggers to use structured prompts instead of inline templates.
 | Input source | Form in Console         | Webhook/schedule/app payload |
 | Use case     | Reusable user workflows | Automated reactions          |
 
-## Script Context
+## Script Variables
 
-Scripts have access to:
+Scripts have access to these global variables:
 
-| Variable            | Description                    |
-| ------------------- | ------------------------------ |
-| `input`             | The user-provided input values |
-| `context.resources` | Connected external resources   |
+| Variable            | Description                                                 |
+| ------------------- | ----------------------------------------------------------- |
+| `input`             | The user-provided input values                              |
+| `context.resources` | Connected external resources (e.g., `context.resources.db`) |
 
 ## Best Practices
 
