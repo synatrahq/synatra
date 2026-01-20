@@ -188,13 +188,6 @@ export async function createCheckoutSession(raw: z.input<typeof CreateCheckoutSe
   }
 
   const stripe = getStripe()
-  const sub = await currentSubscription({})
-
-  const customerId = sub.stripeCustomerId || (await getOrCreateCustomer(stripe, org))
-
-  if (!sub.stripeCustomerId) {
-    await updateStripeInfoSubscription({ stripeCustomerId: customerId })
-  }
 
   const now = new Date()
   const nextMonthFirst = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1))
@@ -202,7 +195,6 @@ export async function createCheckoutSession(raw: z.input<typeof CreateCheckoutSe
 
   const session = await stripe.checkout.sessions.create(
     {
-      customer: customerId,
       mode: "subscription",
       line_items: [{ price: prices.license, quantity: 1 }, { price: prices.overage }],
       success_url: input.successUrl,
@@ -210,11 +202,11 @@ export async function createCheckoutSession(raw: z.input<typeof CreateCheckoutSe
       metadata: { organizationId: org.id, plan: input.plan },
       automatic_tax: { enabled: true },
       tax_id_collection: { enabled: true },
-      customer_update: { address: "auto", name: "auto" },
       subscription_data: {
         billing_cycle_anchor: billingCycleAnchor,
         proration_behavior: "create_prorations",
         billing_mode: { type: "flexible" },
+        metadata: { organizationId: org.id },
       },
     },
     { idempotencyKey: randomUUID() },
@@ -223,18 +215,59 @@ export async function createCheckoutSession(raw: z.input<typeof CreateCheckoutSe
   return { sessionId: session.id, url: session.url }
 }
 
-async function getOrCreateCustomer(
-  stripe: ReturnType<typeof getStripe>,
-  org: { id: string; name: string },
-): Promise<string> {
-  const existing = await stripe.customers.search({ query: `metadata['organizationId']:'${org.id}'`, limit: 1 })
-  if (existing.data.length > 0) return existing.data[0].id
+export const VerifyCheckoutSessionSchema = z.object({
+  sessionId: z.string(),
+})
 
-  const customer = await stripe.customers.create(
-    { name: org.name, metadata: { organizationId: org.id } },
-    { idempotencyKey: `customer-${org.id}` },
-  )
-  return customer.id
+export async function verifyCheckoutSession(raw: z.input<typeof VerifyCheckoutSessionSchema>) {
+  const input = VerifyCheckoutSessionSchema.parse(raw)
+  const stripe = getStripe()
+
+  const session = await stripe.checkout.sessions.retrieve(input.sessionId)
+
+  if (session.status !== "complete") {
+    return currentSubscription({})
+  }
+
+  const organizationId = session.metadata?.organizationId
+  const plan = session.metadata?.plan as SubscriptionPlan | undefined
+
+  if (organizationId !== principal.orgId()) {
+    throw createError("ForbiddenError", { message: "Session does not belong to this organization" })
+  }
+
+  if (!plan) {
+    return currentSubscription({})
+  }
+
+  const sub = await currentSubscription({})
+  if (sub.stripeSubscriptionId) {
+    return sub
+  }
+
+  const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id
+  const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id
+
+  if (!customerId || !subscriptionId) {
+    return currentSubscription({})
+  }
+
+  await stripe.customers.update(customerId, { metadata: { organizationId } })
+
+  const prices = getStripePricesSubscription(plan)
+  await updateSubscription({
+    plan,
+    stripeCustomerId: customerId,
+    stripeSubscriptionId: subscriptionId,
+    stripePriceId: prices?.license,
+  })
+
+  if (sub.plan === "free") {
+    await resetUsageMonth()
+    await ensureStagingEnvironment()
+  }
+
+  return currentSubscription({})
 }
 
 export const CreateBillingPortalSessionSchema = z.object({
