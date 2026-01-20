@@ -96,8 +96,8 @@ export async function createRun(input: CreateRunInput): Promise<{ runId: string;
     const depth = input.depth ?? 0
     const maxDepth = 1
 
-    if (depth >= maxDepth) {
-      throw new Error(`Maximum run depth exceeded (${depth} >= ${maxDepth}). Cannot create subagent at this depth.`)
+    if (depth > maxDepth) {
+      throw new Error(`Maximum run depth exceeded (${depth} > ${maxDepth}). Cannot create subagent at this depth.`)
     }
 
     const thread = await getThreadById(input.threadId)
