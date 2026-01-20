@@ -1,6 +1,7 @@
 import { createSignal, createEffect, onCleanup, For, Show, createMemo } from "solid-js"
 import { Portal } from "solid-js/web"
 import type { AgentStatus } from "../../../components"
+import { createPersistedSignal } from "../../../app/persisted-signal"
 
 import slimeImg from "../../../assets/images/loading-slime.png"
 import robotImg from "../../../assets/images/loading-robot.png"
@@ -14,21 +15,14 @@ import ninjaImg from "../../../assets/images/loading-ninja.png"
 
 const characters = [slimeImg, robotImg, catImg, ghostImg, dragonImg, foxImg, mushroomImg, penguinImg, ninjaImg]
 
-const STORAGE_KEY = "synatra:loading-character"
-
-function getStoredCharacter(): number {
-  if (typeof window === "undefined") return 0
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored === null) return 0
-  const index = parseInt(stored, 10)
-  return isNaN(index) || index < 0 || index >= characters.length ? 0 : index
-}
-
-function setStoredCharacter(index: number) {
-  localStorage.setItem(STORAGE_KEY, String(index))
-}
-
-const [selectedCharacterIndex, setSelectedCharacterIndex] = createSignal(getStoredCharacter())
+const [selectedCharacterIndex, setSelectedCharacterIndex, initCharacter] = createPersistedSignal<number>(
+  "synatra:loading-character",
+  (raw) => {
+    const index = parseInt(raw, 10)
+    return isNaN(index) || index < 0 || index >= characters.length ? null : index
+  },
+)
+initCharacter(0)
 
 export function getSelectedCharacter(): string {
   return characters[selectedCharacterIndex()]
@@ -92,7 +86,6 @@ function CharacterPicker(props: CharacterPickerProps) {
 
   const handleSelect = (index: number) => {
     setSelectedCharacterIndex(index)
-    setStoredCharacter(index)
     setOpen(false)
   }
 

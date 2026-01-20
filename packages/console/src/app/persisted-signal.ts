@@ -5,8 +5,12 @@ export function createPersistedSignal<T>(key: string, parse: (raw: string) => T 
 
   function read(): T | null {
     if (typeof window === "undefined") return null
-    const raw = localStorage.getItem(key)
-    return raw !== null ? parse(raw) : null
+    try {
+      const raw = localStorage.getItem(key)
+      return raw !== null ? parse(raw) : null
+    } catch {
+      return null
+    }
   }
 
   function init(defaultValue: T | (() => T)) {
@@ -16,7 +20,11 @@ export function createPersistedSignal<T>(key: string, parse: (raw: string) => T 
 
     createEffect(() => {
       if (typeof window !== "undefined") {
-        localStorage.setItem(key, String(value()))
+        try {
+          localStorage.setItem(key, String(value()))
+        } catch {
+          // Storage unavailable
+        }
       }
     })
   }
