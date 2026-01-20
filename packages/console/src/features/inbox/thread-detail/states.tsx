@@ -1,5 +1,5 @@
-import { Skeleton, SkeletonText } from "../../../ui"
 import { Tray } from "phosphor-solid-js"
+import { Skeleton, SkeletonText } from "../../../ui"
 
 export function EmptyState() {
   return (
