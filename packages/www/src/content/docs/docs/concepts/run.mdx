@@ -97,8 +97,9 @@ Thread
 | Depth | Description                                   |
 | ----- | --------------------------------------------- |
 | 0     | Root-level execution (user/trigger initiated) |
-| 1     | First-level subagent                          |
-| 2+    | Nested subagent (if allowed)                  |
+| 1     | Subagent execution                            |
+
+Currently, the maximum depth is 1. Subagents cannot delegate to other subagents.
 
 ### Parent-Child Relationship
 
@@ -131,7 +132,7 @@ Runs track token consumption for billing:
 - Input tokens (sent to LLM)
 - Output tokens (received from LLM)
 
-Token usage is aggregated per run, per thread, per environment, and per organization.
+Token usage is aggregated per run and per organization.
 
 ## Run Limits
 

@@ -12,77 +12,66 @@ Synatra is a platform for human-AI collaboration. Instead of building and mainta
 - Execute tasks using multiple LLM providers (OpenAI, Anthropic, Google)
 - Call user-defined tools with configurable approval workflows
 - Connect to external resources (PostgreSQL, MySQL, REST API, Stripe, GitHub)
-- Generate on-demand UI widgets (forms, tables, charts) for user interaction
+- Generate outputs (tables, charts) and request input (forms, confirmations)
 - Respond to triggers (cron schedules, webhooks, app events)
 - Maintain persistent conversation threads with approval gates
 
 ## Core Concepts
 
-Synatra is built around a few key concepts:
+| Concept                                   | Description                                      |
+| ----------------------------------------- | ------------------------------------------------ |
+| [Agent](/docs/concepts/agents)            | AI executor with model, tools, and system prompt |
+| [Tool](/docs/concepts/tools)              | User-defined function that agents can call       |
+| [Resource](/docs/concepts/resources)      | External system connection (database, API)       |
+| [Environment](/docs/concepts/environment) | Deployment context for resource isolation        |
+| [Trigger](/docs/concepts/triggers)        | Automated workflow initiator                     |
+| [Prompt](/docs/concepts/prompt)           | Reusable template for starting conversations     |
+| [Subagent](/docs/concepts/subagent)       | Delegated agent for subtasks                     |
+| [Run](/docs/concepts/run)                 | Single execution unit within a thread            |
+| [Inbox](/docs/concepts/inbox)             | Channels and threads for conversations           |
 
-| Concept                                   | Description                                                    |
-| ----------------------------------------- | -------------------------------------------------------------- |
-| [Agent](/docs/concepts/agents)            | AI executor with model configuration, tools, and system prompt |
-| [Channel](/docs/concepts/inbox)           | Organizational container for grouping related threads          |
-| [Thread](/docs/concepts/inbox)            | Conversation session between users and agents                  |
-| [Run](/docs/concepts/run)                 | Single execution unit within a thread                          |
-| [Trigger](/docs/concepts/triggers)        | Automated workflow initiator (schedule, webhook, app event)    |
-| [Prompt](/docs/concepts/prompt)           | Reusable template for starting agent conversations             |
-| [Subagent](/docs/concepts/subagent)       | Delegated agent that performs subtasks                         |
-| [Environment](/docs/concepts/environment) | Deployment context for resource isolation                      |
-| [Tool](/docs/concepts/tools)              | User-defined function that agents can call                     |
-| [Resource](/docs/concepts/resources)      | External system connection (database, API)                     |
-
-## Architecture Overview
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                         Console                             │
-│  (Channels, Threads, Agents, Triggers, Resources, Prompts)  │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                          Server                             │
-│              (API, Authentication, Authorization)           │
 └─────────────────────────────────────────────────────────────┘
                               │
               ┌───────────────┼───────────────┐
               ▼               ▼               ▼
 ┌───────────────────┐ ┌─────────────┐ ┌─────────────────────┐
 │      Worker       │ │   Temporal  │ │   Resource Gateway  │
-│ (Tool Execution)  │ │ (Workflows) │ │ (External Systems)  │
-└───────────────────┘ └─────────────┘ └─────────────────────┘
+│ (Tool Execution)  │ │ (Workflows) │ │                     │
+└───────────────────┘ └─────────────┘ └──────────┬──────────┘
+                                                 │
+                                      ┌──────────┴──────────┐
+                                      ▼                     ▼
+                                ┌──────────┐         ┌───────────┐
+                                │  Direct  │         │ Connector │
+                                └──────────┘         └───────────┘
 ```
-
-## Execution Flow
-
-1. **Thread Creation**: User starts a conversation or a trigger fires
-2. **Run Creation**: A new Run is created to track agent execution
-3. **Agent Loop**: Agent processes messages in an iterative loop
-4. **Tool Execution**: Agent calls tools, which may require human approval
-5. **Human Interaction**: Agent can request input via forms, confirmations, or messages
-6. **Completion**: Agent returns a result or encounters an error
 
 ## Key Features
 
 **Human-in-the-Loop**
-Configurable approval workflows before agents execute sensitive actions. Modify parameters before approving, reject, or let it timeout.
+Configurable approval workflows before agents execute sensitive actions.
 
 **On-Demand UI**
-Agents generate forms, tables, charts, and confirmations as needed. No pre-built dashboards to maintain.
+Agents generate tables, charts, forms, and confirmations as needed.
 
 **Secure Sandbox**
-User code runs in isolated VMs with memory limits and network isolation.
+Tool code runs in isolated VMs with memory limits.
 
 **Durable Execution**
 Temporal-based orchestration with automatic state recovery.
 
 **Proactive Triggers**
-Cron schedules, webhooks, and app events to start agent workflows automatically.
-
-**Multi-Tenant**
-Organizations, role-based access control, and environment separation.
+Cron schedules, webhooks, and app events to start workflows automatically.
 
 ## Next Steps
 
