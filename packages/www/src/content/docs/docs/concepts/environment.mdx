@@ -3,16 +3,7 @@ title: Environments
 description: Deployment contexts for resource isolation.
 ---
 
-Environments provide isolated deployment contexts within an organization. They allow you to separate production workloads from testing and development.
-
-## Overview
-
-Each organization has environments that:
-
-- Isolate resources (API keys, database connections)
-- Control which trigger releases are active
-- Track usage and costs separately
-- Enable safe testing before production deployment
+Environments provide isolated deployment contexts within an organization. Use them to separate production workloads from testing.
 
 ## Default Environments
 
@@ -23,103 +14,21 @@ Every organization starts with two protected environments:
 | Production  | Live workloads         |
 | Staging     | Testing and validation |
 
-Protected environments cannot be deleted or renamed.
-
-## Creating Environments
-
-You can create additional environments for specific use cases:
-
-```
-Organization
-├── Production (protected)
-├── Staging (protected)
-├── Development
-├── QA
-└── Demo
-```
+Protected environments cannot be deleted.
 
 ## Resource Isolation
 
-Resources are resolved per-environment:
+Each resource can have different configurations per environment. For example, a PostgreSQL resource might connect to different databases:
 
-```
-Environment: Production
-├── LLM API keys
-│   ├── OpenAI: sk-prod-xxx
-│   ├── Anthropic: sk-ant-prod-xxx
-│   └── Google: AIza-prod-xxx
-├── PostgreSQL: prod-db.example.com
-└── Stripe: sk_live_xxx
+- **Production**: `prod-db.example.com`
+- **Staging**: `staging-db.example.com`
 
-Environment: Staging
-├── LLM API keys
-│   ├── OpenAI: sk-test-xxx
-│   ├── Anthropic: sk-ant-test-xxx
-│   └── Google: AIza-test-xxx
-├── PostgreSQL: staging-db.example.com
-└── Stripe: sk_test_xxx
-```
+This ensures production threads never accidentally access staging databases, and vice versa.
 
-This ensures that:
+## How Environments Work
 
-- Production threads use production API keys and databases
-- Staging threads use test credentials
-- No accidental cross-environment access
+**Threads** are bound to an environment at creation. The environment determines which resource configurations are used during execution.
 
-## Thread Environment Binding
+**Triggers** are activated per environment. You can have a trigger active in staging for testing while keeping it disabled in production.
 
-Every thread is bound to an environment at creation. The environment determines:
-
-- Which LLM API keys are used
-- Which database connections are available
-- Which resource configurations apply
-
-## Trigger Environment Binding
-
-Trigger releases are bound to specific environments:
-
-```
-Trigger "daily-report"
-├── Release 1.0.0 → Production
-└── Release 1.0.0-beta → Staging
-```
-
-When a trigger fires:
-
-1. The system finds the release for the target environment
-2. Uses that release's configuration
-3. Creates a thread in that environment
-
-## Environment Selection
-
-### Manual Threads
-
-When users start threads manually, they can select the environment:
-
-- Production (default for most users)
-- Staging (for testing)
-- Other custom environments
-
-### Trigger Threads
-
-Trigger-initiated threads use the environment bound to the trigger release.
-
-### Playground
-
-The playground allows environment selection for testing agent configurations against different resource sets.
-
-## Best Practices
-
-1. **Use staging for testing**: Always test agent changes in staging before production
-2. **Separate credentials**: Use different API keys per environment
-3. **Monitor by environment**: Track usage and errors separately
-4. **Limit production access**: Use role-based access to restrict production deployments
-5. **Create purpose-specific environments**: Demo, QA, development as needed
-
-## Usage Tracking
-
-Usage (LLM tokens, tool executions) is tracked per-environment, enabling:
-
-- Cost allocation by environment
-- Usage limits per environment
-- Separate billing for production vs testing
+**Playground** lets you select an environment when testing agent configurations.
