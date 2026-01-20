@@ -3,45 +3,76 @@ title: Introduction
 description: Learn about Synatra, the AI workspace for human-AI collaboration.
 ---
 
-import { Card, CardGrid } from "@astrojs/starlight/components"
-
 Synatra is the AI workspace where you collaborate with AI agents like colleagues. They handle the work, generate the UI, and ask when they need you.
 
 ## What is Synatra?
 
-Synatra is the next-generation workspace for human-AI collaboration. Instead of building and maintaining internal tools, you chat with AI agents that:
+Synatra is a platform for human-AI collaboration. Instead of building and maintaining internal tools, you chat with AI agents that:
 
 - Execute tasks using multiple LLM providers (OpenAI, Anthropic, Google)
 - Call user-defined tools with configurable approval workflows
-- Connect to external resources (PostgreSQL, MySQL, Stripe, GitHub, Intercom)
-- Generate on-demand UI widgets (forms, tables, charts) for user interaction
+- Connect to external resources (PostgreSQL, MySQL, REST API, Stripe, GitHub)
+- Generate outputs (tables, charts) and request input (forms, confirmations)
 - Respond to triggers (cron schedules, webhooks, app events)
 - Maintain persistent conversation threads with approval gates
 
-## Key Features
+## Core concepts
 
-<CardGrid>
-  <Card title="Human-in-the-Loop" icon="approve-check">
-    Configurable approval workflows before agents execute sensitive actions. Modify parameters before approving, reject,
-    or let it timeout.
-  </Card>
-  <Card title="On-Demand UI" icon="document">
-    Agents generate forms, tables, charts, and confirmations as needed. No pre-built dashboards to maintain.
-  </Card>
-  <Card title="Secure Sandbox" icon="shield">
-    User code runs in isolated VMs with memory limits and network isolation.
-  </Card>
-  <Card title="Durable Execution" icon="rocket">
-    Temporal-based orchestration with automatic state recovery.
-  </Card>
-  <Card title="Proactive Triggers" icon="setting">
-    Cron schedules, webhooks, and app events to start agent workflows automatically.
-  </Card>
-  <Card title="Multi-Tenant" icon="group">
-    Organizations, role-based access control, and environment separation.
-  </Card>
-</CardGrid>
+| Concept                                    | Description                                      |
+| ------------------------------------------ | ------------------------------------------------ |
+| [Agent](/docs/concepts/agents)             | AI executor with model, tools, and system prompt |
+| [Tool](/docs/concepts/tools)               | User-defined function that agents can call       |
+| [Resource](/docs/concepts/resources)       | External system connection (database, API)       |
+| [Environment](/docs/concepts/environments) | Deployment context for resource isolation        |
+| [Trigger](/docs/concepts/triggers)         | Automated workflow initiator                     |
+| [Prompt](/docs/concepts/prompts)           | Reusable template for starting conversations     |
+| [Subagent](/docs/concepts/subagents)       | Delegated agent for subtasks                     |
+| [Run](/docs/concepts/runs)                 | Single execution unit within a thread            |
+| [Inbox](/docs/concepts/inbox)              | Channels and threads for conversations           |
 
-## Next Steps
+## Architecture
 
-Ready to get started? Check out the [Quick Start](/docs/quick-start) guide.
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         Console                             │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                          Server                             │
+└─────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+┌───────────────────┐ ┌─────────────┐ ┌─────────────────────┐
+│      Worker       │ │   Temporal  │ │   Resource Gateway  │
+│ (Tool Execution)  │ │ (Workflows) │ │                     │
+└───────────────────┘ └─────────────┘ └──────────┬──────────┘
+                                                 │
+                                      ┌──────────┴──────────┐
+                                      ▼                     ▼
+                                ┌──────────┐         ┌───────────┐
+                                │  Direct  │         │ Connector │
+                                └──────────┘         └───────────┘
+```
+
+## Key features
+
+**Human-in-the-Loop**
+Configurable approval workflows before agents execute sensitive actions.
+
+**On-Demand UI**
+Agents generate tables, charts, forms, and confirmations as needed.
+
+**Secure Sandbox**
+Tool code runs in isolated VMs with memory limits.
+
+**Durable Execution**
+Temporal-based orchestration with automatic state recovery.
+
+**Proactive Triggers**
+Cron schedules, webhooks, and app events to start workflows automatically.
+
+## Next steps
+
+Ready to get started? Check out the [Quickstart](/docs/quickstart) guide.

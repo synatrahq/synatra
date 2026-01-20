@@ -1,0 +1,160 @@
+---
+title: Inbox
+description: Organizational structure for conversations in Synatra.
+---
+
+The Inbox is where you monitor and manage all conversations. It contains Channels, which group related Threads.
+
+## Inbox
+
+The Inbox is the main view for monitoring active conversations across your organization. It shows all Threads you have access to, with filtering and real-time status updates.
+
+Features:
+
+- Filter by status (running, waiting for input, completed, failed)
+- Filter by agent or channel
+- Archive completed threads
+- Real-time status updates
+
+## Channel
+
+A Channel groups related Threads, similar to Slack channels. Use channels to organize work by team, project, or topic.
+
+### Channel features
+
+- **Name and description**: Identify the channel's purpose
+- **Icon and color**: Visual distinction in the sidebar
+- **Default channel**: Every organization has one that cannot be deleted
+- **Archiving**: Hide inactive channels without deleting
+
+### Channel membership
+
+Channels support role-based access:
+
+| Role   | Permissions                         |
+| ------ | ----------------------------------- |
+| Owner  | Full control over the channel       |
+| Member | Can view and participate in threads |
+
+Organization owners and admins automatically have access to all channels.
+
+### Assigned agents
+
+Each channel can have specific agents assigned. Only assigned agents can start new threads in that channel, allowing different teams to use different agent sets.
+
+## Thread
+
+A Thread is a conversation session between users and agents. Each thread has a subject, belongs to a channel, and contains messages, runs, and outputs.
+
+### Thread status
+
+| Status            | Description                           |
+| ----------------- | ------------------------------------- |
+| Running           | Agent is actively processing          |
+| Waiting for input | Agent needs user approval or response |
+| Completed         | Conversation finished successfully    |
+| Failed            | An error occurred                     |
+| Cancelled         | User cancelled the conversation       |
+| Rejected          | A required approval was rejected      |
+| Skipped           | Thread was skipped by a prompt script |
+
+### Thread lifecycle
+
+```
+┌─────────┐
+│  Start  │
+└────┬────┘
+     │
+     ▼
+┌─────────┐     ┌─────────────────┐
+│ Running │────▶│ Waiting for input│
+└────┬────┘     └────────┬────────┘
+     │                   │
+     │◀──────────────────┘
+     │
+     ▼
+┌────────────────────────────────────────┐
+│ Completed │ Failed │ Cancelled │ etc. │
+└────────────────────────────────────────┘
+```
+
+### Thread contents
+
+**Messages**
+The conversation history:
+
+- User messages
+- Agent responses
+- Tool calls and results
+
+**Runs**
+Execution records for each agent invocation. A thread can have multiple runs when:
+
+- The user sends a follow-up message
+- The thread resumes after approval
+- Subagents are delegated tasks
+
+**Output Items**
+Structured outputs from the agent:
+
+- Tables
+- Charts
+- Markdown content
+- Key-value displays
+
+**Human Requests**
+Pending requests for user input:
+
+- Approval requests for sensitive actions
+- Form submissions
+- Confirmation dialogs
+
+### Starting a thread
+
+Threads can be started in three ways:
+
+1. **User-initiated**: A user starts a conversation in a channel
+2. **Trigger-initiated**: A trigger (schedule, webhook, app event) starts automatically
+3. **Prompt-initiated**: A user selects a reusable prompt with input parameters
+
+### Replying to a thread
+
+Users can reply to threads that are:
+
+- Completed (thread resumes with a new run)
+- Rejected (can be restarted after rejection)
+- Failed (can be retried)
+- Waiting for input (reply continues the conversation)
+
+Threads that are currently running cannot receive replies until the current run completes.
+
+### Playground
+
+Playground threads are isolated test sessions for agent development. Each user has their own playground per agent.
+
+## Hierarchy
+
+```
+Organization
+    │
+    ├── Channel
+    │       │
+    │       ├── Thread
+    │       │     ├── Messages
+    │       │     ├── Runs
+    │       │     ├── Outputs
+    │       │     └── Human Requests
+    │       │
+    │       └── Assigned Agents
+    │
+    └── Environment
+```
+
+## Access control
+
+Access to threads is determined by channel membership:
+
+1. Organization owners and admins can access all channels
+2. Channel members can access threads in their channels
+3. Users can always access threads they created
+4. Default channels are accessible to all organization members

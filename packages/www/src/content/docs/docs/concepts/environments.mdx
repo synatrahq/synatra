@@ -1,0 +1,34 @@
+---
+title: Environments
+description: Deployment contexts for resource isolation.
+---
+
+Environments provide isolated deployment contexts within an organization. Use them to separate production workloads from testing.
+
+## Default environments
+
+Every organization starts with two protected environments:
+
+| Environment | Purpose                |
+| ----------- | ---------------------- |
+| Production  | Live workloads         |
+| Staging     | Testing and validation |
+
+Protected environments cannot be deleted.
+
+## Resource isolation
+
+Each resource can have different configurations per environment. For example, a PostgreSQL resource might connect to different databases:
+
+- **Production**: `prod-db.example.com`
+- **Staging**: `staging-db.example.com`
+
+This ensures production threads never accidentally access staging databases, and vice versa.
+
+## How environments work
+
+**Threads** are bound to an environment at creation. The environment determines which resource configurations are used during execution.
+
+**Triggers** are activated per environment. You can have a trigger active in staging for testing while keeping it disabled in production.
+
+**Playground** lets you select an environment when testing agent configurations.

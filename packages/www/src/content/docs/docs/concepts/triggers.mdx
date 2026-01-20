@@ -1,70 +1,205 @@
 ---
 title: Triggers
-description: Cron, webhooks, and app events to start agent workflows.
+description: Automated workflow initiators for starting agent threads.
 ---
 
-Triggers allow agents to start workflows automatically based on external events.
+Triggers allow agents to start workflows automatically based on external events. They connect external systems to your agents without requiring manual intervention.
 
 ## Overview
 
-Synatra supports three trigger types:
+A Trigger defines:
 
-| Trigger Type | Description                        | Example                       |
-| ------------ | ---------------------------------- | ----------------------------- |
-| Schedule     | Cron-based recurring execution     | Every day at 9:00 AM          |
-| Webhook      | HTTP endpoint for external systems | Stripe payment failed webhook |
-| App Event    | Events from connected apps         | GitHub issue created          |
+- **When** to start a thread (schedule, webhook, or app event)
+- **What agent** handles the thread
+- **Which channel** the thread appears in
+- **What prompt** to send to the agent
 
-## Creating a Trigger
+## Trigger types
 
-1. Navigate to **Triggers** in the Console
-2. Click **New Trigger**
-3. Select the trigger type
-4. Configure the trigger settings
-5. Assign an agent and initial prompt
+| Type      | Description                        | Use Case                            |
+| --------- | ---------------------------------- | ----------------------------------- |
+| Schedule  | Cron-based recurring execution     | Daily reports, periodic cleanup     |
+| Webhook   | HTTP endpoint for external systems | Payment events, CI/CD notifications |
+| App Event | Events from connected apps         | GitHub issues, Intercom messages    |
 
-## Schedule Triggers
+## Prompt modes
 
-Schedule triggers use cron expressions to run agents on a recurring schedule:
+Triggers support three modes for generating the initial prompt:
 
-| Example       | Description          |
-| ------------- | -------------------- |
-| `0 9 * * *`   | Every day at 9:00 AM |
-| `0 */2 * * *` | Every 2 hours        |
-| `0 9 * * 1`   | Every Monday at 9 AM |
-| `0 0 1 * *`   | First of each month  |
+### Template mode
 
-## Webhook Triggers
+Use `{{ variable }}` syntax to inject payload data into a static template:
 
-Webhook triggers provide an HTTP endpoint that external systems can call:
+```
+A new issue was created: {{ issue.title }}
+Repository: {{ repository.name }}
+Author: {{ issue.user.login }}
+```
 
-- Each trigger gets a unique URL
-- Supports POST requests with JSON payload
-- Payload data is available in the agent's prompt
+Objects are automatically converted to JSON strings.
 
-## App Event Triggers
+### Script mode
+
+Execute JavaScript to dynamically generate the prompt or skip the thread. The `payload` and `context` variables are available globally:
+
+```javascript
+if (payload.action === "closed") {
+  return { action: "skip", reason: "Ignoring closed issues" }
+}
+
+const prompt = `
+New issue #${payload.issue.number}: ${payload.issue.title}
+
+${payload.issue.body}
+`
+
+return { action: "run", prompt }
+```
+
+Scripts can access resources via `context.resources` (e.g., `context.resources.db`) and must return either:
+
+- `{ action: "run", prompt: string }` - Start the thread with this prompt
+- `{ action: "skip", reason?: string }` - Skip this trigger execution
+
+### Prompt mode
+
+Reference a reusable Prompt resource instead of inline content.
+
+## Schedule triggers
+
+Schedule triggers use cron expressions:
+
+| Expression     | Description          |
+| -------------- | -------------------- |
+| `0 9 * * *`    | Every day at 9:00 AM |
+| `0 */2 * * *`  | Every 2 hours        |
+| `0 9 * * 1`    | Every Monday at 9 AM |
+| `0 0 1 * *`    | First of each month  |
+| `*/15 * * * *` | Every 15 minutes     |
+
+The timezone is configurable per-trigger.
+
+## Webhook triggers
+
+Webhook triggers provide an HTTP endpoint:
+
+```
+POST https://synatrahq.com/api/webhooks/{orgSlug}/{envSlug}/{triggerSlug}
+Authorization: Bearer {webhook-secret}
+Content-Type: application/json
+
+{
+  "event": "payment_failed",
+  "customer_id": "cus_123",
+  "amount": 9900
+}
+```
+
+The entire request body is available as `payload` in templates and scripts.
+
+### Webhook security
+
+Webhooks are secured with Bearer token authentication:
+
+```
+POST https://synatrahq.com/api/webhooks/{orgSlug}/{envSlug}/{triggerSlug}
+Authorization: Bearer {webhook-secret}
+Content-Type: application/json
+```
+
+The webhook secret is generated when you activate a trigger for an environment. Include it in the `Authorization` header as a Bearer token.
+
+## App event triggers
 
 App event triggers respond to events from connected resources:
 
-- **GitHub**: Issue created, PR opened, comment added
-- **Stripe**: Payment failed, subscription cancelled
-- **Intercom**: Conversation created, message received
+### GitHub Events
 
-## Trigger Payload
+| Event                                   | Description                       |
+| --------------------------------------- | --------------------------------- |
+| `push`                                  | Commits pushed to a branch        |
+| `pull_request.opened`                   | Pull request created              |
+| `pull_request.merged`                   | Pull request merged               |
+| `pull_request.closed`                   | Pull request closed without merge |
+| `pull_request.synchronize`              | New commits pushed to PR          |
+| `pull_request.ready_for_review`         | Draft PR marked ready             |
+| `issues.opened`                         | Issue created                     |
+| `issues.closed`                         | Issue closed                      |
+| `issue_comment.created`                 | Comment on issue                  |
+| `pull_request_comment.created`          | Comment on pull request           |
+| `pull_request_review.approved`          | PR approved                       |
+| `pull_request_review.changes_requested` | Changes requested on PR           |
+| `release.published`                     | Release published                 |
 
-Triggers can inject dynamic data into the agent's initial prompt using template syntax:
+### Intercom Events
+
+| Event                        | Description                        |
+| ---------------------------- | ---------------------------------- |
+| `conversation.user.created`  | Customer starts a new conversation |
+| `conversation.user.replied`  | Customer sends a message           |
+| `conversation.admin.replied` | Admin sends a message              |
+| `conversation.admin.closed`  | Admin closes a conversation        |
+
+The event payload structure matches the respective app's webhook format.
+
+## Version modes
+
+Triggers support two version modes for the target agent:
+
+| Mode    | Behavior                                 |
+| ------- | ---------------------------------------- |
+| Current | Always use the latest agent release      |
+| Fixed   | Lock to a specific agent release version |
+
+Use fixed mode for production stability when you don't want agent changes to immediately affect automated workflows.
+
+## Trigger releases
+
+Like agents and prompts, triggers have versioned releases:
+
+- **Working copy**: Draft configuration for testing
+- **Releases**: Published, immutable versions with semantic versioning
+
+Each release can target a different environment, allowing you to:
+
+1. Test triggers against staging
+2. Deploy to production when ready
+
+## Environment binding
+
+Trigger releases are bound to specific environments:
 
 ```
-A new issue was created: {{ payload.issue.title }}
-Repository: {{ payload.repository.name }}
-Author: {{ payload.issue.user.login }}
+Trigger "daily-report"
+├── Release 1.0.0 → Production
+├── Release 1.1.0 → Staging
+└── Working Copy → (any environment for testing)
 ```
 
-The template uses simple property access with `{{ path.to.value }}` syntax. Objects are automatically converted to JSON strings.
+## Debug mode
 
-## Version Modes
+Triggers can be fired in debug mode for testing:
 
-Triggers support two version modes:
+- Creates a thread marked for debugging
+- Appears in the normal thread list with a debug indicator
+- Useful for testing prompt templates and scripts
 
-- **Current**: Always use the latest agent release. Changes to the agent are immediately reflected.
-- **Fixed**: Lock to a specific agent release version. Useful for production stability.
+## Script variables
+
+The following global variables are available in scripts:
+
+| Variable            | Description                                                 |
+| ------------------- | ----------------------------------------------------------- |
+| `payload`           | The incoming event data                                     |
+| `payload.subject`   | Special: If present, used as thread subject                 |
+| `context.resources` | Connected external resources (e.g., `context.resources.db`) |
+
+In templates, use `{{ xxx }}` syntax to access payload values directly (without `payload.` prefix).
+
+## Best practices
+
+1. **Use scripts for complex logic**: Scripts can skip events, transform data, and generate dynamic prompts
+2. **Set appropriate timeouts**: Configure agent timeouts based on expected task duration
+3. **Monitor thread status**: Set up alerts for failed trigger executions
+4. **Use fixed versions in production**: Prevent unexpected behavior from agent changes
+5. **Test with debug mode**: Verify trigger behavior before enabling in production

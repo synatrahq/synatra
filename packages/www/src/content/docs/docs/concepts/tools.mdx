@@ -14,7 +14,7 @@ Each tool has:
 - **Code** - JavaScript executed in a secure sandbox
 - **Approval policy** - When human review is required
 
-## Creating a Tool
+## Creating a tool
 
 1. Navigate to **Tools** in the Console
 2. Click **New Tool**
@@ -22,18 +22,20 @@ Each tool has:
 4. Write the tool code
 5. Configure the approval policy
 
-## Approval Policies
+## Approval settings
 
 Control when human review is required:
 
-| Policy          | Description                           |
-| --------------- | ------------------------------------- |
-| `auto-approve`  | Tool executes without human review    |
-| `owner-only`    | Only the owner can approve            |
-| `any-member`    | Any channel member can approve        |
-| `self-approval` | Requester can approve their own calls |
+| Setting            | Description                                                    |
+| ------------------ | -------------------------------------------------------------- |
+| Requires Review    | If enabled, tool calls require human approval before execution |
+| Approval Authority | Who can approve: `Owner only` or `Any member` of the channel   |
+| Self Approval      | If enabled, the user who initiated the thread can approve      |
+| Approval Timeout   | Maximum time to wait for approval (1 minute to 1 year)         |
 
-## Secure Execution
+When **Requires Review** is disabled, the tool executes automatically without human intervention.
+
+## Secure execution
 
 Tool code runs in an isolated sandbox with:
 
@@ -42,7 +44,7 @@ Tool code runs in an isolated sandbox with:
 - Network isolation
 - No access to the host filesystem
 
-## Example Tool
+## Example tool
 
 ```javascript
 // Input: { customerId: string }
@@ -61,7 +63,7 @@ return {
 }
 ```
 
-## Tool Context
+## Tool context
 
 Tools have access to:
 

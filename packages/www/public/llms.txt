@@ -1,28 +1,28 @@
 # Synatra
 
-> AI agent platform with human-in-the-loop approval workflows. Build, deploy, and manage autonomous AI agents that execute tasks, call user-defined tools, and connect to external resources with configurable approval workflows.
+> The AI workspace where you collaborate with AI agents like colleagues. They handle the work, generate the UI, and ask when they need you.
 
-Synatra enables teams to build AI agents that can:
+Synatra is a platform for human-AI collaboration. Instead of building and maintaining internal tools, you chat with AI agents that:
+
 - Execute tasks using multiple LLM providers (OpenAI, Anthropic, Google)
 - Call user-defined tools with configurable approval workflows
-- Connect to external resources (PostgreSQL, MySQL, Stripe, GitHub, Intercom)
-- Generate on-demand UI widgets (forms, tables, charts) for user interaction
+- Connect to external resources (PostgreSQL, MySQL, REST API, Stripe, GitHub)
+- Generate outputs (tables, charts) and request input (forms, confirmations)
 - Respond to triggers (cron schedules, webhooks, app events)
 - Maintain persistent conversation threads with approval gates
 
 ## Key Features
 
 - Human-in-the-Loop: Configurable approval workflows before agents execute sensitive actions
-- On-Demand UI: Agents generate forms, tables, charts, and confirmations as needed
-- Secure Sandbox: User code runs in isolated VMs with memory limits and network isolation
+- On-Demand UI: Agents generate tables, charts, forms, and confirmations as needed
+- Secure Sandbox: Tool code runs in isolated VMs with memory limits
 - Durable Execution: Temporal-based orchestration with automatic state recovery
-- Proactive Triggers: Cron schedules, webhooks, and app events to start agent workflows
-- Multi-Tenant: Organizations, role-based access control, and environment separation
+- Proactive Triggers: Cron schedules, webhooks, and app events to start workflows
 
 ## Documentation
 
 - [Introduction](https://synatrahq.com/docs): Overview of Synatra platform
-- [Quick Start](https://synatrahq.com/docs/quick-start): Get Synatra running locally in minutes
+- [Quickstart](https://synatrahq.com/docs/quickstart): Get started with Synatra in minutes
 - [Full Documentation](https://synatrahq.com/llms-full.txt): Complete documentation for LLM context
 
 ## Concepts
@@ -30,8 +30,13 @@ Synatra enables teams to build AI agents that can:
 - [Agents](https://synatrahq.com/docs/concepts/agents): AI executors with versioned configurations
 - [Tools](https://synatrahq.com/docs/concepts/tools): User-defined functions that agents can call
 - [Resources](https://synatrahq.com/docs/concepts/resources): External integrations with encrypted credentials
+- [Environments](https://synatrahq.com/docs/concepts/environments): Deployment contexts for resource isolation
 - [Triggers](https://synatrahq.com/docs/concepts/triggers): Cron, webhooks, and app events to start workflows
+- [Prompts](https://synatrahq.com/docs/concepts/prompts): Reusable templates for starting conversations
+- [Subagents](https://synatrahq.com/docs/concepts/subagents): Delegated agents for subtasks
+- [Runs](https://synatrahq.com/docs/concepts/runs): Single execution units within threads
+- [Inbox](https://synatrahq.com/docs/concepts/inbox): Channels and threads for conversations
 
-## Optional
+## Links
 
 - [GitHub Repository](https://github.com/synatrahq/synatra): Open source codebase

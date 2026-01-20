@@ -1,0 +1,69 @@
+---
+title: Subagents
+description: Delegate subtasks to specialized agents.
+---
+
+Subagents allow a parent agent to delegate tasks to other agents. Each subagent focuses on a specific area of expertise.
+
+## Configuration
+
+When configuring an agent, you can add subagents with:
+
+- **Agent**: Which agent to delegate to
+- **Alias**: Short identifier used in delegation (e.g., `data_analyst`)
+- **Description**: Helps the parent understand when to delegate
+- **Version Mode**: `Current` (latest release) or `Fixed` (specific version)
+
+## Delegation
+
+When subagents are configured, the parent agent receives delegation tools:
+
+```
+delegate_to_{alias}
+```
+
+For example, if you configure a subagent with alias `data_analyst`, the parent can call `delegate_to_data_analyst` with:
+
+- `task`: Description of what the subagent should do
+- `dependsOn`: Optional list of previous subagent results to include as context
+
+## Execution flow
+
+```
+Thread
+└── Run (Parent)
+    ├── delegate_to_data_analyst({ task: "Analyze sales" })
+    │   └── Run (Subagent) → returns result
+    └── Parent continues with result
+```
+
+When delegation occurs:
+
+1. Parent status changes to "Waiting for subagent"
+2. Child run executes independently
+3. Child calls `return_to_parent` with result
+4. Parent resumes
+
+## Dependencies
+
+Subagents can receive context from previous delegations:
+
+```javascript
+delegate_to_code_reviewer({
+  task: "Review the generated query",
+  dependsOn: [{ alias: "data_analyst" }],
+})
+```
+
+The code reviewer will see the data analyst's task and result in its context.
+
+## Completion tools
+
+| Tool               | Used by       | Purpose                              |
+| ------------------ | ------------- | ------------------------------------ |
+| `task_complete`    | Parent only   | End the thread with a summary        |
+| `return_to_parent` | Subagent only | Return result to parent and complete |
+
+## Depth limit
+
+By default, subagents cannot delegate to other subagents (max depth = 1). This prevents runaway delegation chains.

@@ -11,12 +11,35 @@ export default defineConfig({
     sitemap(),
     starlight({
       title: "Synatra",
-      description: "The AI workspace for human-AI collaboration",
       logo: {
         light: "./src/assets/logo-light.svg",
         dark: "./src/assets/logo-dark.svg",
-        replacesTitle: true,
       },
+      description: "The AI workspace",
+      head: [
+        {
+          tag: "link",
+          attrs: {
+            rel: "preconnect",
+            href: "https://fonts.googleapis.com",
+          },
+        },
+        {
+          tag: "link",
+          attrs: {
+            rel: "preconnect",
+            href: "https://fonts.gstatic.com",
+            crossorigin: true,
+          },
+        },
+        {
+          tag: "link",
+          attrs: {
+            rel: "stylesheet",
+            href: "https://fonts.googleapis.com/css2?family=Outfit:wght@600&display=swap",
+          },
+        },
+      ],
       social: [
         {
           icon: "github",
@@ -26,10 +49,10 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: "Getting Started",
+          label: "Getting started",
           items: [
             { label: "Introduction", slug: "docs" },
-            { label: "Quick Start", slug: "docs/quick-start" },
+            { label: "Quickstart", slug: "docs/quickstart" },
           ],
         },
         {
@@ -38,10 +61,16 @@ export default defineConfig({
             { label: "Agents", slug: "docs/concepts/agents" },
             { label: "Tools", slug: "docs/concepts/tools" },
             { label: "Resources", slug: "docs/concepts/resources" },
+            { label: "Environments", slug: "docs/concepts/environments" },
+            { label: "Triggers", slug: "docs/concepts/triggers" },
+            { label: "Prompts", slug: "docs/concepts/prompts" },
+            { label: "Subagents", slug: "docs/concepts/subagents" },
+            { label: "Runs", slug: "docs/concepts/runs" },
+            { label: "Inbox", slug: "docs/concepts/inbox" },
           ],
         },
       ],
-      customCss: ["./src/styles/global.css"],
+      customCss: ["./src/styles/global.css", "./src/styles/docs.css"],
     }),
   ],
   vite: {
