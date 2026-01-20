@@ -145,7 +145,7 @@ export function WorkingIndicator(props: WorkingIndicatorProps) {
   const message = createMemo(() => getStatusMessage(props.status))
 
   return (
-    <div class="flex items-center gap-2 py-1">
+    <div class="flex items-center gap-1.5 py-1">
       <style>{`
         @keyframes character-float {
           0%, 100% { transform: translateY(0); }
