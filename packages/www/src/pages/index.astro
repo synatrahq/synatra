@@ -32,6 +32,15 @@ import Footer from "../components/Footer.astro"
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600&display=swap" rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+      @keyframes slime-float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
+      }
+      .slime-float {
+        animation: slime-float 1.2s ease-in-out infinite;
+      }
+    </style>
   </head>
   <body class="min-h-screen bg-surface-bg antialiased" style="font-family: 'Spectral', Georgia, serif;">
 
@@ -75,6 +84,10 @@ import Footer from "../components/Footer.astro"
       </section>
 
       <section class="py-10 md:py-12 border-t border-surface-border-muted">
+        <div class="flex items-center gap-2.5 mb-5">
+          <img src="/images/slime.png" alt="" width="28" height="28" class="slime-float" style="image-rendering: pixelated;" />
+          <span class="text-text-secondary text-base font-medium">Watch me work for you</span>
+        </div>
         <button id="video-trigger" class="group relative w-full overflow-hidden rounded-lg border border-surface-border-muted cursor-pointer hover:border-surface-border transition-colors bg-transparent p-0 block">
           <video
             class="w-full block pointer-events-none"
