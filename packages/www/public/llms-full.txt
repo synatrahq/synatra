@@ -1,6 +1,6 @@
 # Synatra - Complete Documentation
 
-> AI agent platform with human-in-the-loop approval workflows. Build, deploy, and manage autonomous AI agents that execute tasks, call user-defined tools, and connect to external resources with configurable approval workflows.
+> The AI workspace where you collaborate with AI agents like colleagues. They handle the work, generate the UI, and ask when they need you.
 
 This file contains the complete documentation for Synatra, optimized for LLM context.
 
@@ -8,85 +8,34 @@ This file contains the complete documentation for Synatra, optimized for LLM con
 
 ## Introduction
 
-Synatra is an AI agent platform that enables teams to build, deploy, and manage autonomous AI agents with human oversight.
-
-### What is Synatra?
-
-Synatra enables teams to build, deploy, and manage autonomous AI agents that can:
+Synatra is a platform for human-AI collaboration. Instead of building and maintaining internal tools, you chat with AI agents that:
 
 - Execute tasks using multiple LLM providers (OpenAI, Anthropic, Google)
 - Call user-defined tools with configurable approval workflows
-- Connect to external resources (PostgreSQL, MySQL, Stripe, GitHub, Intercom)
-- Generate on-demand UI widgets (forms, tables, charts) for user interaction
+- Connect to external resources (PostgreSQL, MySQL, REST API, Stripe, GitHub)
+- Generate outputs (tables, charts) and request input (forms, confirmations)
 - Respond to triggers (cron schedules, webhooks, app events)
 - Maintain persistent conversation threads with approval gates
 
 ### Key Features
 
-**Human-in-the-Loop**: Configurable approval workflows before agents execute sensitive actions. Modify parameters before approving, reject, or let it timeout.
+**Human-in-the-Loop**: Configurable approval workflows before agents execute sensitive actions.
 
-**On-Demand UI**: Agents generate forms, tables, charts, and confirmations as needed. No pre-built dashboards to maintain.
+**On-Demand UI**: Agents generate tables, charts, forms, and confirmations as needed.
 
-**Secure Sandbox**: User code runs in isolated VMs with memory limits and network isolation.
+**Secure Sandbox**: Tool code runs in isolated VMs with memory limits.
 
 **Durable Execution**: Temporal-based orchestration with automatic state recovery.
 
-**Proactive Triggers**: Cron schedules, webhooks, and app events to start agent workflows automatically.
-
-**Multi-Tenant**: Organizations, role-based access control, and environment separation.
+**Proactive Triggers**: Cron schedules, webhooks, and app events to start workflows automatically.
 
 ---
 
-## Quick Start
+## Quickstart
 
-This guide walks you through setting up Synatra on your local machine.
-
-### Prerequisites
-
-- Node.js 22+
-- pnpm 10+
-- Docker & Docker Compose
-
-### Installation
-
-1. **Clone the repository**
-
-```bash
-git clone https://github.com/synatrahq/synatra.git
-cd synatra
-```
-
-2. **Install dependencies**
-
-```bash
-pnpm install
-```
-
-3. **Configure environment**
-
-```bash
-cp .env.example .env
-```
-
-4. **Start services**
-
-```bash
-make compose-up
-```
-
-5. **Apply database migrations**
-
-```bash
-make db-migrations-push
-```
-
-### Access the Application
-
-| Service     | URL                   |
-| ----------- | --------------------- |
-| Console     | http://localhost:5173 |
-| API Server  | http://localhost:8787 |
-| Temporal UI | http://localhost:8080 |
+1. Go to https://synatrahq.com/login and create an account.
+2. Navigate to Agents and create your first agent. Configure the model, system prompt, and assign tools.
+3. Go to the Inbox, select a channel, and start a new thread with your agent.
 
 ---
 
@@ -96,42 +45,25 @@ make db-migrations-push
 
 Agents are the core execution units in Synatra. Each agent is an AI executor with versioned configurations.
 
-#### Overview
-
 An agent consists of:
 
-- **Working copy** - Draft state for iterating on configurations
-- **Releases** - Published, immutable versions with semantic versioning
-- **Model configuration** - Provider, temperature, system prompt
-- **Assigned tools** - Functions the agent can call
-
-#### Creating an Agent
-
-1. Navigate to **Agents** in the Console
-2. Click **New Agent**
-3. Configure the model settings
-4. Add tools as needed
-5. Write a system prompt
+- **Model**: LLM provider (OpenAI, Anthropic, Google) and model settings
+- **System prompt**: Instructions that define agent behavior
+- **Tools**: User-defined functions the agent can call
+- **Subagents**: Other agents that can be delegated subtasks
 
 #### Model Configuration
 
-Synatra supports multiple LLM providers:
+| Provider  | Models                      |
+| --------- | --------------------------- |
+| OpenAI    | GPT-4o, GPT-4 Turbo, o1     |
+| Anthropic | Claude 3.5 Sonnet, Claude 4 |
+| Google    | Gemini 1.5 Pro, Gemini 2    |
 
-| Provider  | Models                      | Special Features         |
-| --------- | --------------------------- | ------------------------ |
-| OpenAI    | GPT-4o, GPT-4 Turbo         | Reasoning effort control |
-| Anthropic | Claude 3.5 Sonnet, Claude 4 | Extended thinking        |
-| Google    | Gemini 1.5 Pro, Gemini 2    | Thinking config          |
+#### Versioning
 
-#### Releases
-
-When you're ready to deploy an agent:
-
-1. Review the working copy configuration
-2. Click **Create Release**
-3. The release becomes the active version
-
-Releases are immutable and use semantic versioning (major.minor.patch). To make changes, update the working copy and create a new release.
+- **Working copy**: Draft state for iterating on configurations
+- **Releases**: Published, immutable versions with semantic versioning
 
 ---
 
@@ -139,63 +71,43 @@ Releases are immutable and use semantic versioning (major.minor.patch). To make 
 
 Tools are user-defined functions that agents can invoke during conversations.
 
-#### Overview
-
 Each tool has:
 
-- **Name and description** - How the agent identifies the tool
-- **Input schema** - JSON Schema defining expected parameters
-- **Code** - JavaScript executed in a secure sandbox
-- **Approval policy** - When human review is required
+- **Name and description**: How the agent identifies the tool
+- **Input schema**: JSON Schema defining expected parameters
+- **Code**: JavaScript executed in a secure sandbox
+- **Approval settings**: When human review is required
 
-#### Creating a Tool
+#### Approval Settings
 
-1. Navigate to **Tools** in the Console
-2. Click **New Tool**
-3. Define the input schema
-4. Write the tool code
-5. Configure the approval policy
-
-#### Approval Policies
-
-Control when human review is required:
-
-| Policy          | Description                           |
-| --------------- | ------------------------------------- |
-| `auto-approve`  | Tool executes without human review    |
-| `owner-only`    | Only the owner can approve            |
-| `any-member`    | Any channel member can approve        |
-| `self-approval` | Requester can approve their own calls |
+| Setting           | Description                                          |
+| ----------------- | ---------------------------------------------------- |
+| `requiresReview`  | Whether human approval is needed before execution    |
+| `approvalAuthority` | Who can approve: `owner_only` or `any_member`      |
+| `selfApproval`    | Whether the requester can approve their own calls    |
 
 #### Secure Execution
 
 Tool code runs in an isolated sandbox with:
 
 - Memory limits
-- CPU time limits (configurable, 100ms to 60s)
-- Network isolation
+- Execution timeout (configurable, 100ms to 60s)
 - No access to the host filesystem
 
 #### Example Tool
 
 ```javascript
-// Input: { customerId: string }
-const { customerId } = params;
+const { customerId } = input
 
 const customer = await context.resources.stripe.request(
   "GET",
   `/v1/customers/${customerId}`,
-);
-const subscriptions = await context.resources.stripe.request(
-  "GET",
-  `/v1/subscriptions?customer=${customerId}&status=active`,
-);
+)
 
 return {
-  customer: customer.email,
-  plan: subscriptions.data[0]?.items.data[0]?.price.nickname,
-  status: subscriptions.data[0]?.status,
-};
+  email: customer.email,
+  name: customer.name,
+}
 ```
 
 ---
@@ -204,86 +116,58 @@ return {
 
 Resources represent external systems that tools can interact with.
 
-#### Overview
+| Resource Type | Description                     | Connection Mode     |
+| ------------- | ------------------------------- | ------------------- |
+| PostgreSQL    | Connect to PostgreSQL databases | Direct or Connector |
+| MySQL         | Connect to MySQL databases      | Direct or Connector |
+| REST API      | Connect to any REST API         | Direct              |
+| Stripe        | Access Stripe payment APIs      | Direct              |
+| GitHub        | Access GitHub repository APIs   | Direct (OAuth)      |
 
-Synatra supports five resource types:
-
-| Resource Type | Description                    | Connection Mode      |
-| ------------- | ------------------------------ | -------------------- |
-| PostgreSQL    | Connect to PostgreSQL databases | Direct or Connector  |
-| MySQL         | Connect to MySQL databases      | Direct or Connector  |
-| Stripe        | Access Stripe payment APIs      | Direct only          |
-| GitHub        | Access GitHub repository APIs   | Direct only (OAuth)  |
-| Intercom      | Access Intercom APIs            | Direct only (OAuth)  |
-
-#### Security
-
-All resource credentials are:
-
-- Encrypted at rest using AES
-- Decrypted only in the Resource Gateway
-- Never exposed to user code directly
-
-#### Creating a Resource
-
-1. Navigate to **Resources** in the Console
-2. Click **New Resource**
-3. Select the resource type
-4. Enter connection details
-5. Test the connection
+All resource credentials are encrypted at rest and decrypted only in the Resource Gateway.
 
 #### Using Resources in Tools
 
-Resources are available in tool code via the `context.resources` object:
-
 ```javascript
-// PostgreSQL
+// PostgreSQL / MySQL
 const result = await context.resources.db.query(
   "SELECT * FROM users WHERE id = $1",
   [userId],
-);
+)
 
-// MySQL
-const result = await context.resources.db.query(
-  "SELECT * FROM orders WHERE customer_id = ?",
-  [customerId],
-);
+// REST API
+const data = await context.resources.api.request("GET", "/users")
 
 // Stripe
 const customer = await context.resources.stripe.request(
   "GET",
   `/v1/customers/${customerId}`,
-);
+)
 
 // GitHub
 const issues = await context.resources.github.request(
   "GET",
-  "/repos/myorg/myrepo/issues?state=open",
-);
-
-// Intercom
-const conversations = await context.resources.intercom.request(
-  "GET",
-  "/conversations",
-);
+  "/repos/myorg/myrepo/issues",
+)
 ```
 
-#### Connection Modes
+#### Connector
 
-Resources can connect in two modes:
+For databases in private VPCs, deploy a Connector in your network. The Connector establishes an outbound-only WebSocket connection to Synatra and routes queries securely.
 
-- **Direct**: Resource Gateway connects directly using stored credentials
-- **Connector**: Queries routed through a Connector running in your network (for databases in private VPCs)
+---
 
-#### Resource Gateway
+### Environments
 
-The Resource Gateway is an internal service that:
+Environments provide deployment contexts for resource isolation.
 
-- Manages connection pools for databases
-- Handles OAuth token refresh for GitHub and Intercom
-- Enforces rate limits
-- Logs all external access
-- Provides network isolation
+| Environment | Purpose                          |
+| ----------- | -------------------------------- |
+| Production  | Live customer data and workflows |
+| Staging     | Pre-release testing              |
+| Development | Local development and debugging  |
+
+Each environment has its own resource credentials. Use environments to safely test changes before deploying to production.
 
 ---
 
@@ -291,110 +175,119 @@ The Resource Gateway is an internal service that:
 
 Triggers allow agents to start workflows automatically based on external events.
 
-#### Overview
+| Type      | Description                        |
+| --------- | ---------------------------------- |
+| Schedule  | Cron-based recurring execution     |
+| Webhook   | HTTP endpoint for external systems |
+| App Event | Events from connected apps         |
 
-Synatra supports three trigger types:
+#### Template Mode
 
-| Trigger Type | Description                            | Example                        |
-| ------------ | -------------------------------------- | ------------------------------ |
-| Schedule     | Cron-based recurring execution         | Every day at 9:00 AM           |
-| Webhook      | HTTP endpoint for external systems     | Stripe payment failed webhook  |
-| App Event    | Events from connected apps             | GitHub issue created           |
-
-#### Creating a Trigger
-
-1. Navigate to **Triggers** in the Console
-2. Click **New Trigger**
-3. Select the trigger type
-4. Configure the trigger settings
-5. Assign an agent and initial prompt
-
-#### Trigger Payload
-
-Triggers can inject dynamic data into the agent's initial prompt using template syntax:
+Use `{{ variable }}` syntax to inject payload data:
 
 ```
-A new issue was created: {{ payload.issue.title }}
-Repository: {{ payload.repository.name }}
+A new issue was created: {{ issue.title }}
+Repository: {{ repository.name }}
 ```
 
-#### Version Modes
+#### Script Mode
 
-Triggers support two version modes:
+Execute JavaScript to generate prompts dynamically:
 
-- **Current**: Always use the latest agent release
-- **Fixed**: Lock to a specific agent release version
+```javascript
+if (payload.action === "closed") {
+  return { action: "skip", reason: "Ignoring closed issues" }
+}
+
+return { action: "run", prompt: `New issue: ${payload.issue.title}` }
+```
 
 ---
 
-### UI Widgets
+### Prompts
 
-Agents can generate dynamic UI widgets to interact with users.
+Prompts are reusable templates for starting agent conversations with structured input parameters.
 
-#### Overview
+#### Template Mode
 
-The system provides these widget types:
+Use `{{ variable }}` syntax to inject input values:
 
-| Widget Type   | Description                              |
-| ------------- | ---------------------------------------- |
-| Form          | Input forms with validation              |
-| Table         | Sortable tables with row selection       |
-| Chart         | Line, bar, and pie charts                |
-| Markdown      | Formatted text content                   |
-| Confirmation  | Approve/reject dialogs                   |
-| Key-Value     | Display structured data                  |
+```
+Generate a report for {{ customerName }}.
+Date range: {{ startDate }} to {{ endDate }}
+```
 
-#### Form Widget
+#### Script Mode
 
-Forms support JSON Schema validation with formats:
-
-- Text, number, date, time
-- Email, password, UUID, URI
-- Dropdown (enum), checkbox
-- Min/max length, pattern validation
-
-#### Table Widget
-
-Tables support:
-
-- Single or multiple row selection
-- Column customization
-- Sortable columns
-- Bulk actions on selected rows
-
-#### Chart Widget
-
-Visualize data with:
-
-- Line charts for trends
-- Bar charts for comparisons
-- Pie charts for distributions
-
-#### User Interaction
-
-Widgets can:
-
-- Wait for user action before continuing
-- Collect user input and pass to next tool call
-- Allow users to modify parameters before approval
+Execute JavaScript to generate prompts dynamically. The `input` and `context` variables are available globally.
 
 ---
 
-### Threads
+### Subagents
 
-Threads are persistent conversation histories.
+Subagents allow an agent to delegate subtasks to other agents. The parent agent can invoke subagents as tools and receive their results.
 
-#### Thread Status Lifecycle
+**Depth limit**: Subagents cannot delegate to other subagents (max depth: 1).
 
-| Status            | Description                              |
-| ----------------- | ---------------------------------------- |
-| active            | Agent is processing                      |
-| waiting_approval  | Waiting for human approval on a tool call |
-| waiting_user      | Waiting for user input via widget        |
-| completed         | Thread finished successfully             |
-| failed            | Thread encountered an error              |
-| cancelled         | Thread was cancelled by user             |
-| rejected          | Approval was rejected                    |
+---
+
+### Runs
+
+A Run is a single execution unit within a thread. Each time an agent processes a request, it creates a run.
+
+#### Limits
+
+| Limit       | Default | Max   |
+| ----------- | ------- | ----- |
+| Max steps   | 50      | 100   |
+| Max tokens  | 100,000 | 1,000,000 |
+| Timeout     | 10 min  | 60 min |
+
+---
+
+### Inbox
+
+The Inbox contains Channels and Threads for organizing conversations.
+
+#### Channels
+
+Channels group related threads by team, project, or topic. Each channel can have specific agents assigned.
+
+#### Threads
+
+A Thread is a conversation session. Thread statuses:
+
+| Status            | Description                           |
+| ----------------- | ------------------------------------- |
+| Running           | Agent is actively processing          |
+| Waiting for input | Agent needs user approval or response |
+| Completed         | Conversation finished successfully    |
+| Failed            | An error occurred                     |
+
+---
+
+### Outputs
+
+Agents can generate structured outputs:
+
+| Type      | Description                   |
+| --------- | ----------------------------- |
+| Table     | Sortable data tables          |
+| Chart     | Line, bar, and pie charts     |
+| Markdown  | Formatted text content        |
+| Key-Value | Structured data display       |
+
+---
+
+### Human Requests
+
+Agents can request human input:
+
+| Type         | Description                          |
+| ------------ | ------------------------------------ |
+| Approval     | Approve/reject tool execution        |
+| Form         | Collect structured input from users  |
+| Confirmation | Simple yes/no decisions              |
 
 ---
 
