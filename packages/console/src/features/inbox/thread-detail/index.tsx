@@ -121,6 +121,7 @@ export function ThreadDetail(props: ThreadDetailProps) {
                             subagentWorks={agentItem().subagentWorks}
                             summary={agentItem().summary}
                             humanRequests={agentItem().humanRequests}
+                            threadId={thread.id}
                           />
                         )}
                       </Show>

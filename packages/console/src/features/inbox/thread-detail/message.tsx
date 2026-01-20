@@ -13,6 +13,7 @@ import { Robot, CaretDown, CaretRight, Prohibit, ArrowBendDownRight } from "phos
 import { user } from "../../../app/session"
 import { HumanRequestRenderer } from "../../../components/human-request"
 import { OutputItemRenderer } from "../../../components/output-item"
+import { WorkingIndicator } from "./working-indicator"
 import { getInitials } from "./utils"
 import type { ThreadStatus } from "@synatra/core/types"
 import type {
@@ -398,6 +399,7 @@ type AgentMessageProps = {
   subagentWorks?: SubagentWork[]
   summary?: string
   humanRequests?: HumanRequestItem[]
+  threadId?: string
 }
 
 export function AgentMessage(props: AgentMessageProps) {
@@ -431,14 +433,6 @@ export function AgentMessage(props: AgentMessageProps) {
             {props.agent?.name ?? "Agent"}
           </button>
           <span class="text-2xs text-text-muted">{formatRelativeTime(props.createdAt)}</span>
-          <Show when={props.status}>
-            {(s) => (
-              <>
-                <span class="text-2xs text-text-muted">·</span>
-                <span class="text-2xs text-text-muted animate-pulse">{statusText(s())}</span>
-              </>
-            )}
-          </Show>
         </div>
 
         <Show when={props.tools.length > 0}>
@@ -518,6 +512,10 @@ export function AgentMessage(props: AgentMessageProps) {
 
         <Show when={props.summary}>
           <CompletedSummary summary={props.summary!} />
+        </Show>
+
+        <Show when={isActive()}>
+          <WorkingIndicator status={props.status!} threadId={props.threadId} />
         </Show>
       </div>
     </div>
