@@ -1,4 +1,5 @@
-import { createMemo } from "solid-js"
+import { createSignal, createEffect, onCleanup, For, Show, createMemo } from "solid-js"
+import { Portal } from "solid-js/web"
 import type { AgentStatus } from "../../../components"
 
 import slimeImg from "../../../assets/images/loading-slime.png"
@@ -13,14 +14,24 @@ import ninjaImg from "../../../assets/images/loading-ninja.png"
 
 const characters = [slimeImg, robotImg, catImg, ghostImg, dragonImg, foxImg, mushroomImg, penguinImg, ninjaImg]
 
-export function getCharacterForThread(threadId?: string): string {
-  if (!threadId) return characters[0]
-  let hash = 0
-  for (let i = 0; i < threadId.length; i++) {
-    hash = (hash << 5) - hash + threadId.charCodeAt(i)
-    hash |= 0
-  }
-  return characters[Math.abs(hash) % characters.length]
+const STORAGE_KEY = "synatra:loading-character"
+
+function getStoredCharacter(): number {
+  if (typeof window === "undefined") return 0
+  const stored = localStorage.getItem(STORAGE_KEY)
+  if (stored === null) return 0
+  const index = parseInt(stored, 10)
+  return isNaN(index) || index < 0 || index >= characters.length ? 0 : index
+}
+
+function setStoredCharacter(index: number) {
+  localStorage.setItem(STORAGE_KEY, String(index))
+}
+
+const [selectedCharacterIndex, setSelectedCharacterIndex] = createSignal(getStoredCharacter())
+
+export function getSelectedCharacter(): string {
+  return characters[selectedCharacterIndex()]
 }
 
 function getStatusMessage(status: AgentStatus): string {
@@ -39,13 +50,98 @@ function getStatusMessage(status: AgentStatus): string {
   }
 }
 
+type CharacterPickerProps = {
+  size: number
+  class?: string
+}
+
+function CharacterPicker(props: CharacterPickerProps) {
+  const [open, setOpen] = createSignal(false)
+  const [position, setPosition] = createSignal({ top: 0, left: 0 })
+  let triggerRef: HTMLButtonElement | undefined
+
+  const updatePosition = () => {
+    if (!triggerRef) return
+    const rect = triggerRef.getBoundingClientRect()
+    setPosition({ top: rect.bottom + 4, left: rect.left })
+  }
+
+  createEffect(() => {
+    if (!open()) return
+    updatePosition()
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target
+      if (!(target instanceof HTMLElement)) return setOpen(false)
+      if (target.closest("[data-character-picker]")) return
+      setOpen(false)
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false)
+    }
+    window.addEventListener("scroll", updatePosition, true)
+    window.addEventListener("resize", updatePosition)
+    document.addEventListener("mousedown", handleClick)
+    document.addEventListener("keydown", handleKeyDown)
+    onCleanup(() => {
+      window.removeEventListener("scroll", updatePosition, true)
+      window.removeEventListener("resize", updatePosition)
+      document.removeEventListener("mousedown", handleClick)
+      document.removeEventListener("keydown", handleKeyDown)
+    })
+  })
+
+  const handleSelect = (index: number) => {
+    setSelectedCharacterIndex(index)
+    setStoredCharacter(index)
+    setOpen(false)
+  }
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        class={`cursor-pointer hover:scale-110 transition-transform ${props.class ?? ""}`}
+        onClick={() => setOpen((v) => !v)}
+        data-character-picker
+        title="Click to change character"
+      >
+        <img src={getSelectedCharacter()} alt="" width={props.size} height={props.size} class="working-character" />
+      </button>
+      <Show when={open()}>
+        <Portal>
+          <div
+            class="fixed z-[1100] rounded-lg border border-border bg-surface-floating p-2 shadow-lg"
+            style={{ top: `${position().top}px`, left: `${position().left}px` }}
+            data-character-picker
+          >
+            <div class="grid grid-cols-5 gap-1">
+              <For each={characters}>
+                {(char, index) => (
+                  <button
+                    type="button"
+                    class="flex h-9 w-9 items-center justify-center rounded-md transition-colors hover:bg-surface-muted"
+                    classList={{ "bg-surface-muted ring-1 ring-accent": selectedCharacterIndex() === index() }}
+                    onClick={() => handleSelect(index())}
+                  >
+                    <img src={char} alt="" width={24} height={24} style={{ "image-rendering": "pixelated" }} />
+                  </button>
+                )}
+              </For>
+            </div>
+          </div>
+        </Portal>
+      </Show>
+    </>
+  )
+}
+
 type WorkingIndicatorProps = {
   status: AgentStatus
   threadId?: string
 }
 
 export function WorkingIndicator(props: WorkingIndicatorProps) {
-  const characterImg = createMemo(() => getCharacterForThread(props.threadId))
   const message = createMemo(() => getStatusMessage(props.status))
 
   return (
@@ -67,7 +163,7 @@ export function WorkingIndicator(props: WorkingIndicatorProps) {
         .working-dot:nth-child(2) { animation: dot-blink 1.4s ease-in-out 0.2s infinite; }
         .working-dot:nth-child(3) { animation: dot-blink 1.4s ease-in-out 0.4s infinite; }
       `}</style>
-      <img src={characterImg()} alt="" width={20} height={20} class="working-character" />
+      <CharacterPicker size={20} />
       <div class="flex items-center text-xs text-text-muted">
         <span>{message()}</span>
         <span class="working-dot">.</span>
@@ -78,13 +174,7 @@ export function WorkingIndicator(props: WorkingIndicatorProps) {
   )
 }
 
-type FullScreenWorkingProps = {
-  threadId?: string
-}
-
-export function FullScreenWorking(props: FullScreenWorkingProps) {
-  const characterImg = createMemo(() => getCharacterForThread(props.threadId))
-
+export function FullScreenWorking() {
   return (
     <div class="flex flex-col items-center gap-3">
       <style>{`
@@ -104,7 +194,7 @@ export function FullScreenWorking(props: FullScreenWorkingProps) {
         .working-dot-lg:nth-child(2) { animation: dot-blink-lg 1.4s ease-in-out 0.2s infinite; }
         .working-dot-lg:nth-child(3) { animation: dot-blink-lg 1.4s ease-in-out 0.4s infinite; }
       `}</style>
-      <img src={characterImg()} alt="" width={32} height={32} class="working-character-lg" />
+      <CharacterPicker size={32} class="working-character-lg" />
       <div class="flex items-center text-xs text-text-muted font-medium">
         <span>Loading</span>
         <span class="working-dot-lg">.</span>
