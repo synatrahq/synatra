@@ -1,6 +1,6 @@
 import { createServer } from "http"
 import { serve } from "@hono/node-server"
-import { WebSocketServer } from "ws"
+import { WebSocketServer, WebSocket } from "ws"
 import { initEncryption } from "@synatra/util/crypto"
 import { app } from "./server"
 import * as coordinator from "./coordinator"
@@ -10,6 +10,10 @@ import { config } from "./config"
 import { shutdown, isShuttingDown } from "./shutdown"
 import { isRedisEnabled } from "./redis-client"
 import { startReplyConsumer } from "./command-stream"
+
+interface AliveWebSocket extends WebSocket {
+  isAlive: boolean
+}
 
 const gatewayConfig = config()
 initEncryption(gatewayConfig.encryptionKey)
@@ -50,6 +54,12 @@ wsHttpServer.listen(port)
 console.log(`WebSocket endpoint: ws://localhost:${port}/connector/ws (public)`)
 
 wss.on("connection", async (ws, req) => {
+  const aliveWs = ws as AliveWebSocket
+  aliveWs.isAlive = true
+  ws.on("pong", () => {
+    aliveWs.isAlive = true
+  })
+
   if (isShuttingDown()) {
     ws.close(1001, "Server shutting down")
     return
@@ -107,8 +117,25 @@ wss.on("connection", async (ws, req) => {
 
 coordinator.startHeartbeatInterval()
 
+const WS_PING_INTERVAL_MS = 30000
+const wsPingInterval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    const aliveWs = ws as AliveWebSocket
+    if (ws.readyState !== WebSocket.OPEN) {
+      return
+    }
+    if (!aliveWs.isAlive) {
+      console.log("Terminating unresponsive WebSocket connection")
+      return ws.terminate()
+    }
+    aliveWs.isAlive = false
+    ws.ping()
+  })
+}, WS_PING_INTERVAL_MS)
+
 process.on("SIGTERM", async () => {
   console.log("Received SIGTERM")
+  clearInterval(wsPingInterval)
   wss.close()
   wsHttpServer.close()
   internalServer.close()
@@ -118,6 +145,7 @@ process.on("SIGTERM", async () => {
 
 process.on("SIGINT", async () => {
   console.log("Received SIGINT")
+  clearInterval(wsPingInterval)
   wss.close()
   wsHttpServer.close()
   internalServer.close()
