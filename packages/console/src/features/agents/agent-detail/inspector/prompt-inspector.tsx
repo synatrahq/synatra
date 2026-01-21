@@ -7,7 +7,7 @@ export function PromptInspector(props: { systemPrompt: string; onUpdatePrompt: (
         <CodeEditor
           value={props.systemPrompt}
           onChange={props.onUpdatePrompt}
-          language="text"
+          language="markdown"
           placeholder="You are a helpful assistant..."
           minLines={8}
           indent={false}
