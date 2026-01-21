@@ -163,6 +163,7 @@ projects:
               - fromGroup: synatra-staging-general
               - fromGroup: synatra-staging-temporal
               - fromGroup: synatra-staging-llm
+              - fromGroup: synatra-staging-stripe
               - key: NODE_ENV
                 value: production
               - key: DATABASE_URL
@@ -404,6 +405,7 @@ projects:
               - fromGroup: synatra-production-general
               - fromGroup: synatra-production-temporal
               - fromGroup: synatra-production-llm
+              - fromGroup: synatra-production-stripe
               - key: NODE_ENV
                 value: production
               - key: DATABASE_URL
