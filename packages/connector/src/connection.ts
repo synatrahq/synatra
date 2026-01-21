@@ -23,12 +23,18 @@ interface ConnectionConfig {
 const RECONNECT_BASE_MS = 1000
 const RECONNECT_MAX_MS = 30000
 const HEARTBEAT_INTERVAL_MS = 25000
+const SERVER_TIMEOUT_MS = 60000
+const SERVER_TIMEOUT_CHECK_MS = 10000
 
 let ws: WebSocket | null = null
 let config: ConnectionConfig | null = null
 let reconnectAttempts = 0
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let serverTimeoutTimer: ReturnType<typeof setInterval> | null = null
+let lastServerMessage = 0
+let connectedAt = 0
+let messageCount = 0
 
 export function connect(cfg: ConnectionConfig): void {
   config = cfg
@@ -44,6 +50,10 @@ export function disconnect(): void {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer)
     reconnectTimer = null
+  }
+  if (serverTimeoutTimer) {
+    clearInterval(serverTimeoutTimer)
+    serverTimeoutTimer = null
   }
   if (ws) {
     ws.close(1000, "Disconnect requested")
@@ -62,19 +72,33 @@ function createConnection(): void {
   ws.onopen = () => {
     console.log("Connected to cloud")
     reconnectAttempts = 0
+    connectedAt = Date.now()
+    lastServerMessage = Date.now()
+    messageCount = 0
     sendRegister()
     startHeartbeat()
+    startServerTimeoutCheck()
   }
 
   ws.onmessage = async (event) => {
+    lastServerMessage = Date.now()
+    messageCount++
     const data = typeof event.data === "string" ? event.data : await event.data.text()
     const cmd = JSON.parse(data) as CloudCommand
+    if (cmd.type === "ping") {
+      console.log(`[WS] Received ping from server (message #${messageCount})`)
+    }
     handleCommand(cmd)
   }
 
   ws.onclose = (event) => {
-    console.log(`Connection closed: ${event.code} ${event.reason}`)
+    const duration = connectedAt ? Math.round((Date.now() - connectedAt) / 1000) : 0
+    const lastMsg = lastServerMessage ? Math.round((Date.now() - lastServerMessage) / 1000) : -1
+    console.log(
+      `Connection closed: ${event.code} ${event.reason || "(no reason)"} duration=${duration}s lastServerMsg=${lastMsg}s ago messages=${messageCount}`,
+    )
     stopHeartbeat()
+    stopServerTimeoutCheck()
     ws = null
     scheduleReconnect()
   }
@@ -125,6 +149,27 @@ function stopHeartbeat(): void {
   if (heartbeatTimer) {
     clearInterval(heartbeatTimer)
     heartbeatTimer = null
+  }
+}
+
+function startServerTimeoutCheck(): void {
+  stopServerTimeoutCheck()
+  serverTimeoutTimer = setInterval(() => {
+    const elapsed = Date.now() - lastServerMessage
+    if (ws?.readyState === WebSocket.OPEN && elapsed > SERVER_TIMEOUT_MS) {
+      const duration = connectedAt ? Math.round((Date.now() - connectedAt) / 1000) : 0
+      console.log(
+        `[WS] Server timeout: no message for ${Math.round(elapsed / 1000)}s, duration=${duration}s, messages=${messageCount}, reconnecting...`,
+      )
+      ws.close(1000, "Server timeout")
+    }
+  }, SERVER_TIMEOUT_CHECK_MS)
+}
+
+function stopServerTimeoutCheck(): void {
+  if (serverTimeoutTimer) {
+    clearInterval(serverTimeoutTimer)
+    serverTimeoutTimer = null
   }
 }
 
