@@ -64,6 +64,11 @@ const defs = {
     title: "Timeout",
     schema: z.object({ message: z.string() }),
   },
+  ServiceUnavailableError: {
+    status: 503,
+    title: "Service unavailable",
+    schema: z.object({ message: z.string() }),
+  },
   MissingPrincipalError: {
     status: 401,
     title: "Missing principal",

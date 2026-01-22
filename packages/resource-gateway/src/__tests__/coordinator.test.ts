@@ -49,7 +49,8 @@ vi.mock("../connector-auth", () => ({
 }))
 
 import { WebSocket } from "ws"
-import { registerConnection, unregisterConnection, handleMessage } from "../coordinator"
+import { registerConnection, unregisterConnection, handleMessage, dispatchCommand } from "../coordinator"
+import * as ownership from "../ownership"
 
 describe("coordinator", () => {
   beforeEach(() => {
@@ -157,6 +158,26 @@ describe("coordinator", () => {
     await registerConnection(ws2, info)
 
     expect(mocks.startCommandConsumer).toHaveBeenCalledTimes(1)
+  })
+
+  it("serializes concurrent registrations for the same connector", async () => {
+    const ws1 = { close: vi.fn(), send: vi.fn(), readyState: WebSocket.OPEN } as any
+    const ws2 = { close: vi.fn(), send: vi.fn(), readyState: WebSocket.OPEN } as any
+    const info = { id: "connector-1", name: "test", tokenHash: "hash", organizationId: "org-1" } as any
+
+    mocks.isOwnershipValid.mockResolvedValue(true)
+
+    await Promise.all([registerConnection(ws1, info), registerConnection(ws2, info)])
+
+    expect(mocks.acquireOwnership).toHaveBeenCalledTimes(1)
+  })
+
+  it("returns service unavailable when local connector has no active connection", async () => {
+    vi.mocked(ownership.isOwnedLocally).mockReturnValue(true)
+
+    await expect(dispatchCommand("connector-1", { type: "query", payload: {} as any })).rejects.toMatchObject({
+      name: "ServiceUnavailableError",
+    })
   })
 
   it("reacquires ownership when existing group is no longer valid", async () => {

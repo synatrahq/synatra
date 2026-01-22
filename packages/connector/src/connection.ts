@@ -151,12 +151,18 @@ function attachHandlers(socket: WebSocket): void {
   socket.onclose = (event) => {
     if (socket !== ws) {
       if (pendingWs === socket) {
+        console.log(`[WS] Pending connection closed: ${event.code} ${event.reason || "(no reason)"}`)
         pendingWs = null
         if (pendingTimeoutTimer) {
           clearTimeout(pendingTimeoutTimer)
           pendingTimeoutTimer = null
         }
-        schedulePendingReconnect(jitterDelay(1000))
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          console.log("[WS] Pending connection closed, main connection unavailable, scheduling reconnect")
+          scheduleReconnect(jitterDelay(1000))
+        } else {
+          schedulePendingReconnect(jitterDelay(1000))
+        }
       }
       return
     }
@@ -231,7 +237,12 @@ function attachHandlers(socket: WebSocket): void {
         clearTimeout(pendingTimeoutTimer)
         pendingTimeoutTimer = null
       }
-      schedulePendingReconnect(jitterDelay(1000))
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        console.log("[WS] Pending connection error, main connection unavailable, scheduling reconnect")
+        scheduleReconnect(jitterDelay(1000))
+      } else {
+        schedulePendingReconnect(jitterDelay(1000))
+      }
       return
     }
     if (socket !== ws) return
@@ -241,6 +252,7 @@ function attachHandlers(socket: WebSocket): void {
 
 function scheduleReconnect(minDelayMs = 0): void {
   if (!config) return
+  if (reconnectTimer) return
 
   reconnectAttempts += 1
   const delay = Math.min(Math.max(RECONNECT_BASE_MS * Math.pow(2, reconnectAttempts - 1), minDelayMs), RECONNECT_MAX_MS)
@@ -406,10 +418,17 @@ function startPendingConnection(): void {
     sendRegister(newWs)
     pendingTimeoutTimer = setTimeout(() => {
       if (pendingWs === newWs) {
-        console.log("[WS] Pending connection timeout, closing")
+        console.log(
+          `[WS] Pending connection timeout, closing (main=${ws?.readyState === WebSocket.OPEN ? "open" : "closed"})`,
+        )
         pendingWs = null
         newWs.close(1000, "Pending timeout")
-        schedulePendingReconnect(jitterDelay(1000))
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          console.log("[WS] Main connection unavailable, scheduling reconnect")
+          scheduleReconnect(jitterDelay(1000))
+        } else {
+          schedulePendingReconnect(jitterDelay(1000))
+        }
       }
       pendingTimeoutTimer = null
     }, PENDING_TIMEOUT_MS)
