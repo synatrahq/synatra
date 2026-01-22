@@ -1,7 +1,17 @@
-import { describe, test, expect, beforeEach, afterEach } from "vitest"
+import { describe, test, expect, beforeAll, afterAll, afterEach } from "vitest"
 import { SsrfError, validateExternalUrl, validateHost } from "../url"
 
 describe("Url", () => {
+  const originalNodeEnv = process.env.NODE_ENV
+
+  beforeAll(() => {
+    process.env.NODE_ENV = "production"
+  })
+
+  afterAll(() => {
+    process.env.NODE_ENV = originalNodeEnv
+  })
+
   describe("validateExternalUrl", () => {
     describe("blocks internal IPv4 addresses", () => {
       test("blocks localhost", async () => {

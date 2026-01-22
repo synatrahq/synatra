@@ -97,6 +97,8 @@ async function resolveHostAddresses(host: string): Promise<string[]> {
 }
 
 export async function validateExternalUrl(urlString: string): Promise<void> {
+  if (process.env.NODE_ENV !== "production") return
+
   const url = new URL(urlString)
   const rawHost = url.hostname.toLowerCase()
   const host = rawHost.startsWith("[") && rawHost.endsWith("]") ? rawHost.slice(1, -1) : rawHost
@@ -126,6 +128,8 @@ export async function validateExternalUrl(urlString: string): Promise<void> {
 }
 
 export async function validateHost(host: string): Promise<void> {
+  if (process.env.NODE_ENV !== "production") return
+
   const normalized = host.toLowerCase()
 
   if (isBlockedHostname(normalized)) {

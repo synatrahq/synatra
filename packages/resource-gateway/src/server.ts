@@ -3,6 +3,7 @@ import { zValidator } from "@hono/zod-validator"
 import { z } from "zod"
 import { serviceAuth } from "@synatra/service-call"
 import { UserConfigurableResourceType } from "@synatra/core/types"
+import { validateHost } from "@synatra/util/url"
 import * as pool from "./pool"
 import * as audit from "./audit"
 import * as coordinator from "./coordinator"
@@ -180,11 +181,13 @@ app.post("/query", zValidator("json", querySchema), async (c) => {
         throw createError("BadRequestError", { message: "API resources cannot use connector mode" })
       }
     } else if (isPostgresResource(config) && operation.type === "postgres") {
+      await validateHost(config.config.host)
       result = await withRetry(
         () => withTimeout(executePostgresOperation(resourceId, environmentId, config, operation), QUERY_TIMEOUT_MS),
         RETRY_COUNT,
       )
     } else if (isMysqlResource(config) && operation.type === "mysql") {
+      await validateHost(config.config.host)
       result = await withRetry(
         () => withTimeout(executeMysqlOperation(resourceId, environmentId, config, operation), QUERY_TIMEOUT_MS),
         RETRY_COUNT,
