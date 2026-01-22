@@ -171,6 +171,34 @@ async function runInIsolate(pooled: PooledIsolate, input: ExecuteInput): Promise
       }),
     )
 
+    await jail.set(
+      "_restapiRequestAsync",
+      new ivm.Reference(
+        async (
+          resourceName: string,
+          method: string,
+          path: string,
+          headers: string,
+          queryParams: string,
+          body: string,
+        ) => {
+          try {
+            const result = await resourceClient.query(resourceName, {
+              type: "restapi",
+              method,
+              path,
+              headers: headers ? JSON.parse(headers) : undefined,
+              queryParams: queryParams ? JSON.parse(queryParams) : undefined,
+              body: body ? JSON.parse(body) : undefined,
+            })
+            return JSON.stringify(result)
+          } catch (error) {
+            throw new Error(error instanceof Error ? error.message : String(error))
+          }
+        },
+      ),
+    )
+
     // Inject params and context
     await jail.set("_params", new ivm.ExternalCopy(input.params).copyInto())
     await jail.set("_context", new ivm.ExternalCopy(input.context).copyInto())
@@ -228,6 +256,25 @@ async function runInIsolate(pooled: PooledIsolate, input: ExecuteInput): Promise
             return {
               request: async (method, endpoint, body) => {
                 const result = await _intercomRequestAsync.apply(null, [name, method, endpoint, body ? JSON.stringify(body) : ""], {
+                  arguments: { copy: true },
+                  result: { promise: true, copy: true }
+                });
+                return JSON.parse(result);
+              }
+            };
+          }
+          if (type === "restapi") {
+            return {
+              request: async (method, path, options = {}) => {
+                const { headers, queryParams, body } = options;
+                const result = await _restapiRequestAsync.apply(null, [
+                  name,
+                  method,
+                  path,
+                  headers ? JSON.stringify(headers) : "",
+                  queryParams ? JSON.stringify(queryParams) : "",
+                  body ? JSON.stringify(body) : ""
+                ], {
                   arguments: { copy: true },
                   result: { promise: true, copy: true }
                 });
