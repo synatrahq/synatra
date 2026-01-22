@@ -105,6 +105,7 @@ function createDefaultAPIConfig(type: string): APIResourceConfig {
       baseUrl: "",
       authType: "none",
       authConfig: "",
+      authUsername: "",
       headers: {},
       queryParams: {},
     } as APIRestApiConfig

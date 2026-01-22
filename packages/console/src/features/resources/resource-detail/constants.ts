@@ -66,6 +66,7 @@ export type RestApiEditorConfig = {
   basicPassword: string
   originalAuthType: "none" | "api_key" | "bearer" | "basic"
   originalAuthConfig: string
+  originalAuthUsername: string
   headers: Array<{ key: string; value: string }>
   queryParams: Array<{ key: string; value: string }>
 }
@@ -151,11 +152,12 @@ export function createEditorState(
         authType: restConfig.authType,
         originalAuthType: restConfig.authType,
         originalAuthConfig: restConfig.authConfig,
+        originalAuthUsername: restConfig.authUsername ?? "",
         apiKeyValue: restConfig.authType === "api_key" ? restConfig.authConfig : "",
         apiKeyLocation: restConfig.authLocation,
         apiKeyName: restConfig.authName,
         bearerToken: restConfig.authType === "bearer" ? restConfig.authConfig : "",
-        basicUsername: "",
+        basicUsername: restConfig.authUsername ?? "",
         basicPassword: restConfig.authType === "basic" ? restConfig.authConfig : "",
         headers: Object.entries(restConfig.headers).map(([key, value]) => ({ key, value })),
         queryParams: Object.entries(restConfig.queryParams).map(([key, value]) => ({ key, value })),
@@ -263,9 +265,8 @@ export function hasEditorChanges(
       if (rest.bearerToken !== rest.originalAuthConfig) return true
     }
     if (rest.authType === "basic") {
-      const hasNewUsername = rest.basicUsername !== ""
-      const hasNewPassword = rest.basicPassword !== "" && rest.basicPassword !== ENCRYPTED_PLACEHOLDER
-      if (hasNewUsername && hasNewPassword) return true
+      if (rest.basicUsername !== rest.originalAuthUsername) return true
+      if (rest.basicPassword !== rest.originalAuthConfig) return true
     }
 
     const headers = rest.headers.filter((h) => h.key)
@@ -393,7 +394,7 @@ export function editorStateToInputConfig(type: ResourceType, editState: Editable
     } else if (rest.authType === "basic") {
       auth = {
         type: "basic",
-        username: rest.basicUsername || undefined,
+        username: rest.basicUsername !== rest.originalAuthUsername ? rest.basicUsername : undefined,
         password: toInputSensitive(rest.basicPassword),
       }
     }

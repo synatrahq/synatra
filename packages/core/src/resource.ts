@@ -123,15 +123,14 @@ function encryptSensitiveFields(
         result.authType = "basic"
         result.authLocation = undefined
         result.authName = undefined
-        if (restapiInput.auth.username && restapiInput.auth.password) {
-          result.authConfig = encrypt(
-            JSON.stringify({
-              type: "basic",
-              username: restapiInput.auth.username,
-              password: restapiInput.auth.password,
-            }),
-          )
-        } else if (restapiInput.auth.password === null || existingRestapi?.authType !== "basic") {
+        const username =
+          restapiInput.auth.username !== undefined ? restapiInput.auth.username : existingRestapi?.authUsername
+        result.authUsername = username || undefined
+        if (restapiInput.auth.password === null) {
+          result.authConfig = null
+        } else if (restapiInput.auth.password) {
+          result.authConfig = encrypt(JSON.stringify({ type: "basic", password: restapiInput.auth.password }))
+        } else if (existingRestapi?.authType !== "basic") {
           result.authConfig = null
         }
       }
@@ -160,11 +159,11 @@ function encryptSensitiveFields(
         if (apiKey) {
           result[provider] = { apiKey: encrypt(apiKey), baseUrl, enabled }
         } else if (apiKey === null) {
-          result[provider] = null
+          result[provider] = { apiKey: null, baseUrl, enabled }
         } else if (existingProvider?.apiKey) {
           result[provider] = { apiKey: existingProvider.apiKey, baseUrl, enabled }
         } else {
-          result[provider] = null
+          result[provider] = { apiKey: null, baseUrl, enabled }
         }
       }
     }
@@ -240,9 +239,24 @@ function decryptSensitiveFields(type: ResourceType, stored: StoredResourceConfig
         auth = { type: "bearer", token: decrypted.token }
         break
       case "basic":
-        auth = { type: "basic", username: decrypted.username, password: decrypted.password }
+        auth = {
+          type: "basic",
+          username: decrypted.username ?? restapiStored.authUsername ?? "",
+          password: decrypted.password,
+        }
+        break
+      default:
+        if (restapiStored.authType === "basic" && decrypted.password) {
+          auth = {
+            type: "basic",
+            username: restapiStored.authUsername ?? "",
+            password: decrypted.password,
+          }
+        }
         break
     }
+  } else if (restapiStored.authType === "basic" && restapiStored.authUsername) {
+    auth = { type: "basic", username: restapiStored.authUsername, password: "" }
   }
 
   return {

@@ -69,6 +69,7 @@ export function toAPIResourceConfig(type: ResourceType, stored: StoredResourceCo
     authConfig: toPlaceholder(s.authConfig),
     authLocation: s.authLocation as "header" | "query" | undefined,
     authName: s.authName as string | undefined,
+    authUsername: s.authUsername as string | undefined,
     headers: (s.headers as Record<string, string>) ?? {},
     queryParams: (s.queryParams as Record<string, string>) ?? {},
   }

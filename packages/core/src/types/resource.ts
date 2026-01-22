@@ -202,6 +202,7 @@ export const StoredRestApiConfigSchema = z.object({
   authConfig: EncryptedValueSchema.nullable(),
   authLocation: z.enum(["header", "query"]).optional(),
   authName: z.string().optional(),
+  authUsername: z.string().optional(),
   headers: z.record(z.string(), z.string()),
   queryParams: z.record(z.string(), z.string()),
 })
@@ -288,6 +289,7 @@ export type APIRestApiConfig = {
   authConfig: string
   authLocation?: "header" | "query"
   authName?: string
+  authUsername?: string
   headers: Record<string, string>
   queryParams: Record<string, string>
 }
