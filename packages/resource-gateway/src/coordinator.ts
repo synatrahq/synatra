@@ -357,7 +357,7 @@ function pickConnection(group: ConnectorGroup): ConnectorConnection | null {
   for (const conn of group.connections.values()) {
     if (!conn.ready) continue
     if (conn.ws.readyState !== WebSocket.OPEN) continue
-    if (!selected || conn.lastSeen > selected.lastSeen) {
+    if (!selected || conn.connectedAt > selected.connectedAt) {
       selected = conn
     }
   }

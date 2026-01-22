@@ -246,9 +246,11 @@ function getShutdownDelayMs(): number {
   return remaining > 0 ? remaining : 0
 }
 
+const JITTER_MAX_MS = 3000
+
 function jitterDelay(baseMs: number): number {
-  if (baseMs <= 0) return Math.floor(Math.random() * 500)
-  return baseMs + Math.floor(Math.random() * 500)
+  if (baseMs <= 0) return Math.floor(Math.random() * JITTER_MAX_MS)
+  return baseMs + Math.floor(Math.random() * JITTER_MAX_MS)
 }
 
 function sendRegister(socket: WebSocket): void {
