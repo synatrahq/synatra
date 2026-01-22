@@ -1,7 +1,7 @@
 import { getRedis, isRedisEnabled } from "./redis-client"
 import { config } from "./config"
 
-const OWNER_TTL_SEC = 30
+const OWNER_TTL_SEC = 60
 const STATUS_TTL_SEC = 60
 const REFRESH_INTERVAL_MS = 10000
 

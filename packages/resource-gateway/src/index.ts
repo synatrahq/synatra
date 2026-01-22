@@ -17,6 +17,7 @@ interface AliveWebSocket extends WebSocket {
   connectorName?: string
   connectedAt?: number
   lastPongAt?: number
+  missedPongCount?: number
 }
 
 const gatewayConfig = config()
@@ -64,6 +65,7 @@ wss.on("connection", async (ws, req) => {
   ws.on("pong", () => {
     aliveWs.isAlive = true
     aliveWs.lastPongAt = Date.now()
+    aliveWs.missedPongCount = 0
   })
 
   if (isShuttingDown()) {
@@ -107,7 +109,13 @@ wss.on("connection", async (ws, req) => {
   aliveWs.connectorName = info.name
 
   ws.on("message", (data) => {
-    const msg = JSON.parse(data.toString()) as ConnectorMessage
+    let msg: ConnectorMessage
+    try {
+      msg = JSON.parse(data.toString()) as ConnectorMessage
+    } catch (err) {
+      console.error(`Invalid JSON from ${info.id}:`, (err as Error).message)
+      return
+    }
     coordinator.handleMessage(info.id, msg).catch((err) => {
       console.error(`Error handling message from ${info.id}:`, err.message)
     })
@@ -144,12 +152,18 @@ const wsPingInterval = setInterval(() => {
       return
     }
     if (!aliveWs.isAlive) {
-      const duration = aliveWs.connectedAt ? Math.round((Date.now() - aliveWs.connectedAt) / 1000) : 0
-      const lastPong = aliveWs.lastPongAt ? Math.round((Date.now() - aliveWs.lastPongAt) / 1000) : -1
-      console.log(
-        `[WS Ping] Terminating unresponsive: ${aliveWs.connectorName || "unknown"} (${aliveWs.connectorId || "?"}) duration=${duration}s lastPong=${lastPong}s ago`,
-      )
-      return ws.terminate()
+      aliveWs.missedPongCount = (aliveWs.missedPongCount || 0) + 1
+      if (aliveWs.missedPongCount >= 2) {
+        const duration = aliveWs.connectedAt ? Math.round((Date.now() - aliveWs.connectedAt) / 1000) : 0
+        const lastPong = aliveWs.lastPongAt ? Math.round((Date.now() - aliveWs.lastPongAt) / 1000) : -1
+        console.log(
+          `[WS Ping] Terminating unresponsive: ${aliveWs.connectorName || "unknown"} (${aliveWs.connectorId || "?"}) duration=${duration}s lastPong=${lastPong}s ago`,
+        )
+        return ws.terminate()
+      }
+      console.log(`[WS Ping] Missed pong (${aliveWs.missedPongCount}/2): ${aliveWs.connectorName || "unknown"}`)
+    } else {
+      aliveWs.missedPongCount = 0
     }
     aliveWs.isAlive = false
     ws.ping()

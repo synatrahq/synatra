@@ -49,7 +49,11 @@ export function config(): GatewayEnv {
     serviceSecret: process.env.SERVICE_SECRET?.trim(),
     port: process.env.PORT,
     internalPort: process.env.INTERNAL_PORT,
-    instanceId: process.env.INSTANCE_ID?.trim() || randomUUID(),
+    instanceId:
+      process.env.INSTANCE_ID?.trim() ||
+      process.env.RENDER_INSTANCE_ID ||
+      process.env.RENDER_SERVICE_ID ||
+      randomUUID(),
     redis: {
       mode: process.env.REDIS_MODE as "off" | "redis" | undefined,
       url: process.env.REDIS_URL?.trim(),
