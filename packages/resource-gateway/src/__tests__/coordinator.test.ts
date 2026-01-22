@@ -107,7 +107,9 @@ describe("coordinator", () => {
     mocks.verifyConnectorStillValid.mockResolvedValue(true)
 
     await registerConnection(ws1, info1)
+    await handleMessage("connector-1", ws1, { type: "register", payload: { version: "1.0", platform: "test" } } as any)
     await registerConnection(ws2, info2)
+    await handleMessage("connector-1", ws2, { type: "register", payload: { version: "1.0", platform: "test" } } as any)
     await handleMessage("connector-1", ws1, { type: "heartbeat" } as any)
 
     expect(mocks.verifyConnectorStillValid).toHaveBeenCalledWith("connector-1", "hash-1")
@@ -170,6 +172,22 @@ describe("coordinator", () => {
     await Promise.all([registerConnection(ws1, info), registerConnection(ws2, info)])
 
     expect(mocks.acquireOwnership).toHaveBeenCalledTimes(1)
+  })
+
+  it("evicts excess pending connections", async () => {
+    const ws1 = { close: vi.fn(), send: vi.fn(), readyState: WebSocket.OPEN } as any
+    const ws2 = { close: vi.fn(), send: vi.fn(), readyState: WebSocket.OPEN } as any
+    const ws3 = { close: vi.fn(), send: vi.fn(), readyState: WebSocket.OPEN } as any
+    const info = { id: "connector-1", name: "test", tokenHash: "hash", organizationId: "org-1" } as any
+
+    mocks.isOwnershipValid.mockResolvedValue(true)
+
+    await registerConnection(ws1, info)
+    await registerConnection(ws2, info)
+    await registerConnection(ws3, info)
+
+    expect(ws1.close).toHaveBeenCalled()
+    expect(ws2.close).toHaveBeenCalled()
   })
 
   it("returns service unavailable when local connector has no active connection", async () => {

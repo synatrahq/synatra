@@ -49,6 +49,7 @@ const registrationLocks = new Map<string, Promise<void>>()
 const COMMAND_TIMEOUT_MS = 630000
 const HEARTBEAT_INTERVAL_MS = 30000
 const MAX_CONNECTIONS_PER_CONNECTOR = 5
+const MAX_PENDING_CONNECTIONS = 1
 
 async function withRegistrationLock<T>(connectorId: string, fn: () => Promise<T>): Promise<T> {
   while (true) {
@@ -95,6 +96,14 @@ export async function incrementTokenVersion(connectorId: string): Promise<number
   if (!redis) return 0
 
   return redis.incr(tokenVersionKey(connectorId))
+}
+
+function countReadyConnections(group: ConnectorGroup): number {
+  let count = 0
+  for (const conn of group.connections.values()) {
+    if (conn.ready) count += 1
+  }
+  return count
 }
 
 export async function registerConnection(ws: WebSocket, info: ConnectorInfo): Promise<boolean> {
@@ -158,8 +167,16 @@ export async function registerConnection(ws: WebSocket, info: ConnectorInfo): Pr
         lastSeen: Date.now(),
       })
 
-      if (group.connections.size > MAX_CONNECTIONS_PER_CONNECTOR) {
+      let readyCount = countReadyConnections(group)
+      let pendingCount = group.connections.size - readyCount
+      while (pendingCount > MAX_PENDING_CONNECTIONS) {
         evictOldestConnection(group)
+        readyCount = countReadyConnections(group)
+        pendingCount = group.connections.size - readyCount
+      }
+      while (readyCount > MAX_CONNECTIONS_PER_CONNECTOR) {
+        evictOldestConnection(group)
+        readyCount = countReadyConnections(group)
       }
 
       await ensureCommandConsumer(info.id, group)
@@ -221,10 +238,15 @@ export async function handleMessage(connectorId: string, ws: WebSocket, message:
 
   switch (message.type) {
     case "register": {
+      console.log(`[Coordinator] Register received for ${connectorId}`)
       group.metadata = message.payload as RegisterPayload
       connection.ready = true
       setConnectorMetadata({ connectorId, metadata: group.metadata })
+      while (countReadyConnections(group) > MAX_CONNECTIONS_PER_CONNECTOR) {
+        evictOldestConnection(group)
+      }
       sendRegisterOk(connection.ws)
+      console.log(`[Coordinator] Register ok sent for ${connectorId}`)
       break
     }
     case "heartbeat": {
