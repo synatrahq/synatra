@@ -19,7 +19,7 @@ interface OperationResult {
   data: unknown
 }
 
-const RESTAPI_TIMEOUT_MS = 30000
+const RESTAPI_TIMEOUT_MS = 600000
 
 const toRecord = (pairs: KeyValuePair[]): Record<string, string> =>
   Object.fromEntries(pairs.map((p) => [p.key, p.value]))

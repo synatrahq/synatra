@@ -1,4 +1,4 @@
-const INTERCOM_TIMEOUT_MS = 30000
+const INTERCOM_TIMEOUT_MS = 60000
 const INTERCOM_API_VERSION = "2.14"
 
 export async function intercomRequest(

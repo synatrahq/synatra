@@ -44,7 +44,7 @@ const pendingRequests = new Map<string, PendingRequest>()
 const commandConsumerStops = new Map<string, () => void>()
 const replyToMap = new Map<string, string>()
 
-const COMMAND_TIMEOUT_MS = 30000
+const COMMAND_TIMEOUT_MS = 630000
 const HEARTBEAT_INTERVAL_MS = 30000
 const MAX_CONNECTIONS_PER_CONNECTOR = 5
 function tokenVersionKey(connectorId: string): string {

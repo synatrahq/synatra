@@ -4,7 +4,7 @@ import { config } from "./config"
 import { isConnectorOnlineInCluster } from "./ownership"
 import type { CloudCommand } from "./ws-types"
 
-const COMMAND_TIMEOUT_MS = 30000
+const COMMAND_TIMEOUT_MS = 630000
 const STREAM_MAXLEN = 1000
 const PROCESSED_CACHE_TTL_MS = 5 * 60 * 1000
 

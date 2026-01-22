@@ -79,7 +79,7 @@ const wsHttpServer = createServer((req, res) => {
   res.end()
 })
 
-const wss = new WebSocketServer({ server: wsHttpServer, maxPayload: 64 * 1024 })
+const wss = new WebSocketServer({ server: wsHttpServer })
 wsHttpServer.listen(port)
 console.log(`WebSocket endpoint: ws://localhost:${port}/connector/ws (public)`)
 

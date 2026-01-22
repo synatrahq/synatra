@@ -103,7 +103,7 @@ describe("command-stream", () => {
       )
 
       const stop = await startCommandConsumer("connector-1", async () => true)
-      expect(mockRedis.xAutoClaim).toHaveBeenCalledWith("cmd:connector-1", "owner", "test-instance", 30000, "0-0", {
+      expect(mockRedis.xAutoClaim).toHaveBeenCalledWith("cmd:connector-1", "owner", "test-instance", 630000, "0-0", {
         COUNT: 50,
       })
 
