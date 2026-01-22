@@ -1,4 +1,5 @@
 import { createServer } from "http"
+import { randomUUID } from "crypto"
 import { serve } from "@hono/node-server"
 import { WebSocketServer, WebSocket } from "ws"
 import { initEncryption } from "@synatra/util/crypto"
@@ -7,7 +8,7 @@ import * as coordinator from "./coordinator"
 import { verifyConnectorToken } from "./connector-auth"
 import type { ConnectorMessage } from "./ws-types"
 import { config } from "./config"
-import { shutdown, isShuttingDown } from "./shutdown"
+import { shutdown, isShuttingDown, markShuttingDown } from "./shutdown"
 import { isRedisEnabled } from "./redis-client"
 import { startReplyConsumer } from "./command-stream"
 
@@ -25,19 +26,23 @@ initEncryption(gatewayConfig.encryptionKey)
 
 const port = gatewayConfig.port
 const internalPort = gatewayConfig.internalPort
+let redisReady = !isRedisEnabled()
 
 async function initializeRedis(): Promise<void> {
   if (!isRedisEnabled()) {
     console.log("[Redis] Mode: off (single instance)")
+    redisReady = true
     return
   }
 
   console.log(`[Redis] Mode: redis, Instance ID: ${gatewayConfig.instanceId}`)
   await startReplyConsumer()
   console.log("[Redis] Reply consumer started")
+  redisReady = true
 }
 
 initializeRedis().catch((err) => {
+  redisReady = false
   console.error("[Redis] Failed to initialize:", err.message)
 })
 
@@ -46,8 +51,15 @@ console.log(`HTTP endpoints on http://localhost:${internalPort} (internal)`)
 
 const wsHttpServer = createServer((req, res) => {
   if (req.url === "/health" && req.method === "GET") {
-    res.writeHead(200, { "Content-Type": "application/json" })
-    res.end(JSON.stringify({ status: "ok" }))
+    const healthy = !isShuttingDown() && redisReady
+    res.writeHead(healthy ? 200 : 503, { "Content-Type": "application/json" })
+    res.end(
+      JSON.stringify({
+        status: healthy ? "ok" : "unhealthy",
+        shuttingDown: isShuttingDown(),
+        redisReady,
+      }),
+    )
     return
   }
   res.writeHead(404)
@@ -116,7 +128,7 @@ wss.on("connection", async (ws, req) => {
       console.error(`Invalid JSON from ${info.id}:`, (err as Error).message)
       return
     }
-    coordinator.handleMessage(info.id, msg).catch((err) => {
+    coordinator.handleMessage(info.id, ws, msg).catch((err) => {
       console.error(`Error handling message from ${info.id}:`, err.message)
     })
   })
@@ -138,6 +150,7 @@ wss.on("connection", async (ws, req) => {
 coordinator.startHeartbeatInterval()
 
 const WS_PING_INTERVAL_MS = 30000
+const SHUTDOWN_GRACE_PERIOD_MS = 10000
 const wsPingInterval = setInterval(() => {
   const clientCount = wss.clients.size
   if (clientCount > 0) {
@@ -171,7 +184,28 @@ const wsPingInterval = setInterval(() => {
 }, WS_PING_INTERVAL_MS)
 
 process.on("SIGTERM", async () => {
-  console.log("Received SIGTERM")
+  console.log("[Shutdown] Received SIGTERM, starting graceful shutdown")
+  markShuttingDown()
+
+  const shutdownNotice = {
+    type: "shutdown_notice",
+    correlationId: randomUUID(),
+    payload: { gracePeriodMs: SHUTDOWN_GRACE_PERIOD_MS },
+  }
+
+  wss.clients.forEach((ws) => {
+    try {
+      ws.send(JSON.stringify(shutdownNotice))
+    } catch {
+      /* ignore */
+    }
+  })
+
+  console.log(`[Shutdown] Sent shutdown notice to ${wss.clients.size} connectors`)
+
+  await new Promise((resolve) => setTimeout(resolve, SHUTDOWN_GRACE_PERIOD_MS))
+
+  console.log("[Shutdown] Grace period ended, closing connections")
   clearInterval(wsPingInterval)
   wss.close()
   wsHttpServer.close()
@@ -181,7 +215,28 @@ process.on("SIGTERM", async () => {
 })
 
 process.on("SIGINT", async () => {
-  console.log("Received SIGINT")
+  console.log("[Shutdown] Received SIGINT, starting graceful shutdown")
+  markShuttingDown()
+
+  const shutdownNotice = {
+    type: "shutdown_notice",
+    correlationId: randomUUID(),
+    payload: { gracePeriodMs: SHUTDOWN_GRACE_PERIOD_MS },
+  }
+
+  wss.clients.forEach((ws) => {
+    try {
+      ws.send(JSON.stringify(shutdownNotice))
+    } catch {
+      /* ignore */
+    }
+  })
+
+  console.log(`[Shutdown] Sent shutdown notice to ${wss.clients.size} connectors`)
+
+  await new Promise((resolve) => setTimeout(resolve, SHUTDOWN_GRACE_PERIOD_MS))
+
+  console.log("[Shutdown] Grace period ended, closing connections")
   clearInterval(wsPingInterval)
   wss.close()
   wsHttpServer.close()

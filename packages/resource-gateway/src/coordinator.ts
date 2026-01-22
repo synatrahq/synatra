@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto"
-import type { WebSocket } from "ws"
+import { WebSocket } from "ws"
 import { principal, setConnectorStatus, setConnectorMetadata, setConnectorLastSeen } from "@synatra/core"
 import { verifyConnectorStillValid, type ConnectorInfo } from "./connector-auth"
 import {
@@ -24,13 +24,20 @@ interface PendingRequest {
 
 interface ConnectorConnection {
   ws: WebSocket
+  tokenHash: string
+  connectedAt: number
+  lastSeen: number
+}
+
+interface ConnectorGroup {
   info: ConnectorInfo
   metadata?: RegisterPayload
   tokenVersion: number
   fence: number
+  connections: Map<WebSocket, ConnectorConnection>
 }
 
-const connections = new Map<string, ConnectorConnection>()
+const connections = new Map<string, ConnectorGroup>()
 const pendingRequests = new Map<string, PendingRequest>()
 const commandConsumerStops = new Map<string, () => void>()
 const replyToMap = new Map<string, string>()
@@ -61,99 +68,95 @@ export async function incrementTokenVersion(connectorId: string): Promise<number
 }
 
 export async function registerConnection(ws: WebSocket, info: ConnectorInfo): Promise<boolean> {
-  const { acquired, fence } = await acquireOwnership(info.id)
-  if (!acquired) {
-    ws.close(4004, "Connector owned by another instance")
-    return false
-  }
-
-  const existing = connections.get(info.id)
-  if (existing) {
-    const stop = commandConsumerStops.get(info.id)
-    if (stop) {
-      stop()
-      commandConsumerStops.delete(info.id)
+  let group = connections.get(info.id)
+  if (!group) {
+    const { acquired, fence } = await acquireOwnership(info.id)
+    if (!acquired) {
+      ws.close(4004, "Connector owned by another instance")
+      return false
     }
-    existing.ws.close(1000, "Replaced by new connection")
-  }
 
-  const tokenVersion = await getTokenVersion(info.id)
-  connections.set(info.id, { ws, info, tokenVersion, fence })
-  principal.withSystem({ organizationId: info.organizationId }, () =>
-    setConnectorStatus({ connectorId: info.id, status: "online" }),
-  )
-
-  if (isRedisEnabled()) {
-    const stop = await startCommandConsumer(info.id, async (command) => {
-      const conn = connections.get(info.id)
-      if (!conn) {
-        console.warn(`[Coordinator] No connection for ${info.id}, will retry`)
+    const tokenVersion = await getTokenVersion(info.id)
+    group = {
+      info,
+      tokenVersion,
+      fence,
+      connections: new Map(),
+    }
+    connections.set(info.id, group)
+    principal.withSystem({ organizationId: info.organizationId }, () =>
+      setConnectorStatus({ connectorId: info.id, status: "online" }),
+    )
+  } else {
+    const validOwnership = await isOwnershipValid(info.id, group.fence)
+    if (!validOwnership) {
+      const { acquired, fence } = await acquireOwnership(info.id)
+      if (!acquired) {
+        ws.close(4004, "Connector owned by another instance")
         return false
       }
-      const valid = await isOwnershipValid(info.id, conn.fence)
-      if (!valid) return false
-      replyToMap.set(command.correlationId, command.replyTo)
-      setTimeout(() => replyToMap.delete(command.correlationId), COMMAND_TIMEOUT_MS + 5000)
-      conn.ws.send(JSON.stringify({ ...command, replyTo: undefined }))
-      return true
-    })
-    commandConsumerStops.set(info.id, stop)
-
-    onOwnershipLost(info.id, () => {
-      const conn = connections.get(info.id)
-      if (conn) {
-        console.log(`[Coordinator] Ownership lost for ${info.id}, closing WebSocket`)
-        conn.ws.close(4006, "Ownership lost")
-      }
-    })
+      group.fence = fence
+      group.tokenVersion = await getTokenVersion(info.id)
+      principal.withSystem({ organizationId: info.organizationId }, () =>
+        setConnectorStatus({ connectorId: info.id, status: "online" }),
+      )
+    }
+    group.info = info
   }
 
+  group.connections.set(ws, { ws, tokenHash: info.tokenHash, connectedAt: Date.now(), lastSeen: Date.now() })
+  await ensureCommandConsumer(info.id, group)
   return true
 }
 
 export async function unregisterConnection(connectorId: string, ws?: WebSocket): Promise<void> {
-  const current = connections.get(connectorId)
-  if (!current) return
-  if (ws && current.ws !== ws) return
+  const group = connections.get(connectorId)
+  if (!group) return
 
-  const stop = commandConsumerStops.get(connectorId)
-  if (stop) {
-    stop()
-    commandConsumerStops.delete(connectorId)
+  if (ws) {
+    if (!group.connections.has(ws)) return
+    group.connections.delete(ws)
+    if (group.connections.size > 0) return
   }
+
+  stopCommandConsumer(connectorId)
   removeOwnershipLostCallback(connectorId)
 
-  const organizationId = current.info.organizationId
+  const organizationId = group.info.organizationId
   connections.delete(connectorId)
   await releaseOwnership(connectorId)
   principal.withSystem({ organizationId }, () => setConnectorStatus({ connectorId, status: "offline" }))
 }
 
-export async function handleMessage(connectorId: string, message: ConnectorMessage): Promise<void> {
-  const conn = connections.get(connectorId)
-  if (!conn) return
+export async function handleMessage(connectorId: string, ws: WebSocket, message: ConnectorMessage): Promise<void> {
+  const group = connections.get(connectorId)
+  if (!group) return
+
+  const connection = group.connections.get(ws)
+  if (!connection) return
+  connection.lastSeen = Date.now()
 
   switch (message.type) {
     case "register": {
-      conn.metadata = message.payload as RegisterPayload
-      setConnectorMetadata({ connectorId, metadata: conn.metadata })
+      group.metadata = message.payload as RegisterPayload
+      setConnectorMetadata({ connectorId, metadata: group.metadata })
       break
     }
     case "heartbeat": {
       if (isRedisEnabled()) {
         const currentVersion = await getTokenVersion(connectorId)
-        if (currentVersion > conn.tokenVersion) {
-          conn.tokenVersion = currentVersion
+        if (currentVersion > group.tokenVersion) {
+          group.tokenVersion = currentVersion
         }
       }
-      const valid = await verifyConnectorStillValid(connectorId, conn.info.tokenHash)
+      const valid = await verifyConnectorStillValid(connectorId, connection.tokenHash)
       if (!valid) {
         console.log(`Connector ${connectorId} token invalidated, closing connection`)
-        conn.ws.close(4003, "Token invalidated")
-        await unregisterConnection(connectorId)
+        connection.ws.close(4003, "Token invalidated")
+        await unregisterConnection(connectorId, connection.ws)
         return
       }
-      principal.withSystem({ organizationId: conn.info.organizationId }, () => setConnectorLastSeen(connectorId))
+      principal.withSystem({ organizationId: group.info.organizationId }, () => setConnectorLastSeen(connectorId))
       break
     }
     case "result": {
@@ -201,9 +204,9 @@ export async function dispatchCommand<T>(
   command: Omit<CloudCommand, "correlationId">,
 ): Promise<T> {
   if (isOwnedLocally(connectorId)) {
-    const conn = connections.get(connectorId)
-    if (!conn) throw new Error(`Connector ${connectorId} is not connected`)
-    return dispatchLocal<T>(conn, command)
+    const group = connections.get(connectorId)
+    if (!group) throw new Error(`Connector ${connectorId} is not connected`)
+    return dispatchLocal<T>(connectorId, group, command)
   }
 
   if (!isRedisEnabled()) {
@@ -213,9 +216,17 @@ export async function dispatchCommand<T>(
   return dispatchRemoteCommand<T>(connectorId, command)
 }
 
-async function dispatchLocal<T>(conn: ConnectorConnection, command: Omit<CloudCommand, "correlationId">): Promise<T> {
+async function dispatchLocal<T>(
+  connectorId: string,
+  group: ConnectorGroup,
+  command: Omit<CloudCommand, "correlationId">,
+): Promise<T> {
   const correlationId = randomUUID()
   const fullCommand: CloudCommand = { ...command, correlationId }
+  const connection = pickConnection(group)
+  if (!connection) {
+    throw new Error(`Connector ${connectorId} is not connected`)
+  }
 
   return new Promise<T>((resolve, reject) => {
     const timeout = setTimeout(() => {
@@ -229,7 +240,7 @@ async function dispatchLocal<T>(conn: ConnectorConnection, command: Omit<CloudCo
       timeout,
     })
 
-    conn.ws.send(JSON.stringify(fullCommand))
+    connection.ws.send(JSON.stringify(fullCommand))
   })
 }
 
@@ -243,7 +254,9 @@ export function getConnectorStatus(connectorId: string): "online" | "offline" {
 }
 
 export function broadcastPing(): void {
-  for (const [, conn] of connections) {
+  for (const [, group] of connections) {
+    const conn = pickConnection(group)
+    if (!conn) continue
     const ping: CloudCommand = {
       type: "ping",
       correlationId: randomUUID(),
@@ -275,8 +288,70 @@ export function clearPendingRequests(): void {
 }
 
 export async function closeAllConnections(): Promise<void> {
-  for (const [connectorId, conn] of connections) {
-    conn.ws.close(1001, "Server shutting down")
+  for (const [connectorId, group] of connections) {
+    for (const connection of group.connections.values()) {
+      connection.ws.close(1001, "Server shutting down")
+    }
     await unregisterConnection(connectorId)
+  }
+}
+
+async function ensureCommandConsumer(connectorId: string, group: ConnectorGroup): Promise<void> {
+  if (!isRedisEnabled()) return
+  if (commandConsumerStops.has(connectorId)) return
+
+  const stop = await startCommandConsumer(connectorId, async (command) => {
+    const currentGroup = connections.get(connectorId)
+    if (!currentGroup) {
+      console.warn(`[Coordinator] No connection for ${connectorId}, will retry`)
+      return false
+    }
+    const valid = await isOwnershipValid(connectorId, currentGroup.fence)
+    if (!valid) return false
+    const conn = pickConnection(currentGroup)
+    if (!conn) {
+      console.warn(`[Coordinator] No active connection for ${connectorId}, will retry`)
+      return false
+    }
+    replyToMap.set(command.correlationId, command.replyTo)
+    setTimeout(() => replyToMap.delete(command.correlationId), COMMAND_TIMEOUT_MS + 5000)
+    conn.ws.send(JSON.stringify({ ...command, replyTo: undefined }))
+    return true
+  })
+  if (!stop) return
+  commandConsumerStops.set(connectorId, stop)
+  onOwnershipLost(connectorId, () => {
+    const currentGroup = connections.get(connectorId)
+    if (currentGroup) {
+      console.log(`[Coordinator] Ownership lost for ${connectorId}, closing WebSocket`)
+      closeConnections(connectorId, 4006, "Ownership lost")
+      stopCommandConsumer(connectorId)
+    }
+  })
+}
+
+function stopCommandConsumer(connectorId: string): void {
+  if (!commandConsumerStops.has(connectorId)) return
+  const stop = commandConsumerStops.get(connectorId)
+  if (stop) stop()
+  commandConsumerStops.delete(connectorId)
+}
+
+function pickConnection(group: ConnectorGroup): ConnectorConnection | null {
+  let selected: ConnectorConnection | null = null
+  for (const conn of group.connections.values()) {
+    if (conn.ws.readyState !== WebSocket.OPEN) continue
+    if (!selected || conn.connectedAt > selected.connectedAt) {
+      selected = conn
+    }
+  }
+  return selected
+}
+
+function closeConnections(connectorId: string, code: number, reason: string): void {
+  const group = connections.get(connectorId)
+  if (!group) return
+  for (const connection of group.connections.values()) {
+    connection.ws.close(code, reason)
   }
 }
