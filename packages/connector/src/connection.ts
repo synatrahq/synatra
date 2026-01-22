@@ -30,6 +30,7 @@ const HEARTBEAT_INTERVAL_MS = 25000
 const SERVER_TIMEOUT_MS = 60000
 const SERVER_TIMEOUT_CHECK_MS = 10000
 const STABILITY_WINDOW_MS = 30000
+const PENDING_TIMEOUT_MS = 10000
 
 let ws: WebSocket | null = null
 let pendingWs: WebSocket | null = null
@@ -38,6 +39,7 @@ let reconnectAttempts = 0
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let pendingReconnectTimer: ReturnType<typeof setTimeout> | null = null
+let pendingTimeoutTimer: ReturnType<typeof setTimeout> | null = null
 let serverTimeoutTimer: ReturnType<typeof setInterval> | null = null
 let stabilityTimer: ReturnType<typeof setTimeout> | null = null
 let lastServerMessage = 0
@@ -63,6 +65,10 @@ export function disconnect(): void {
   if (pendingReconnectTimer) {
     clearTimeout(pendingReconnectTimer)
     pendingReconnectTimer = null
+  }
+  if (pendingTimeoutTimer) {
+    clearTimeout(pendingTimeoutTimer)
+    pendingTimeoutTimer = null
   }
   if (serverTimeoutTimer) {
     clearInterval(serverTimeoutTimer)
@@ -146,6 +152,10 @@ function attachHandlers(socket: WebSocket): void {
     if (socket !== ws) {
       if (pendingWs === socket) {
         pendingWs = null
+        if (pendingTimeoutTimer) {
+          clearTimeout(pendingTimeoutTimer)
+          pendingTimeoutTimer = null
+        }
         schedulePendingReconnect(jitterDelay(1000))
       }
       return
@@ -183,6 +193,11 @@ function attachHandlers(socket: WebSocket): void {
         scheduleReconnect(jitterDelay(1000))
         return
 
+      case "Connection limit exceeded":
+        console.log("[WS] Connection limit exceeded, reconnecting with backoff")
+        scheduleReconnect()
+        return
+
       case "Registration failed":
         console.log("[WS] Registration failed, reconnecting")
         reconnectAttempts = 0
@@ -209,6 +224,16 @@ function attachHandlers(socket: WebSocket): void {
   }
 
   socket.onerror = (error) => {
+    if (socket === pendingWs) {
+      console.error("[WS] Pending connection error:", error)
+      pendingWs = null
+      if (pendingTimeoutTimer) {
+        clearTimeout(pendingTimeoutTimer)
+        pendingTimeoutTimer = null
+      }
+      schedulePendingReconnect(jitterDelay(1000))
+      return
+    }
     if (socket !== ws) return
     console.error("WebSocket error:", error)
   }
@@ -379,20 +404,15 @@ function startPendingConnection(): void {
       reconnectTimer = null
     }
     sendRegister(newWs)
-  }
-
-  newWs.onerror = () => {
-    console.log("[WS] Failed to establish new connection preemptively")
-    if (pendingWs === newWs) {
-      pendingWs = null
-    }
-  }
-
-  newWs.onclose = () => {
-    if (pendingWs === newWs) {
-      pendingWs = null
-      schedulePendingReconnect(jitterDelay(1000))
-    }
+    pendingTimeoutTimer = setTimeout(() => {
+      if (pendingWs === newWs) {
+        console.log("[WS] Pending connection timeout, closing")
+        pendingWs = null
+        newWs.close(1000, "Pending timeout")
+        schedulePendingReconnect(jitterDelay(1000))
+      }
+      pendingTimeoutTimer = null
+    }, PENDING_TIMEOUT_MS)
   }
 }
 
@@ -403,6 +423,10 @@ function promotePending(next: WebSocket): void {
   if (pendingReconnectTimer) {
     clearTimeout(pendingReconnectTimer)
     pendingReconnectTimer = null
+  }
+  if (pendingTimeoutTimer) {
+    clearTimeout(pendingTimeoutTimer)
+    pendingTimeoutTimer = null
   }
   if (reconnectTimer) {
     clearTimeout(reconnectTimer)

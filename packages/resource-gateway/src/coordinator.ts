@@ -46,6 +46,7 @@ const replyToMap = new Map<string, string>()
 
 const COMMAND_TIMEOUT_MS = 30000
 const HEARTBEAT_INTERVAL_MS = 30000
+const MAX_CONNECTIONS_PER_CONNECTOR = 5
 function tokenVersionKey(connectorId: string): string {
   return `connector:${connectorId}:tokenVersion`
 }
@@ -113,8 +114,36 @@ export async function registerConnection(ws: WebSocket, info: ConnectorInfo): Pr
     connectedAt: Date.now(),
     lastSeen: Date.now(),
   })
+
+  if (group.connections.size > MAX_CONNECTIONS_PER_CONNECTOR) {
+    evictOldestConnection(group)
+  }
+
   await ensureCommandConsumer(info.id, group)
   return true
+}
+
+function evictOldestConnection(group: ConnectorGroup): void {
+  let target: { ws: WebSocket; connectedAt: number } | null = null
+  for (const conn of group.connections.values()) {
+    if (!conn.ready) {
+      if (!target || conn.connectedAt < target.connectedAt) {
+        target = { ws: conn.ws, connectedAt: conn.connectedAt }
+      }
+    }
+  }
+  if (!target) {
+    for (const conn of group.connections.values()) {
+      if (!target || conn.connectedAt < target.connectedAt) {
+        target = { ws: conn.ws, connectedAt: conn.connectedAt }
+      }
+    }
+  }
+  if (target) {
+    console.log(`[Coordinator] Evicting connection for connector (max ${MAX_CONNECTIONS_PER_CONNECTOR} reached)`)
+    target.ws.close(4009, "Connection limit exceeded")
+    group.connections.delete(target.ws)
+  }
 }
 
 export async function unregisterConnection(connectorId: string, ws?: WebSocket): Promise<void> {

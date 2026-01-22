@@ -62,7 +62,7 @@ describe("coordinator", () => {
     await unregisterConnection("connector-1")
   })
 
-  it("does not unregister when closing an old connection", async () => {
+  it("does not unregister when closing an old connection if ready connection remains", async () => {
     const ws1 = { close: vi.fn(), send: vi.fn(), readyState: WebSocket.OPEN } as any
     const ws2 = { close: vi.fn(), send: vi.fn(), readyState: WebSocket.OPEN } as any
     const info = { id: "connector-1", name: "test", tokenHash: "hash", organizationId: "org-1" } as any
@@ -71,6 +71,8 @@ describe("coordinator", () => {
 
     await registerConnection(ws1, info)
     await registerConnection(ws2, info)
+
+    await handleMessage("connector-1", ws2, { type: "register", payload: { version: "1.0", platform: "test" } })
 
     await unregisterConnection("connector-1", ws1)
 
