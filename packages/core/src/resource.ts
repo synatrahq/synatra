@@ -107,7 +107,7 @@ function encryptSensitiveFields(
         result.authName = restapiInput.auth.name
         if (restapiInput.auth.key) {
           result.authConfig = encrypt(JSON.stringify({ type: "api_key", key: restapiInput.auth.key }))
-        } else if (existingRestapi?.authType !== "api_key") {
+        } else if (restapiInput.auth.key === null || existingRestapi?.authType !== "api_key") {
           result.authConfig = null
         }
       } else if (restapiInput.auth.type === "bearer") {
@@ -116,7 +116,7 @@ function encryptSensitiveFields(
         result.authName = undefined
         if (restapiInput.auth.token) {
           result.authConfig = encrypt(JSON.stringify({ type: "bearer", token: restapiInput.auth.token }))
-        } else if (existingRestapi?.authType !== "bearer") {
+        } else if (restapiInput.auth.token === null || existingRestapi?.authType !== "bearer") {
           result.authConfig = null
         }
       } else if (restapiInput.auth.type === "basic") {
@@ -131,7 +131,7 @@ function encryptSensitiveFields(
               password: restapiInput.auth.password,
             }),
           )
-        } else if (existingRestapi?.authType !== "basic") {
+        } else if (restapiInput.auth.password === null || existingRestapi?.authType !== "basic") {
           result.authConfig = null
         }
       }
@@ -159,6 +159,8 @@ function encryptSensitiveFields(
 
         if (apiKey) {
           result[provider] = { apiKey: encrypt(apiKey), baseUrl, enabled }
+        } else if (apiKey === null) {
+          result[provider] = null
         } else if (existingProvider?.apiKey) {
           result[provider] = { apiKey: existingProvider.apiKey, baseUrl, enabled }
         } else {

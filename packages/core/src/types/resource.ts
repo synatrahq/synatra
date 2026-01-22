@@ -364,9 +364,9 @@ export type InputIntercomConfig = {
 
 export type InputRestApiAuth =
   | { type: "none" }
-  | { type: "api_key"; key?: string; location: "header" | "query"; name: string }
-  | { type: "bearer"; token?: string }
-  | { type: "basic"; username?: string; password?: string }
+  | { type: "api_key"; key?: string | null; location: "header" | "query"; name: string }
+  | { type: "bearer"; token?: string | null }
+  | { type: "basic"; username?: string; password?: string | null }
 
 export type InputRestApiConfig = {
   baseUrl: string

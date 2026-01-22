@@ -382,23 +382,19 @@ export function editorStateToInputConfig(type: ResourceType, editState: Editable
     if (rest.authType === "none") {
       auth = { type: "none" }
     } else if (rest.authType === "api_key") {
-      const key = toInputSensitive(rest.apiKeyValue)
       auth = {
         type: "api_key",
-        key: key === null ? undefined : key,
+        key: toInputSensitive(rest.apiKeyValue),
         location: rest.apiKeyLocation ?? "header",
         name: rest.apiKeyName ?? "X-API-Key",
       }
     } else if (rest.authType === "bearer") {
-      const token = toInputSensitive(rest.bearerToken)
-      auth = { type: "bearer", token: token === null ? undefined : token }
+      auth = { type: "bearer", token: toInputSensitive(rest.bearerToken) }
     } else if (rest.authType === "basic") {
-      const username = rest.basicUsername || undefined
-      const password = toInputSensitive(rest.basicPassword)
       auth = {
         type: "basic",
-        username,
-        password: password === null ? undefined : password,
+        username: rest.basicUsername || undefined,
+        password: toInputSensitive(rest.basicPassword),
       }
     }
 
