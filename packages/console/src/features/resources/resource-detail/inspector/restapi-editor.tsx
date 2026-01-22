@@ -40,7 +40,6 @@ export function RestApiConfigEditorContent(props: {
           <SensitiveInput
             type="password"
             value={props.config.apiKeyValue}
-            hasSaved={props.config.hasAuthConfig && props.config.originalAuthType === "api_key"}
             placeholder="your-api-key"
             onChange={(v) => props.onChange({ ...props.config, apiKeyValue: v })}
             class="font-code"
@@ -69,7 +68,6 @@ export function RestApiConfigEditorContent(props: {
           <SensitiveInput
             type="password"
             value={props.config.bearerToken}
-            hasSaved={props.config.hasAuthConfig && props.config.originalAuthType === "bearer"}
             placeholder="your-token"
             onChange={(v) => props.onChange({ ...props.config, bearerToken: v })}
             class="font-code"
@@ -82,7 +80,7 @@ export function RestApiConfigEditorContent(props: {
           <FormField label="Username">
             <Input
               type="text"
-              value={props.config.basicUsername ?? ""}
+              value={props.config.basicUsername}
               placeholder="username"
               onInput={(e) => props.onChange({ ...props.config, basicUsername: e.currentTarget.value })}
             />
@@ -91,7 +89,6 @@ export function RestApiConfigEditorContent(props: {
             <SensitiveInput
               type="password"
               value={props.config.basicPassword}
-              hasSaved={props.config.hasAuthConfig && props.config.originalAuthType === "basic"}
               onChange={(v) => props.onChange({ ...props.config, basicPassword: v })}
             />
           </FormField>

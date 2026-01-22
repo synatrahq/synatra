@@ -84,12 +84,15 @@ function createDefaultAPIConfig(type: string): APIResourceConfig {
       port: type === "mysql" ? 3306 : 5432,
       database: "",
       user: "",
-      hasPassword: false,
+      password: "",
       ssl: false,
       sslVerification: "full",
-      hasCaCertificate: false,
-      hasClientCertificate: false,
-      hasClientKey: false,
+      caCertificate: null,
+      caCertificateFilename: null,
+      clientCertificate: null,
+      clientCertificateFilename: null,
+      clientKey: null,
+      clientKeyFilename: null,
     } as APIPostgresConfig | APIMysqlConfig
   }
   if (type === "github") {
@@ -101,13 +104,14 @@ function createDefaultAPIConfig(type: string): APIResourceConfig {
     return {
       baseUrl: "",
       authType: "none",
-      hasAuthConfig: false,
-      headers: {},
-      queryParams: {},
+      authConfig: "",
+      authUsername: "",
+      headers: [],
+      queryParams: [],
     } as APIRestApiConfig
   }
   return {
-    hasApiKey: false,
+    apiKey: "",
     apiVersion: "2025-12-15.clover",
   } as APIStripeConfig
 }
@@ -150,8 +154,8 @@ function createDefaultInputConfig(type: string): InputResourceConfig {
     return {
       baseUrl: "",
       auth: { type: "none" },
-      headers: {},
-      queryParams: {},
+      headers: [],
+      queryParams: [],
     } as InputRestApiConfig
   }
   return {

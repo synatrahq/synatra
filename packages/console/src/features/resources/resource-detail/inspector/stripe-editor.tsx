@@ -12,7 +12,6 @@ export function StripeConfigEditorContent(props: {
         <SensitiveInput
           type="password"
           value={props.config.apiKey}
-          hasSaved={props.config.hasApiKey}
           placeholder="sk_live_..."
           onChange={(v) => props.onChange({ ...props.config, apiKey: v })}
           class="font-code"

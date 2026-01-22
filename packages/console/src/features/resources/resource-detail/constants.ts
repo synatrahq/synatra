@@ -1,17 +1,18 @@
-import type {
-  ResourceType,
-  APIResourceConfig,
-  InputResourceConfig,
-  InputRestApiAuth,
-  APIPostgresConfig,
-  APIMysqlConfig,
-  APIStripeConfig,
-  APIGitHubConfig,
-  APIIntercomConfig,
-  APIRestApiConfig,
-  APISynatraAiConfig,
-  LlmProvider,
-  ConnectionMode,
+import {
+  ENCRYPTED_PLACEHOLDER,
+  type ResourceType,
+  type APIResourceConfig,
+  type InputResourceConfig,
+  type InputRestApiAuth,
+  type APIPostgresConfig,
+  type APIMysqlConfig,
+  type APIStripeConfig,
+  type APIGitHubConfig,
+  type APIIntercomConfig,
+  type APIRestApiConfig,
+  type APISynatraAiConfig,
+  type LlmProvider,
+  type ConnectionMode,
 } from "@synatra/core/types"
 
 export type EditableConfig = {
@@ -25,30 +26,24 @@ export type EditableConfig = {
   }
 }
 
-// Editor config types for UI state management
 export type DatabaseEditorConfig = {
   host: string
   port: number
   database: string
   user: string
-  password?: string // undefined = unchanged, "" = cleared by user, string = new value
-  hasPassword: boolean // from API
-  caCertificate?: string | null
-  caCertificateFilename?: string | null
-  hasCaCertificate: boolean
-  clientCertificate?: string | null
-  clientCertificateFilename?: string | null
-  hasClientCertificate: boolean
-  clientKey?: string | null
-  clientKeyFilename?: string | null
-  hasClientKey: boolean
+  password: string
+  caCertificate: string | null
+  caCertificateFilename: string | null
+  clientCertificate: string | null
+  clientCertificateFilename: string | null
+  clientKey: string | null
+  clientKeyFilename: string | null
   ssl: boolean
   sslVerification: "full" | "verify_ca" | "skip_ca"
 }
 
 export type StripeEditorConfig = {
-  apiKey?: string
-  hasApiKey: boolean
+  apiKey: string
   apiVersion: string
 }
 
@@ -63,21 +58,21 @@ export type IntercomEditorConfig = {
 export type RestApiEditorConfig = {
   baseUrl: string
   authType: "none" | "api_key" | "bearer" | "basic"
-  apiKeyValue?: string
+  apiKeyValue: string
   apiKeyLocation?: "header" | "query"
   apiKeyName?: string
-  bearerToken?: string
-  basicUsername?: string
-  basicPassword?: string
-  hasAuthConfig: boolean
+  bearerToken: string
+  basicUsername: string
+  basicPassword: string
   originalAuthType: "none" | "api_key" | "bearer" | "basic"
+  originalAuthConfig: string
+  originalAuthUsername: string
   headers: Array<{ key: string; value: string }>
   queryParams: Array<{ key: string; value: string }>
 }
 
 export type SynatraAiProviderEditorConfig = {
-  apiKey?: string
-  hasApiKey: boolean
+  apiKey: string
   baseUrl: string | null
   enabled: boolean
 }
@@ -99,7 +94,6 @@ export type EditableConfigState = {
   connectorId: string | null
 }
 
-// Create initial editor state from API config
 export function createEditorState(
   type: ResourceType,
   apiConfig: APIResourceConfig,
@@ -114,17 +108,13 @@ export function createEditorState(
         port: dbConfig.port,
         database: dbConfig.database,
         user: dbConfig.user,
-        hasPassword: dbConfig.hasPassword,
-        password: undefined,
-        caCertificate: undefined,
-        caCertificateFilename: dbConfig.caCertificateFilename ?? undefined,
-        hasCaCertificate: dbConfig.hasCaCertificate,
-        clientCertificate: undefined,
-        clientCertificateFilename: dbConfig.clientCertificateFilename ?? undefined,
-        hasClientCertificate: dbConfig.hasClientCertificate,
-        clientKey: undefined,
-        clientKeyFilename: dbConfig.clientKeyFilename ?? undefined,
-        hasClientKey: dbConfig.hasClientKey,
+        password: dbConfig.password,
+        caCertificate: dbConfig.caCertificate,
+        caCertificateFilename: dbConfig.caCertificateFilename,
+        clientCertificate: dbConfig.clientCertificate,
+        clientCertificateFilename: dbConfig.clientCertificateFilename,
+        clientKey: dbConfig.clientKey,
+        clientKeyFilename: dbConfig.clientKeyFilename,
         ssl: dbConfig.ssl,
         sslVerification: dbConfig.sslVerification,
       },
@@ -137,8 +127,7 @@ export function createEditorState(
     const stripeConfig = apiConfig as APIStripeConfig
     return {
       stripe: {
-        hasApiKey: stripeConfig.hasApiKey,
-        apiKey: undefined,
+        apiKey: stripeConfig.apiKey,
         apiVersion: stripeConfig.apiVersion,
       },
       connectionMode,
@@ -161,16 +150,17 @@ export function createEditorState(
       restapi: {
         baseUrl: restConfig.baseUrl,
         authType: restConfig.authType,
-        hasAuthConfig: restConfig.hasAuthConfig,
         originalAuthType: restConfig.authType,
-        apiKeyValue: undefined,
+        originalAuthConfig: restConfig.authConfig,
+        originalAuthUsername: restConfig.authUsername ?? "",
+        apiKeyValue: restConfig.authType === "api_key" ? restConfig.authConfig : "",
         apiKeyLocation: restConfig.authLocation,
         apiKeyName: restConfig.authName,
-        bearerToken: undefined,
-        basicUsername: undefined,
-        basicPassword: undefined,
-        headers: Object.entries(restConfig.headers).map(([key, value]) => ({ key, value })),
-        queryParams: Object.entries(restConfig.queryParams).map(([key, value]) => ({ key, value })),
+        bearerToken: restConfig.authType === "bearer" ? restConfig.authConfig : "",
+        basicUsername: restConfig.authUsername ?? "",
+        basicPassword: restConfig.authType === "basic" ? restConfig.authConfig : "",
+        headers: restConfig.headers,
+        queryParams: restConfig.queryParams,
       },
       connectionMode,
       connectorId,
@@ -180,8 +170,7 @@ export function createEditorState(
   if (type === "synatra_ai") {
     const synatraConfig = apiConfig as APISynatraAiConfig
     const createProvider = (provider: APISynatraAiConfig["openai"]): SynatraAiProviderEditorConfig => ({
-      apiKey: undefined,
-      hasApiKey: provider?.hasApiKey ?? false,
+      apiKey: provider?.apiKey ?? "",
       baseUrl: provider?.baseUrl ?? null,
       enabled: provider?.enabled ?? true,
     })
@@ -199,7 +188,6 @@ export function createEditorState(
   throw new Error(`Unsupported resource type: ${type}`)
 }
 
-// Check if editor state has actual changes compared to original API config
 export function hasEditorChanges(
   type: ResourceType,
   editState: EditableConfigState,
@@ -221,11 +209,10 @@ export function hasEditorChanges(
     if (db.user !== original.user) return true
     if (db.ssl !== original.ssl) return true
     if (db.sslVerification !== original.sslVerification) return true
-
-    if (db.password !== undefined && db.password !== "") return true
-    if (db.caCertificate !== undefined) return true
-    if (db.clientCertificate !== undefined) return true
-    if (db.clientKey !== undefined) return true
+    if (db.password !== original.password) return true
+    if (db.caCertificate !== original.caCertificate) return true
+    if (db.clientCertificate !== original.clientCertificate) return true
+    if (db.clientKey !== original.clientKey) return true
 
     return false
   }
@@ -236,7 +223,7 @@ export function hasEditorChanges(
     if (!stripe) return false
 
     if (stripe.apiVersion !== original.apiVersion) return true
-    if (stripe.apiKey !== undefined && stripe.apiKey !== "") return true
+    if (stripe.apiKey !== original.apiKey) return true
 
     return false
   }
@@ -269,38 +256,33 @@ export function hasEditorChanges(
     if (rest.baseUrl !== original.baseUrl) return true
     if (rest.authType !== original.authType) return true
 
-    if (rest.authType === "none" && original.authType !== "none") return true
     if (rest.authType === "api_key") {
-      const hasKey = rest.apiKeyValue !== undefined && rest.apiKeyValue !== ""
-      if (hasKey) return true
-      if (original.authType === "api_key") {
-        if (rest.apiKeyLocation !== original.authLocation) return true
-        if (rest.apiKeyName !== original.authName) return true
-      }
+      if (rest.apiKeyValue !== rest.originalAuthConfig) return true
+      if (rest.apiKeyLocation !== original.authLocation) return true
+      if (rest.apiKeyName !== original.authName) return true
     }
     if (rest.authType === "bearer") {
-      if (rest.bearerToken !== undefined && rest.bearerToken !== "") return true
+      if (rest.bearerToken !== rest.originalAuthConfig) return true
     }
     if (rest.authType === "basic") {
-      const hasUsername = rest.basicUsername !== undefined && rest.basicUsername !== ""
-      const hasPassword = rest.basicPassword !== undefined && rest.basicPassword !== ""
-      if (hasUsername && hasPassword) return true
+      if (rest.basicUsername !== rest.originalAuthUsername) return true
+      if (rest.basicPassword !== rest.originalAuthConfig) return true
     }
 
     const headers = rest.headers.filter((h) => h.key)
     const params = rest.queryParams.filter((p) => p.key)
-    const origHeaders = Object.entries(original.headers)
-    const origParams = Object.entries(original.queryParams)
+    const origHeaders = original.headers.filter((h) => h.key)
+    const origParams = original.queryParams.filter((p) => p.key)
     if (headers.length !== origHeaders.length) return true
     if (params.length !== origParams.length) return true
 
     for (let i = 0; i < headers.length; i++) {
-      if (headers[i].key !== origHeaders[i]?.[0]) return true
-      if (headers[i].value !== origHeaders[i]?.[1]) return true
+      if (headers[i].key !== origHeaders[i]?.key) return true
+      if (headers[i].value !== origHeaders[i]?.value) return true
     }
     for (let i = 0; i < params.length; i++) {
-      if (params[i].key !== origParams[i]?.[0]) return true
-      if (params[i].value !== origParams[i]?.[1]) return true
+      if (params[i].key !== origParams[i]?.key) return true
+      if (params[i].value !== origParams[i]?.value) return true
     }
 
     return false
@@ -316,7 +298,7 @@ export function hasEditorChanges(
       const edit = ai[provider]
       const orig = original[provider]
 
-      if (edit.apiKey !== undefined && edit.apiKey !== "") return true
+      if (edit.apiKey !== (orig?.apiKey ?? "")) return true
       if (edit.baseUrl !== (orig?.baseUrl ?? null)) return true
       if (edit.enabled !== (orig?.enabled ?? true)) return true
     }
@@ -327,16 +309,27 @@ export function hasEditorChanges(
   return false
 }
 
-// Convert editor state to input config for saving
+const toInputSensitive = (v: string): string | null | undefined => {
+  if (v === ENCRYPTED_PLACEHOLDER) return undefined
+  if (v === "") return null
+  return v
+}
+
+const toInputSensitiveNullable = (v: string | null): string | null | undefined => {
+  if (v === null) return undefined
+  if (v === ENCRYPTED_PLACEHOLDER) return undefined
+  if (v === "") return null
+  return v
+}
+
 export function editorStateToInputConfig(type: ResourceType, editState: EditableConfigState): InputResourceConfig {
   if (type === "postgres" || type === "mysql") {
     const db = editState.database!
-    const emptyToNull = (v: string | null | undefined) => (v === "" ? null : v)
-    const caCertificate = emptyToNull(db.caCertificate)
-    const clientCertificate = emptyToNull(db.clientCertificate)
-    const clientKey = emptyToNull(db.clientKey)
+    const caCertificate = toInputSensitiveNullable(db.caCertificate)
+    const clientCertificate = toInputSensitiveNullable(db.clientCertificate)
+    const clientKey = toInputSensitiveNullable(db.clientKey)
 
-    const resolveFilename = (content: string | null | undefined, filename: string | null | undefined) => {
+    const resolveFilename = (content: string | null | undefined, filename: string | null) => {
       if (content) return filename
       if (content === null) return null
       return undefined
@@ -347,7 +340,7 @@ export function editorStateToInputConfig(type: ResourceType, editState: Editable
       port: db.port,
       database: db.database,
       user: db.user,
-      password: db.password === "" ? undefined : db.password,
+      password: toInputSensitive(db.password),
       ssl: db.ssl,
       sslVerification: db.sslVerification,
       caCertificate,
@@ -362,7 +355,7 @@ export function editorStateToInputConfig(type: ResourceType, editState: Editable
   if (type === "stripe") {
     const stripe = editState.stripe!
     return {
-      apiKey: stripe.apiKey === "" ? undefined : stripe.apiKey,
+      apiKey: toInputSensitive(stripe.apiKey),
       apiVersion: stripe.apiVersion,
     }
   }
@@ -383,30 +376,26 @@ export function editorStateToInputConfig(type: ResourceType, editState: Editable
 
   if (type === "restapi") {
     const rest = editState.restapi!
-    const headers = Object.fromEntries(rest.headers.filter((h) => h.key).map((h) => [h.key, h.value]))
-    const queryParams = Object.fromEntries(rest.queryParams.filter((p) => p.key).map((p) => [p.key, p.value]))
+    const headers = rest.headers.filter((h) => h.key)
+    const queryParams = rest.queryParams.filter((p) => p.key)
 
     let auth: InputRestApiAuth | undefined
     if (rest.authType === "none") {
       auth = { type: "none" }
     } else if (rest.authType === "api_key") {
-      const hasKey = rest.apiKeyValue !== undefined && rest.apiKeyValue !== ""
       auth = {
         type: "api_key",
-        key: hasKey ? rest.apiKeyValue : undefined,
+        key: toInputSensitive(rest.apiKeyValue),
         location: rest.apiKeyLocation ?? "header",
         name: rest.apiKeyName ?? "X-API-Key",
       }
     } else if (rest.authType === "bearer") {
-      const hasToken = rest.bearerToken !== undefined && rest.bearerToken !== ""
-      auth = { type: "bearer", token: hasToken ? rest.bearerToken : undefined }
+      auth = { type: "bearer", token: toInputSensitive(rest.bearerToken) }
     } else if (rest.authType === "basic") {
-      const hasUsername = rest.basicUsername !== undefined && rest.basicUsername !== ""
-      const hasPassword = rest.basicPassword !== undefined && rest.basicPassword !== ""
       auth = {
         type: "basic",
-        username: hasUsername ? rest.basicUsername : undefined,
-        password: hasPassword ? rest.basicPassword : undefined,
+        username: rest.basicUsername !== rest.originalAuthUsername ? rest.basicUsername : undefined,
+        password: toInputSensitive(rest.basicPassword),
       }
     }
 
@@ -420,14 +409,14 @@ export function editorStateToInputConfig(type: ResourceType, editState: Editable
 
   if (type === "synatra_ai") {
     const ai = editState.synatraAi!
-    const result: Record<string, { apiKey?: string; baseUrl?: string | null; enabled?: boolean } | undefined> = {}
+    const result: Record<string, { apiKey?: string | null; baseUrl?: string | null; enabled?: boolean } | undefined> =
+      {}
 
     const providers: LlmProvider[] = ["openai", "anthropic", "google"]
     for (const provider of providers) {
       const edit = ai[provider]
-      const hasKey = edit.apiKey !== undefined && edit.apiKey !== ""
       result[provider] = {
-        apiKey: hasKey ? edit.apiKey : undefined,
+        apiKey: toInputSensitive(edit.apiKey),
         baseUrl: edit.baseUrl,
         enabled: edit.enabled,
       }

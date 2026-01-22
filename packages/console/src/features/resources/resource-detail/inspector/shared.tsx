@@ -1,39 +1,35 @@
-import { Show, For, createSignal } from "solid-js"
+import { Show, Index, createSignal } from "solid-js"
 import { X, Plus } from "phosphor-solid-js"
-import type { LlmProvider } from "@synatra/core/types"
+import { ENCRYPTED_PLACEHOLDER, type LlmProvider } from "@synatra/core/types"
 import { Input, IconButton } from "../../../../ui"
 import { theme } from "../../../../app"
 import { PROVIDER_ICONS } from "./constants"
 
-const MASK = "••••••••"
-
 export function SensitiveInput(props: {
   type?: "text" | "password"
-  value: string | undefined
-  hasSaved: boolean
+  value: string
   placeholder?: string
-  onChange: (value: string | undefined) => void
+  onChange: (value: string) => void
   class?: string
 }) {
   const [editing, setEditing] = createSignal(false)
 
-  const displayValue = () => {
-    if (editing()) return props.value ?? ""
-    if (props.value !== undefined) return props.value
-    if (props.hasSaved) return MASK
-    return ""
+  const isEncrypted = () => props.value === ENCRYPTED_PLACEHOLDER
+  const inputType = () => {
+    if (editing()) return "text"
+    if (isEncrypted()) return "text"
+    return props.type ?? "password"
   }
 
-  const handleFocus = () => {
+  const handleFocus = (e: FocusEvent) => {
     setEditing(true)
+    if (isEncrypted()) {
+      ;(e.target as HTMLInputElement).select()
+    }
   }
 
-  const handleBlur = (e: FocusEvent) => {
-    const val = (e.target as HTMLInputElement).value
+  const handleBlur = () => {
     setEditing(false)
-    if (val === "" && props.hasSaved) {
-      props.onChange(undefined)
-    }
   }
 
   const handleInput = (e: InputEvent) => {
@@ -42,8 +38,8 @@ export function SensitiveInput(props: {
 
   return (
     <Input
-      type={props.type ?? "text"}
-      value={displayValue()}
+      type={inputType()}
+      value={props.value}
       placeholder={props.placeholder}
       onFocus={handleFocus}
       onBlur={handleBlur}
@@ -76,34 +72,34 @@ export function KeyValueList(props: {
 
   return (
     <div class="flex flex-col gap-1.5">
-      <For each={items()}>
+      <Index each={items()}>
         {(item, index) => (
           <div class="group flex items-center gap-1.5">
             <Input
               type="text"
-              value={item.key}
+              value={item().key}
               placeholder={props.keyPlaceholder ?? "Key"}
-              onInput={(e) => handleChange(index(), "key", e.currentTarget.value)}
+              onInput={(e) => handleChange(index, "key", e.currentTarget.value)}
               class="flex-1 font-code text-xs"
             />
             <Input
               type="text"
-              value={item.value}
+              value={item().value}
               placeholder={props.valuePlaceholder ?? "Value"}
-              onInput={(e) => handleChange(index(), "value", e.currentTarget.value)}
+              onInput={(e) => handleChange(index, "value", e.currentTarget.value)}
               class="flex-1 font-code text-xs"
             />
             <IconButton
               variant="ghost"
               size="sm"
               class="opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => handleRemove(index())}
+              onClick={() => handleRemove(index)}
             >
               <X class="h-3.5 w-3.5" />
             </IconButton>
           </div>
         )}
-      </For>
+      </Index>
       <button
         type="button"
         class="flex items-center gap-1 self-start text-xs text-text-muted transition-colors hover:text-text"

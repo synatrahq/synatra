@@ -56,7 +56,6 @@ export function DatabaseConfigEditorContent(props: {
           <SensitiveInput
             type="password"
             value={props.config.password}
-            hasSaved={props.config.hasPassword}
             onChange={(v) => props.onChange({ ...props.config, password: v })}
           />
         </FormField>
@@ -83,7 +82,6 @@ export function DatabaseConfigEditorContent(props: {
           <FileInput
             value={props.config.caCertificate}
             filename={props.config.caCertificateFilename}
-            hasSaved={props.config.hasCaCertificate}
             accept=".pem,.crt,.cer"
             placeholder="Upload CA certificate"
             onValidate={validatePemCertificate}
@@ -101,7 +99,6 @@ export function DatabaseConfigEditorContent(props: {
           <FileInput
             value={props.config.clientCertificate}
             filename={props.config.clientCertificateFilename}
-            hasSaved={props.config.hasClientCertificate}
             accept=".pem,.crt,.cer"
             placeholder="Upload client certificate"
             onValidate={validatePemCertificate}
@@ -119,7 +116,6 @@ export function DatabaseConfigEditorContent(props: {
           <FileInput
             value={props.config.clientKey}
             filename={props.config.clientKeyFilename}
-            hasSaved={props.config.hasClientKey}
             accept=".pem,.key"
             placeholder="Upload client key"
             onValidate={validatePemPrivateKey}

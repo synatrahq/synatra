@@ -1,5 +1,14 @@
 import { isEncryptedValue } from "@synatra/util/crypto"
-import type { ResourceType, StoredResourceConfig, APIResourceConfig } from "@synatra/core/types"
+import {
+  ENCRYPTED_PLACEHOLDER,
+  type ResourceType,
+  type StoredResourceConfig,
+  type APIResourceConfig,
+  type KeyValuePair,
+} from "@synatra/core/types"
+
+const toPlaceholder = (v: unknown) => (isEncryptedValue(v) ? ENCRYPTED_PLACEHOLDER : "")
+const toPlaceholderNullable = (v: unknown) => (isEncryptedValue(v) ? ENCRYPTED_PLACEHOLDER : null)
 
 export function toAPIResourceConfig(type: ResourceType, stored: StoredResourceConfig): APIResourceConfig {
   if (type === "postgres" || type === "mysql") {
@@ -9,14 +18,14 @@ export function toAPIResourceConfig(type: ResourceType, stored: StoredResourceCo
       port: s.port as number,
       database: s.database as string,
       user: s.user as string,
-      hasPassword: isEncryptedValue(s.password),
+      password: toPlaceholder(s.password),
       ssl: s.ssl as boolean,
       sslVerification: s.sslVerification as "full" | "verify_ca" | "skip_ca",
-      hasCaCertificate: isEncryptedValue(s.caCertificate),
+      caCertificate: toPlaceholderNullable(s.caCertificate),
       caCertificateFilename: (s.caCertificateFilename as string | null) ?? null,
-      hasClientCertificate: isEncryptedValue(s.clientCertificate),
+      clientCertificate: toPlaceholderNullable(s.clientCertificate),
       clientCertificateFilename: (s.clientCertificateFilename as string | null) ?? null,
-      hasClientKey: isEncryptedValue(s.clientKey),
+      clientKey: toPlaceholderNullable(s.clientKey),
       clientKeyFilename: (s.clientKeyFilename as string | null) ?? null,
     }
   }
@@ -34,7 +43,7 @@ export function toAPIResourceConfig(type: ResourceType, stored: StoredResourceCo
   if (type === "stripe") {
     const s = stored as Record<string, unknown>
     return {
-      hasApiKey: isEncryptedValue(s.apiKey),
+      apiKey: toPlaceholder(s.apiKey),
       apiVersion: s.apiVersion as string,
     }
   }
@@ -46,7 +55,7 @@ export function toAPIResourceConfig(type: ResourceType, stored: StoredResourceCo
       google?: { apiKey?: string; baseUrl?: string | null; enabled?: boolean } | null
     }
     const toProviderConfig = (p: { apiKey?: string; baseUrl?: string | null; enabled?: boolean } | null | undefined) =>
-      p ? { hasApiKey: isEncryptedValue(p.apiKey), baseUrl: p.baseUrl ?? null, enabled: p.enabled ?? true } : null
+      p ? { apiKey: toPlaceholder(p.apiKey), baseUrl: p.baseUrl ?? null, enabled: p.enabled ?? true } : null
     return {
       openai: toProviderConfig(s.openai),
       anthropic: toProviderConfig(s.anthropic),
@@ -58,10 +67,11 @@ export function toAPIResourceConfig(type: ResourceType, stored: StoredResourceCo
   return {
     baseUrl: (s.baseUrl as string) ?? "",
     authType: (s.authType as "none" | "api_key" | "bearer" | "basic") ?? "none",
-    hasAuthConfig: isEncryptedValue(s.authConfig),
+    authConfig: toPlaceholder(s.authConfig),
     authLocation: s.authLocation as "header" | "query" | undefined,
     authName: s.authName as string | undefined,
-    headers: (s.headers as Record<string, string>) ?? {},
-    queryParams: (s.queryParams as Record<string, string>) ?? {},
+    authUsername: s.authUsername as string | undefined,
+    headers: (s.headers as KeyValuePair[]) ?? [],
+    queryParams: (s.queryParams as KeyValuePair[]) ?? [],
   }
 }

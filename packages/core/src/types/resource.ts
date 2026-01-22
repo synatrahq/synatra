@@ -1,5 +1,10 @@
 import { z } from "zod"
 
+export const ENCRYPTED_PLACEHOLDER = "---encrypted-on-server---"
+
+export const KeyValuePairSchema = z.object({ key: z.string(), value: z.string() })
+export type KeyValuePair = z.infer<typeof KeyValuePairSchema>
+
 export const ManagedResourceType = ["synatra_ai"] as const
 export type ManagedResourceType = (typeof ManagedResourceType)[number]
 
@@ -97,8 +102,8 @@ export type RestApiAuth =
 export type RestApiConfig = {
   baseUrl: string
   auth: RestApiAuth
-  headers: Record<string, string>
-  queryParams: Record<string, string>
+  headers: KeyValuePair[]
+  queryParams: KeyValuePair[]
 }
 
 export type LlmProviderConfig = {
@@ -200,8 +205,9 @@ export const StoredRestApiConfigSchema = z.object({
   authConfig: EncryptedValueSchema.nullable(),
   authLocation: z.enum(["header", "query"]).optional(),
   authName: z.string().optional(),
-  headers: z.record(z.string(), z.string()),
-  queryParams: z.record(z.string(), z.string()),
+  authUsername: z.string().optional(),
+  headers: z.array(KeyValuePairSchema),
+  queryParams: z.array(KeyValuePairSchema),
 })
 export type StoredRestApiConfig = z.infer<typeof StoredRestApiConfigSchema>
 
@@ -240,14 +246,14 @@ export type APIPostgresConfig = {
   port: number
   database: string
   user: string
-  hasPassword: boolean
+  password: string
   ssl: boolean
   sslVerification: "full" | "verify_ca" | "skip_ca"
-  hasCaCertificate: boolean
+  caCertificate: string | null
   caCertificateFilename: string | null
-  hasClientCertificate: boolean
+  clientCertificate: string | null
   clientCertificateFilename: string | null
-  hasClientKey: boolean
+  clientKey: string | null
   clientKeyFilename: string | null
 }
 
@@ -256,19 +262,19 @@ export type APIMysqlConfig = {
   port: number
   database: string
   user: string
-  hasPassword: boolean
+  password: string
   ssl: boolean
   sslVerification: "full" | "verify_ca" | "skip_ca"
-  hasCaCertificate: boolean
+  caCertificate: string | null
   caCertificateFilename: string | null
-  hasClientCertificate: boolean
+  clientCertificate: string | null
   clientCertificateFilename: string | null
-  hasClientKey: boolean
+  clientKey: string | null
   clientKeyFilename: string | null
 }
 
 export type APIStripeConfig = {
-  hasApiKey: boolean
+  apiKey: string
   apiVersion: string
 }
 
@@ -283,15 +289,16 @@ export type APIIntercomConfig = {
 export type APIRestApiConfig = {
   baseUrl: string
   authType: "none" | "api_key" | "bearer" | "basic"
-  hasAuthConfig: boolean
+  authConfig: string
   authLocation?: "header" | "query"
   authName?: string
-  headers: Record<string, string>
-  queryParams: Record<string, string>
+  authUsername?: string
+  headers: KeyValuePair[]
+  queryParams: KeyValuePair[]
 }
 
 export type APILlmProviderConfig = {
-  hasApiKey: boolean
+  apiKey: string
   baseUrl: string | null
   enabled: boolean
 }
@@ -362,15 +369,15 @@ export type InputIntercomConfig = {
 
 export type InputRestApiAuth =
   | { type: "none" }
-  | { type: "api_key"; key?: string; location: "header" | "query"; name: string }
-  | { type: "bearer"; token?: string }
-  | { type: "basic"; username?: string; password?: string }
+  | { type: "api_key"; key?: string | null; location: "header" | "query"; name: string }
+  | { type: "bearer"; token?: string | null }
+  | { type: "basic"; username?: string; password?: string | null }
 
 export type InputRestApiConfig = {
   baseUrl: string
   auth?: InputRestApiAuth | null
-  headers?: Record<string, string>
-  queryParams?: Record<string, string>
+  headers?: KeyValuePair[]
+  queryParams?: KeyValuePair[]
 }
 
 export type InputLlmProviderConfig = {

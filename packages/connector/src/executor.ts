@@ -1,6 +1,10 @@
 import * as pool from "./pool"
 import type { DatabaseConfig } from "./pool"
 
+type KeyValuePair = { key: string; value: string }
+const toRecord = (pairs: KeyValuePair[]): Record<string, string> =>
+  Object.fromEntries(pairs.map((p) => [p.key, p.value]))
+
 export interface QueryCommand {
   resourceType: "postgres" | "mysql"
   config: DatabaseConfig
@@ -30,8 +34,8 @@ export interface RestApiTestCommand {
       | { type: "api_key"; key: string; location: "header" | "query"; name: string }
       | { type: "bearer"; token: string }
       | { type: "basic"; username: string; password: string }
-    headers: Record<string, string>
-    queryParams: Record<string, string>
+    headers: KeyValuePair[]
+    queryParams: KeyValuePair[]
   }
 }
 
@@ -44,8 +48,8 @@ export interface RestApiCommand {
       | { type: "api_key"; key: string; location: "header" | "query"; name: string }
       | { type: "bearer"; token: string }
       | { type: "basic"; username: string; password: string }
-    headers: Record<string, string>
-    queryParams: Record<string, string>
+    headers: KeyValuePair[]
+    queryParams: KeyValuePair[]
   }
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
   path: string
@@ -149,11 +153,11 @@ export async function executeRestApiTest(
   try {
     const url = new URL(cmd.config.baseUrl)
 
-    for (const [key, value] of Object.entries(cmd.config.queryParams ?? {})) {
+    for (const [key, value] of Object.entries(toRecord(cmd.config.queryParams ?? []))) {
       url.searchParams.set(key, value)
     }
 
-    const headers: Record<string, string> = { ...(cmd.config.headers ?? {}) }
+    const headers: Record<string, string> = { ...toRecord(cmd.config.headers ?? []) }
 
     if (cmd.config.auth.type === "api_key") {
       if (cmd.config.auth.location === "header") {
@@ -329,7 +333,7 @@ const RESTAPI_TIMEOUT_MS = 30000
 export async function executeRestApi(cmd: RestApiCommand): Promise<RestApiResult> {
   const url = new URL(cmd.path, cmd.config.baseUrl)
 
-  const allQueryParams = { ...(cmd.config.queryParams ?? {}), ...(cmd.queryParams ?? {}) }
+  const allQueryParams = { ...toRecord(cmd.config.queryParams ?? []), ...(cmd.queryParams ?? {}) }
   for (const [key, value] of Object.entries(allQueryParams)) {
     url.searchParams.set(key, value)
   }
@@ -338,7 +342,7 @@ export async function executeRestApi(cmd: RestApiCommand): Promise<RestApiResult
     url.searchParams.set(cmd.config.auth.name, cmd.config.auth.key)
   }
 
-  const headers: Record<string, string> = { ...(cmd.config.headers ?? {}), ...(cmd.headers ?? {}) }
+  const headers: Record<string, string> = { ...toRecord(cmd.config.headers ?? []), ...(cmd.headers ?? {}) }
 
   if (cmd.config.auth.type === "api_key" && cmd.config.auth.location === "header") {
     headers[cmd.config.auth.name] = cmd.config.auth.key

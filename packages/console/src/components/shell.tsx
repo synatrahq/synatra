@@ -55,7 +55,7 @@ export function Shell(props: ShellProps) {
     if (!aiConfig) return false
 
     const providers: LlmProvider[] = ["anthropic", "openai", "google"]
-    return providers.some((p) => aiConfig[p]?.hasApiKey && aiConfig[p]?.enabled)
+    return providers.some((p) => aiConfig[p]?.apiKey && aiConfig[p]?.enabled)
   })
 
   const handleLlmSave = async (provider: LlmProvider, apiKey: string) => {
