@@ -68,9 +68,11 @@ function getResourceMethods(type: string): MethodDef[] {
         params: [
           { name: "method", type: '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"' },
           { name: "path", type: "string" },
-          { name: "headers", type: "Record<string, string>", optional: true },
-          { name: "queryParams", type: "Record<string, string>", optional: true },
-          { name: "body", type: "unknown", optional: true },
+          {
+            name: "options",
+            type: "{ headers?: Record<string, string>, queryParams?: Record<string, string>, body?: unknown }",
+            optional: true,
+          },
         ],
         returnType: "Promise<unknown>",
       },
