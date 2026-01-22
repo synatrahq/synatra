@@ -1,18 +1,15 @@
-import { type ParentProps, onMount, createSignal, Show, createMemo } from "solid-js"
+import { type ParentProps, onMount, Show, createMemo } from "solid-js"
 import { useQuery } from "@tanstack/solid-query"
+import { A } from "@solidjs/router"
 import { Warning, ArrowRight } from "phosphor-solid-js"
 import type { LlmProvider, APISynatraAiConfig } from "@synatra/core/types"
 import { GlobalNav } from "./global-nav"
 import { pendingCount, fetchPendingCount, api, activeOrg } from "../app"
 import type { Environments, Resources } from "../app/api"
-import { LlmSetupModal } from "../features/onboarding/llm-setup-modal"
 
 type ShellProps = ParentProps
 
 export function Shell(props: ShellProps) {
-  const [showLlmModal, setShowLlmModal] = createSignal(false)
-  const [savingLlm, setSavingLlm] = createSignal(false)
-
   onMount(() => {
     fetchPendingCount()
   })
@@ -58,50 +55,12 @@ export function Shell(props: ShellProps) {
     return providers.some((p) => aiConfig[p]?.apiKey && aiConfig[p]?.enabled)
   })
 
-  const handleLlmSave = async (provider: LlmProvider, apiKey: string) => {
-    setSavingLlm(true)
-
-    const prodEnv = productionEnv()
-    if (!prodEnv) {
-      setSavingLlm(false)
-      throw new Error("Production environment not found")
-    }
-
-    let resourceId = synatraAiResource()?.id
-
-    if (!resourceId) {
-      const createRes = await api.api.resources.$post({
-        json: { name: "Synatra AI", slug: "synatra_ai", type: "synatra_ai", configs: [] },
-      })
-      if (!createRes.ok) {
-        setSavingLlm(false)
-        throw new Error("Failed to create LLM resource")
-      }
-      const created = await createRes.json()
-      resourceId = created.id
-    }
-
-    const configRes = await api.api.resources[":id"].config.$post({
-      param: { id: resourceId },
-      json: { environmentId: prodEnv.id, config: { [provider]: { apiKey, enabled: true } } },
-    })
-    if (!configRes.ok) {
-      setSavingLlm(false)
-      throw new Error("Failed to save LLM configuration")
-    }
-
-    await resourcesQuery.refetch()
-    setSavingLlm(false)
-    setShowLlmModal(false)
-  }
-
   return (
     <div class="flex h-screen flex-col bg-surface text-text">
-      <Show when={!llmConfigured()}>
-        <button
-          type="button"
+      <Show when={!llmConfigured() && synatraAiResource()}>
+        <A
+          href={`/resources/${synatraAiResource()!.id}`}
           class="flex w-full items-center justify-center gap-2 bg-warning px-3 py-1.5 text-warning-contrast transition-colors hover:bg-warning/90"
-          onClick={() => setShowLlmModal(true)}
         >
           <Warning size={14} weight="fill" />
           <span class="text-xs font-medium">LLM provider not configured for production</span>
@@ -109,7 +68,7 @@ export function Shell(props: ShellProps) {
             Set up now
             <ArrowRight size={12} />
           </span>
-        </button>
+        </A>
       </Show>
 
       <div class="flex flex-1 overflow-hidden">
@@ -118,14 +77,6 @@ export function Shell(props: ShellProps) {
           <div class="flex flex-1 overflow-hidden bg-surface-elevated">{props.children}</div>
         </div>
       </div>
-
-      <LlmSetupModal
-        open={showLlmModal()}
-        onClose={() => setShowLlmModal(false)}
-        onSave={handleLlmSave}
-        saving={savingLlm()}
-        saveButtonText="Save"
-      />
     </div>
   )
 }
