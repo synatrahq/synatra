@@ -1,5 +1,5 @@
-import { describe, test, expect } from "vitest"
-import { SsrfError, validateExternalUrl } from "../url"
+import { describe, test, expect, beforeEach, afterEach } from "vitest"
+import { SsrfError, validateExternalUrl, validateHost } from "../url"
 
 describe("Url", () => {
   describe("validateExternalUrl", () => {
@@ -179,6 +179,123 @@ describe("Url", () => {
         } catch (e) {
           expect((e as Error).message).toContain("10.0.0.1")
         }
+      })
+    })
+  })
+
+  describe("validateHost", () => {
+    describe("blocks internal IPv4 addresses", () => {
+      test("blocks 127.0.0.1 (loopback)", async () => {
+        await expect(validateHost("127.0.0.1")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks 10.x.x.x (private)", async () => {
+        await expect(validateHost("10.0.0.1")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks 172.16.x.x (private)", async () => {
+        await expect(validateHost("172.16.0.1")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks 192.168.x.x (private)", async () => {
+        await expect(validateHost("192.168.1.1")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks 169.254.169.254 (AWS metadata)", async () => {
+        await expect(validateHost("169.254.169.254")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks 0.0.0.0", async () => {
+        await expect(validateHost("0.0.0.0")).rejects.toThrow(SsrfError)
+      })
+    })
+
+    describe("allows public IPv4 addresses", () => {
+      test("allows 8.8.8.8 (Google DNS)", async () => {
+        await expect(validateHost("8.8.8.8")).resolves.toBeUndefined()
+      })
+
+      test("allows 1.1.1.1 (Cloudflare DNS)", async () => {
+        await expect(validateHost("1.1.1.1")).resolves.toBeUndefined()
+      })
+    })
+
+    describe("blocks blocked hostnames", () => {
+      test("blocks localhost", async () => {
+        await expect(validateHost("localhost")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks localhost case-insensitive", async () => {
+        await expect(validateHost("LOCALHOST")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks metadata.google.internal", async () => {
+        await expect(validateHost("metadata.google.internal")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks metadata", async () => {
+        await expect(validateHost("metadata")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks kubernetes.default.svc", async () => {
+        await expect(validateHost("kubernetes.default.svc")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks any .internal domain", async () => {
+        await expect(validateHost("my-service.internal")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks db", async () => {
+        await expect(validateHost("db")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks redis", async () => {
+        await expect(validateHost("redis")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks postgres", async () => {
+        await expect(validateHost("postgres")).rejects.toThrow(SsrfError)
+      })
+    })
+
+    describe("blocks Render internal services", () => {
+      const originalEnv = process.env.RENDER_SERVICE_NAME
+
+      afterEach(() => {
+        if (originalEnv === undefined) {
+          delete process.env.RENDER_SERVICE_NAME
+        } else {
+          process.env.RENDER_SERVICE_NAME = originalEnv
+        }
+      })
+
+      test("blocks same-prefix services when RENDER_SERVICE_NAME is set (staging)", async () => {
+        process.env.RENDER_SERVICE_NAME = "synatra-staging-server"
+        await expect(validateHost("synatra-staging-db")).rejects.toThrow(SsrfError)
+        await expect(validateHost("synatra-staging-redis")).rejects.toThrow(SsrfError)
+        await expect(validateHost("synatra-staging-resource-gateway")).rejects.toThrow(SsrfError)
+      })
+
+      test("blocks same-prefix services when RENDER_SERVICE_NAME is set (production)", async () => {
+        process.env.RENDER_SERVICE_NAME = "synatra-production-worker"
+        await expect(validateHost("synatra-production-server")).rejects.toThrow(SsrfError)
+        await expect(validateHost("synatra-production-db")).rejects.toThrow(SsrfError)
+      })
+
+      test("does not block when RENDER_SERVICE_NAME is not set", async () => {
+        delete process.env.RENDER_SERVICE_NAME
+        await expect(validateHost("8.8.8.8")).resolves.toBeUndefined()
+      })
+
+      test("blocks Render discovery hostnames", async () => {
+        await expect(validateHost("my-service-discovery")).rejects.toThrow(SsrfError)
+        await expect(validateHost("api-discovery")).rejects.toThrow(SsrfError)
+      })
+    })
+
+    describe("blocks unresolvable hostnames", () => {
+      test("blocks hostname that cannot be resolved", async () => {
+        await expect(validateHost("this-domain-definitely-does-not-exist-12345.invalid")).rejects.toThrow(SsrfError)
       })
     })
   })
