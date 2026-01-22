@@ -40,11 +40,11 @@ export function ModelInspector(props: {
     const envConfig = synatraAi.configs.find((c) => c.environmentId === props.environmentId)
     if (!envConfig?.config) return new Set<ModelProvider>()
     const config = envConfig.config as {
-      openai?: { hasApiKey?: boolean; enabled?: boolean }
-      anthropic?: { hasApiKey?: boolean; enabled?: boolean }
-      google?: { hasApiKey?: boolean; enabled?: boolean }
+      openai?: { apiKey?: string; enabled?: boolean }
+      anthropic?: { apiKey?: string; enabled?: boolean }
+      google?: { apiKey?: string; enabled?: boolean }
     }
-    const isEnabled = (p?: { hasApiKey?: boolean; enabled?: boolean }) => p?.hasApiKey && (p.enabled ?? true)
+    const isEnabled = (p?: { apiKey?: string; enabled?: boolean }) => !!p?.apiKey && (p.enabled ?? true)
     const providers: ModelProvider[] = []
     if (isEnabled(config.openai)) providers.push("openai")
     if (isEnabled(config.anthropic)) providers.push("anthropic")
