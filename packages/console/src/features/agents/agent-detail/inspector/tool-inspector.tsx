@@ -40,22 +40,47 @@ function getResourceMethods(type: string): MethodDef[] {
       {
         name: "request",
         params: [
-          { name: "method", type: "string" },
+          { name: "method", type: '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"' },
           { name: "path", type: "string" },
-          { name: "body", type: "object", optional: true },
+          {
+            name: "options",
+            type: "{ queryParams?: Record<string, string>, body?: unknown }",
+            optional: true,
+          },
         ],
         returnType: "Promise<unknown>",
       },
     ]
   }
-  if (type === "github" || type === "intercom") {
+  if (type === "github") {
     return [
       {
         name: "request",
         params: [
-          { name: "method", type: "string" },
+          { name: "method", type: '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"' },
           { name: "endpoint", type: "string" },
-          { name: "body", type: "object", optional: true },
+          {
+            name: "options",
+            type: "{ queryParams?: Record<string, string>, body?: unknown }",
+            optional: true,
+          },
+        ],
+        returnType: "Promise<unknown>",
+      },
+    ]
+  }
+  if (type === "intercom") {
+    return [
+      {
+        name: "request",
+        params: [
+          { name: "method", type: '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"' },
+          { name: "endpoint", type: "string" },
+          {
+            name: "options",
+            type: "{ queryParams?: Record<string, string>, body?: unknown }",
+            optional: true,
+          },
         ],
         returnType: "Promise<unknown>",
       },
