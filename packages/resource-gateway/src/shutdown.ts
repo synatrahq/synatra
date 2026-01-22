@@ -5,9 +5,11 @@ import * as pool from "./pool"
 import * as coordinator from "./coordinator"
 
 let shuttingDown = false
+let shutdownStarted = false
 
 export async function shutdown(): Promise<void> {
-  if (shuttingDown) return
+  if (shutdownStarted) return
+  shutdownStarted = true
   shuttingDown = true
 
   console.log("[Shutdown] Starting graceful shutdown...")
@@ -36,4 +38,8 @@ export async function shutdown(): Promise<void> {
 
 export function isShuttingDown(): boolean {
   return shuttingDown
+}
+
+export function markShuttingDown(): void {
+  shuttingDown = true
 }

@@ -1,5 +1,5 @@
 export type ConnectorMessageType = "register" | "heartbeat" | "result" | "error"
-export type CloudCommandType = "query" | "introspect" | "test" | "ping" | "restapi"
+export type CloudCommandType = "query" | "introspect" | "test" | "ping" | "restapi" | "shutdown_notice" | "register_ok"
 
 export interface ConnectorMessage {
   type: ConnectorMessageType
@@ -23,10 +23,18 @@ export interface ErrorPayload {
   message: string
 }
 
+export interface ShutdownNoticePayload {
+  gracePeriodMs: number
+}
+
+export interface RegisterOkPayload {
+  ready: true
+}
+
 export interface CloudCommand {
   type: CloudCommandType
   correlationId: string
-  payload: QueryPayload | IntrospectPayload | TestPayload | RestApiPayload
+  payload: QueryPayload | IntrospectPayload | TestPayload | RestApiPayload | ShutdownNoticePayload | RegisterOkPayload
 }
 
 export interface QueryPayload {

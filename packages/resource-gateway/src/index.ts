@@ -1,13 +1,14 @@
 import { createServer } from "http"
+import { randomUUID } from "crypto"
 import { serve } from "@hono/node-server"
-import { WebSocketServer, WebSocket } from "ws"
+import { WebSocketServer, WebSocket, RawData } from "ws"
 import { initEncryption } from "@synatra/util/crypto"
 import { app } from "./server"
 import * as coordinator from "./coordinator"
-import { verifyConnectorToken } from "./connector-auth"
+import { verifyConnectorToken, type ConnectorInfo } from "./connector-auth"
 import type { ConnectorMessage } from "./ws-types"
 import { config } from "./config"
-import { shutdown, isShuttingDown } from "./shutdown"
+import { shutdown, isShuttingDown, markShuttingDown } from "./shutdown"
 import { isRedisEnabled } from "./redis-client"
 import { startReplyConsumer } from "./command-stream"
 
@@ -20,24 +21,41 @@ interface AliveWebSocket extends WebSocket {
   missedPongCount?: number
 }
 
+function processMessage(connectorId: string, ws: WebSocket, data: RawData): void {
+  let msg: ConnectorMessage
+  try {
+    msg = JSON.parse(data.toString()) as ConnectorMessage
+  } catch (err) {
+    console.error(`Invalid JSON from ${connectorId}:`, (err as Error).message)
+    return
+  }
+  coordinator.handleMessage(connectorId, ws, msg).catch((err) => {
+    console.error(`Error handling message from ${connectorId}:`, err.message)
+  })
+}
+
 const gatewayConfig = config()
 initEncryption(gatewayConfig.encryptionKey)
 
 const port = gatewayConfig.port
 const internalPort = gatewayConfig.internalPort
+let redisReady = !isRedisEnabled()
 
 async function initializeRedis(): Promise<void> {
   if (!isRedisEnabled()) {
     console.log("[Redis] Mode: off (single instance)")
+    redisReady = true
     return
   }
 
   console.log(`[Redis] Mode: redis, Instance ID: ${gatewayConfig.instanceId}`)
   await startReplyConsumer()
   console.log("[Redis] Reply consumer started")
+  redisReady = true
 }
 
 initializeRedis().catch((err) => {
+  redisReady = false
   console.error("[Redis] Failed to initialize:", err.message)
 })
 
@@ -46,8 +64,15 @@ console.log(`HTTP endpoints on http://localhost:${internalPort} (internal)`)
 
 const wsHttpServer = createServer((req, res) => {
   if (req.url === "/health" && req.method === "GET") {
-    res.writeHead(200, { "Content-Type": "application/json" })
-    res.end(JSON.stringify({ status: "ok" }))
+    const healthy = !isShuttingDown() && redisReady
+    res.writeHead(healthy ? 200 : 503, { "Content-Type": "application/json" })
+    res.end(
+      JSON.stringify({
+        status: healthy ? "ok" : "unhealthy",
+        shuttingDown: isShuttingDown(),
+        redisReady,
+      }),
+    )
     return
   }
   res.writeHead(404)
@@ -62,6 +87,20 @@ wss.on("connection", async (ws, req) => {
   const aliveWs = ws as AliveWebSocket
   aliveWs.isAlive = true
   aliveWs.connectedAt = Date.now()
+
+  let firstMessage: RawData | null = null
+  let connectorInfo: ConnectorInfo | null = null
+
+  ws.on("message", (data) => {
+    if (!connectorInfo) {
+      if (!firstMessage) {
+        firstMessage = data
+      }
+      return
+    }
+    processMessage(connectorInfo.id, ws, data)
+  })
+
   ws.on("pong", () => {
     aliveWs.isAlive = true
     aliveWs.lastPongAt = Date.now()
@@ -94,32 +133,24 @@ wss.on("connection", async (ws, req) => {
   }
 
   console.log(`Connector connected: ${info.name} (${info.id})`)
-  let registered = false
+
   try {
-    registered = await coordinator.registerConnection(ws, info)
+    const registered = await coordinator.registerConnection(ws, info)
+    if (!registered) return
   } catch (err) {
     console.error(`Failed to register connector ${info.id}:`, (err as Error).message)
     ws.close(4005, "Registration failed")
     return
   }
-  if (!registered) {
-    return
-  }
+
+  connectorInfo = info
   aliveWs.connectorId = info.id
   aliveWs.connectorName = info.name
 
-  ws.on("message", (data) => {
-    let msg: ConnectorMessage
-    try {
-      msg = JSON.parse(data.toString()) as ConnectorMessage
-    } catch (err) {
-      console.error(`Invalid JSON from ${info.id}:`, (err as Error).message)
-      return
-    }
-    coordinator.handleMessage(info.id, msg).catch((err) => {
-      console.error(`Error handling message from ${info.id}:`, err.message)
-    })
-  })
+  if (firstMessage) {
+    processMessage(info.id, ws, firstMessage)
+    firstMessage = null
+  }
 
   ws.on("close", (code, reason) => {
     const duration = aliveWs.connectedAt ? Math.round((Date.now() - aliveWs.connectedAt) / 1000) : 0
@@ -138,6 +169,7 @@ wss.on("connection", async (ws, req) => {
 coordinator.startHeartbeatInterval()
 
 const WS_PING_INTERVAL_MS = 30000
+const SHUTDOWN_GRACE_PERIOD_MS = 20000
 const wsPingInterval = setInterval(() => {
   const clientCount = wss.clients.size
   if (clientCount > 0) {
@@ -170,22 +202,37 @@ const wsPingInterval = setInterval(() => {
   })
 }, WS_PING_INTERVAL_MS)
 
-process.on("SIGTERM", async () => {
-  console.log("Received SIGTERM")
-  clearInterval(wsPingInterval)
-  wss.close()
-  wsHttpServer.close()
-  internalServer.close()
-  await shutdown()
-  process.exit(0)
-})
+async function gracefulShutdown(signal: string): Promise<void> {
+  console.log(`[Shutdown] Received ${signal}, starting graceful shutdown`)
+  markShuttingDown()
 
-process.on("SIGINT", async () => {
-  console.log("Received SIGINT")
+  const shutdownNotice = {
+    type: "shutdown_notice",
+    correlationId: randomUUID(),
+    payload: { gracePeriodMs: SHUTDOWN_GRACE_PERIOD_MS },
+  }
+
+  wss.clients.forEach((ws) => {
+    try {
+      ws.send(JSON.stringify(shutdownNotice))
+    } catch {
+      /* ignore */
+    }
+  })
+
+  console.log(`[Shutdown] Sent shutdown notice to ${wss.clients.size} connectors`)
+
+  await new Promise((resolve) => setTimeout(resolve, SHUTDOWN_GRACE_PERIOD_MS))
+
+  console.log("[Shutdown] Grace period ended, draining and closing connections")
+  await coordinator.startDrain()
   clearInterval(wsPingInterval)
   wss.close()
   wsHttpServer.close()
   internalServer.close()
   await shutdown()
   process.exit(0)
-})
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"))
+process.on("SIGINT", () => gracefulShutdown("SIGINT"))

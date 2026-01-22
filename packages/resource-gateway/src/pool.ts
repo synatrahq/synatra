@@ -15,8 +15,8 @@ const mysqlManager = new PoolManager<mysql.Pool>(
 const resourceToPoolKey = new Map<string, string>()
 const poolKeyToResources = new Map<string, Set<string>>()
 
-const CONNECTION_TIMEOUT_MS = 5000
-const STATEMENT_TIMEOUT_MS = 15000
+const CONNECTION_TIMEOUT_MS = 30000
+const STATEMENT_TIMEOUT_MS = 600000
 
 function normalizePostgresKey(config: PostgresResource["config"]): string {
   const hash = createHash("sha256")

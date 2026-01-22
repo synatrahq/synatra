@@ -3,7 +3,7 @@ import { updateAppAccountGitHubToken } from "@synatra/core"
 import { config } from "../config"
 
 const TOKEN_BUFFER_MS = 5 * 60 * 1000
-const GITHUB_TIMEOUT_MS = 30000
+const GITHUB_TIMEOUT_MS = 60000
 const pendingTokenRequests = new Map<string, Promise<string>>()
 
 function getGitHubConfig() {

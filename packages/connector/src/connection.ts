@@ -2,9 +2,13 @@ import { executeQuery, executeIntrospect, executeTest, executeRestApi, executeRe
 import type { QueryCommand, IntrospectCommand, TestCommand, RestApiCommand, RestApiTestCommand } from "./executor"
 
 interface CloudCommand {
-  type: "query" | "introspect" | "test" | "ping" | "restapi"
+  type: "query" | "introspect" | "test" | "ping" | "restapi" | "shutdown_notice" | "register_ok"
   correlationId: string
   payload: unknown
+}
+
+interface ShutdownNoticePayload {
+  gracePeriodMs: number
 }
 
 interface ConnectorMessage {
@@ -26,17 +30,22 @@ const HEARTBEAT_INTERVAL_MS = 25000
 const SERVER_TIMEOUT_MS = 60000
 const SERVER_TIMEOUT_CHECK_MS = 10000
 const STABILITY_WINDOW_MS = 30000
+const PENDING_TIMEOUT_MS = 10000
 
 let ws: WebSocket | null = null
+let pendingWs: WebSocket | null = null
 let config: ConnectionConfig | null = null
 let reconnectAttempts = 0
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let pendingReconnectTimer: ReturnType<typeof setTimeout> | null = null
+let pendingTimeoutTimer: ReturnType<typeof setTimeout> | null = null
 let serverTimeoutTimer: ReturnType<typeof setInterval> | null = null
 let stabilityTimer: ReturnType<typeof setTimeout> | null = null
 let lastServerMessage = 0
 let connectedAt = 0
 let messageCount = 0
+let shutdownDeadline = 0
 
 export function connect(cfg: ConnectionConfig): void {
   config = cfg
@@ -53,6 +62,14 @@ export function disconnect(): void {
     clearTimeout(reconnectTimer)
     reconnectTimer = null
   }
+  if (pendingReconnectTimer) {
+    clearTimeout(pendingReconnectTimer)
+    pendingReconnectTimer = null
+  }
+  if (pendingTimeoutTimer) {
+    clearTimeout(pendingTimeoutTimer)
+    pendingTimeoutTimer = null
+  }
   if (serverTimeoutTimer) {
     clearInterval(serverTimeoutTimer)
     serverTimeoutTimer = null
@@ -60,6 +77,10 @@ export function disconnect(): void {
   if (stabilityTimer) {
     clearTimeout(stabilityTimer)
     stabilityTimer = null
+  }
+  if (pendingWs) {
+    pendingWs.close(1000, "Disconnect requested")
+    pendingWs = null
   }
   if (ws) {
     ws.close(1000, "Disconnect requested")
@@ -74,39 +95,72 @@ function createConnection(): void {
   const url = new URL(config.gatewayUrl)
   url.searchParams.set("token", config.token)
   ws = new WebSocket(url.toString())
+  attachHandlers(ws)
 
   ws.onopen = () => {
     console.log("Connected to cloud")
-    connectedAt = Date.now()
-    lastServerMessage = Date.now()
-    messageCount = 0
-    if (stabilityTimer) {
-      clearTimeout(stabilityTimer)
-    }
-    stabilityTimer = setTimeout(() => {
-      if (ws?.readyState === WebSocket.OPEN) {
-        reconnectAttempts = 0
-        console.log("[WS] Connection stable, reset backoff")
-      }
-      stabilityTimer = null
-    }, STABILITY_WINDOW_MS)
-    sendRegister()
-    startHeartbeat()
-    startServerTimeoutCheck()
+    const current = ws
+    if (!current) return
+    activateConnection(current, true)
   }
+}
 
-  ws.onmessage = async (event) => {
-    lastServerMessage = Date.now()
-    messageCount++
+function attachHandlers(socket: WebSocket): void {
+  socket.onmessage = async (event) => {
+    if (socket !== ws && socket !== pendingWs) return
+
     const data = typeof event.data === "string" ? event.data : await event.data.text()
     const cmd = JSON.parse(data) as CloudCommand
+
+    if (cmd.type === "register_ok") {
+      if (socket === pendingWs) {
+        promotePending(socket)
+      }
+      return
+    }
+
+    if (socket !== ws) return
+
+    lastServerMessage = Date.now()
+    messageCount++
+
     if (cmd.type === "ping") {
       console.log(`[WS] Received ping from server (message #${messageCount})`)
+      return
     }
+
+    if (cmd.type === "shutdown_notice") {
+      console.log("[WS] Received shutdown notice, establishing new connection preemptively")
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer)
+        reconnectTimer = null
+      }
+      const payload = cmd.payload as ShutdownNoticePayload
+      if (payload?.gracePeriodMs) {
+        shutdownDeadline = Date.now() + payload.gracePeriodMs
+      }
+
+      startPendingConnection()
+
+      return
+    }
+
     handleCommand(cmd)
   }
 
-  ws.onclose = (event) => {
+  socket.onclose = (event) => {
+    if (socket !== ws) {
+      if (pendingWs === socket) {
+        pendingWs = null
+        if (pendingTimeoutTimer) {
+          clearTimeout(pendingTimeoutTimer)
+          pendingTimeoutTimer = null
+        }
+        schedulePendingReconnect(jitterDelay(1000))
+      }
+      return
+    }
+
     const duration = connectedAt ? Math.round((Date.now() - connectedAt) / 1000) : 0
     const lastMsg = lastServerMessage ? Math.round((Date.now() - lastServerMessage) / 1000) : -1
     console.log(
@@ -119,19 +173,77 @@ function createConnection(): void {
       stabilityTimer = null
     }
     ws = null
-    scheduleReconnect()
+
+    switch (event.reason) {
+      case "Replaced by new connection":
+        console.log("[WS] Connection replaced by another instance, reconnecting")
+        reconnectAttempts = 0
+        scheduleReconnect(jitterDelay(1000))
+        return
+
+      case "Ownership lost":
+        console.log("[WS] Ownership lost to another gateway, reconnecting")
+        reconnectAttempts = 0
+        scheduleReconnect(jitterDelay(1000))
+        return
+
+      case "Connector owned by another instance":
+        console.log("[WS] Connector owned by another instance, reconnecting")
+        reconnectAttempts = 0
+        scheduleReconnect(jitterDelay(1000))
+        return
+
+      case "Connection limit exceeded":
+        console.log("[WS] Connection limit exceeded, reconnecting with backoff")
+        scheduleReconnect()
+        return
+
+      case "Registration failed":
+        console.log("[WS] Registration failed, reconnecting")
+        reconnectAttempts = 0
+        scheduleReconnect(jitterDelay(1000))
+        return
+
+      case "Token invalidated":
+        console.log("[WS] Token invalidated, not reconnecting")
+        return
+
+      case "Server shutting down":
+        console.log("[WS] Server shutting down, reconnecting after grace period")
+        reconnectAttempts = 0
+        scheduleReconnect(jitterDelay(getShutdownDelayMs()))
+        return
+
+      case "Migrated to new connection":
+        console.log("[WS] Connection migrated, not reconnecting from old connection")
+        return
+
+      default:
+        scheduleReconnect()
+    }
   }
 
-  ws.onerror = (error) => {
+  socket.onerror = (error) => {
+    if (socket === pendingWs) {
+      console.error("[WS] Pending connection error:", error)
+      pendingWs = null
+      if (pendingTimeoutTimer) {
+        clearTimeout(pendingTimeoutTimer)
+        pendingTimeoutTimer = null
+      }
+      schedulePendingReconnect(jitterDelay(1000))
+      return
+    }
+    if (socket !== ws) return
     console.error("WebSocket error:", error)
   }
 }
 
-function scheduleReconnect(): void {
+function scheduleReconnect(minDelayMs = 0): void {
   if (!config) return
 
   reconnectAttempts += 1
-  const delay = Math.min(RECONNECT_BASE_MS * Math.pow(2, reconnectAttempts - 1), RECONNECT_MAX_MS)
+  const delay = Math.min(Math.max(RECONNECT_BASE_MS * Math.pow(2, reconnectAttempts - 1), minDelayMs), RECONNECT_MAX_MS)
   console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts})`)
 
   reconnectTimer = setTimeout(() => {
@@ -140,8 +252,34 @@ function scheduleReconnect(): void {
   }, delay)
 }
 
-function sendRegister(): void {
-  if (!ws || !config) return
+function schedulePendingReconnect(minDelayMs = 0): void {
+  if (!config) return
+  if (pendingReconnectTimer) return
+
+  const delay = Math.min(Math.max(minDelayMs, 500), RECONNECT_MAX_MS)
+  pendingReconnectTimer = setTimeout(() => {
+    pendingReconnectTimer = null
+    if (ws?.readyState === WebSocket.OPEN && !pendingWs) {
+      startPendingConnection()
+    }
+  }, delay)
+}
+
+function getShutdownDelayMs(): number {
+  if (!shutdownDeadline) return 0
+  const remaining = shutdownDeadline - Date.now()
+  return remaining > 0 ? remaining : 0
+}
+
+const JITTER_MAX_MS = 3000
+
+function jitterDelay(baseMs: number): number {
+  if (baseMs <= 0) return Math.floor(Math.random() * JITTER_MAX_MS)
+  return baseMs + Math.floor(Math.random() * JITTER_MAX_MS)
+}
+
+function sendRegister(socket: WebSocket): void {
+  if (!config) return
 
   const msg: ConnectorMessage = {
     type: "register",
@@ -151,7 +289,7 @@ function sendRegister(): void {
       capabilities: ["postgres", "mysql", "restapi"],
     },
   }
-  ws.send(JSON.stringify(msg))
+  socket.send(JSON.stringify(msg))
 }
 
 function startHeartbeat(): void {
@@ -247,4 +385,86 @@ function sendError(correlationId: string, message: string): void {
 
 export function isConnected(): boolean {
   return ws?.readyState === WebSocket.OPEN
+}
+
+function startPendingConnection(): void {
+  if (!config) return
+  if (pendingWs) return
+
+  const newUrl = new URL(config.gatewayUrl)
+  newUrl.searchParams.set("token", config.token)
+  const newWs = new WebSocket(newUrl.toString())
+  pendingWs = newWs
+  attachHandlers(newWs)
+
+  newWs.onopen = () => {
+    console.log("[WS] New connection established, awaiting register_ok")
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
+    sendRegister(newWs)
+    pendingTimeoutTimer = setTimeout(() => {
+      if (pendingWs === newWs) {
+        console.log("[WS] Pending connection timeout, closing")
+        pendingWs = null
+        newWs.close(1000, "Pending timeout")
+        schedulePendingReconnect(jitterDelay(1000))
+      }
+      pendingTimeoutTimer = null
+    }, PENDING_TIMEOUT_MS)
+  }
+}
+
+function promotePending(next: WebSocket): void {
+  if (pendingWs !== next) return
+  const currentWs = ws
+
+  if (pendingReconnectTimer) {
+    clearTimeout(pendingReconnectTimer)
+    pendingReconnectTimer = null
+  }
+  if (pendingTimeoutTimer) {
+    clearTimeout(pendingTimeoutTimer)
+    pendingTimeoutTimer = null
+  }
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+  if (stabilityTimer) {
+    clearTimeout(stabilityTimer)
+    stabilityTimer = null
+  }
+
+  if (currentWs && currentWs !== next) {
+    currentWs.close(1000, "Migrated to new connection")
+  }
+
+  ws = next
+  pendingWs = null
+  activateConnection(next, false)
+}
+
+function activateConnection(socket: WebSocket, shouldRegister: boolean): void {
+  connectedAt = Date.now()
+  lastServerMessage = Date.now()
+  messageCount = 0
+  shutdownDeadline = 0
+  if (stabilityTimer) {
+    clearTimeout(stabilityTimer)
+  }
+  stabilityTimer = setTimeout(() => {
+    if (ws?.readyState === WebSocket.OPEN) {
+      reconnectAttempts = 0
+      console.log("[WS] Connection stable, reset backoff")
+    }
+    stabilityTimer = null
+  }, STABILITY_WINDOW_MS)
+
+  if (shouldRegister) {
+    sendRegister(socket)
+  }
+  startHeartbeat()
+  startServerTimeoutCheck()
 }

@@ -17,10 +17,10 @@ import { applyAuth } from "./restapi/auth"
 const toRecord = (pairs: KeyValuePair[]): Record<string, string> =>
   Object.fromEntries(pairs.map((p) => [p.key, p.value]))
 
-const CONNECTION_TIMEOUT_MS = 5000
-const QUERY_TIMEOUT_MS = 15000
-const STRIPE_TIMEOUT_MS = 15000
-const RESTAPI_TIMEOUT_MS = 10000
+const CONNECTION_TIMEOUT_MS = 30000
+const QUERY_TIMEOUT_MS = 600000
+const STRIPE_TIMEOUT_MS = 60000
+const RESTAPI_TIMEOUT_MS = 600000
 
 export const getResourceConfig = (resourceId: string, environmentId: string) =>
   getResourceExecutionConfig({ resourceId, environmentId })

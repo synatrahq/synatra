@@ -328,7 +328,7 @@ async function listColumns(
   }
 }
 
-const RESTAPI_TIMEOUT_MS = 30000
+const RESTAPI_TIMEOUT_MS = 600000
 
 export async function executeRestApi(cmd: RestApiCommand): Promise<RestApiResult> {
   const url = new URL(cmd.path, cmd.config.baseUrl)

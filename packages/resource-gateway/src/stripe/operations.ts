@@ -16,7 +16,7 @@ interface OperationResult {
   data: unknown
 }
 
-const STRIPE_TIMEOUT_MS = 15000
+const STRIPE_TIMEOUT_MS = 60000
 
 export async function executeStripeOperation(
   resource: StripeResource,

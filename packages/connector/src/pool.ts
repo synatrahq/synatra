@@ -23,8 +23,8 @@ export interface PooledClient {
 const pgPools = new Map<string, pg.Pool>()
 const mysqlPools = new Map<string, mysql.Pool>()
 
-const CONNECTION_TIMEOUT_MS = 5000
-const STATEMENT_TIMEOUT_MS = 15000
+const CONNECTION_TIMEOUT_MS = 30000
+const STATEMENT_TIMEOUT_MS = 600000
 
 function configKey(config: DatabaseConfig): string {
   const hash = createHash("sha256").update(JSON.stringify(config)).digest("hex").slice(0, 16)
