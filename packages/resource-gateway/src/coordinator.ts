@@ -16,6 +16,7 @@ import {
 import { dispatchRemoteCommand, publishReply, startCommandConsumer } from "./command-stream"
 import { getRedis, isRedisEnabled } from "./redis-client"
 import type { ConnectorMessage, CloudCommand, RegisterPayload, ResultPayload, ErrorPayload } from "./ws-types"
+import { createError } from "@synatra/util/error"
 
 interface PendingRequest {
   resolve: (value: unknown) => void
@@ -43,10 +44,36 @@ const connections = new Map<string, ConnectorGroup>()
 const pendingRequests = new Map<string, PendingRequest>()
 const commandConsumerStops = new Map<string, () => void>()
 const replyToMap = new Map<string, string>()
+const registrationLocks = new Map<string, Promise<void>>()
 
 const COMMAND_TIMEOUT_MS = 630000
 const HEARTBEAT_INTERVAL_MS = 30000
 const MAX_CONNECTIONS_PER_CONNECTOR = 5
+
+async function withRegistrationLock<T>(connectorId: string, fn: () => Promise<T>): Promise<T> {
+  while (true) {
+    const existing = registrationLocks.get(connectorId)
+    if (existing) {
+      await existing
+      continue
+    }
+
+    let resolve: (() => void) | undefined
+    const promise = new Promise<void>((res) => {
+      resolve = res
+    })
+    registrationLocks.set(connectorId, promise)
+
+    try {
+      return await fn()
+    } finally {
+      if (registrationLocks.get(connectorId) === promise) {
+        registrationLocks.delete(connectorId)
+      }
+      resolve?.()
+    }
+  }
+}
 function tokenVersionKey(connectorId: string): string {
   return `connector:${connectorId}:tokenVersion`
 }
@@ -71,56 +98,75 @@ export async function incrementTokenVersion(connectorId: string): Promise<number
 }
 
 export async function registerConnection(ws: WebSocket, info: ConnectorInfo): Promise<boolean> {
-  let group = connections.get(info.id)
-  if (!group) {
-    const { acquired, fence } = await acquireOwnership(info.id)
-    if (!acquired) {
-      ws.close(4004, "Connector owned by another instance")
-      return false
-    }
-
-    const tokenVersion = await getTokenVersion(info.id)
-    group = {
-      info,
-      tokenVersion,
-      fence,
-      connections: new Map(),
-    }
-    connections.set(info.id, group)
-    principal.withSystem({ organizationId: info.organizationId }, () =>
-      setConnectorStatus({ connectorId: info.id, status: "online" }),
-    )
-  } else {
-    const validOwnership = await isOwnershipValid(info.id, group.fence)
-    if (!validOwnership) {
+  return withRegistrationLock(info.id, async () => {
+    let group = connections.get(info.id)
+    let acquiredNow = false
+    if (!group) {
       const { acquired, fence } = await acquireOwnership(info.id)
       if (!acquired) {
         ws.close(4004, "Connector owned by another instance")
         return false
       }
-      group.fence = fence
-      group.tokenVersion = await getTokenVersion(info.id)
-      principal.withSystem({ organizationId: info.organizationId }, () =>
-        setConnectorStatus({ connectorId: info.id, status: "online" }),
-      )
+      acquiredNow = true
+
+      group = connections.get(info.id)
+      if (!group) {
+        const tokenVersion = await getTokenVersion(info.id)
+        group = {
+          info,
+          tokenVersion,
+          fence,
+          connections: new Map(),
+        }
+        connections.set(info.id, group)
+        principal.withSystem({ organizationId: info.organizationId }, () =>
+          setConnectorStatus({ connectorId: info.id, status: "online" }),
+        )
+      } else {
+        group.fence = fence
+        group.tokenVersion = await getTokenVersion(info.id)
+        principal.withSystem({ organizationId: info.organizationId }, () =>
+          setConnectorStatus({ connectorId: info.id, status: "online" }),
+        )
+      }
     }
-    group.info = info
-  }
 
-  group.connections.set(ws, {
-    ws,
-    tokenHash: info.tokenHash,
-    ready: false,
-    connectedAt: Date.now(),
-    lastSeen: Date.now(),
+    if (group) {
+      if (!acquiredNow) {
+        const validOwnership = await isOwnershipValid(info.id, group.fence)
+        if (!validOwnership) {
+          const { acquired, fence } = await acquireOwnership(info.id)
+          if (!acquired) {
+            ws.close(4004, "Connector owned by another instance")
+            return false
+          }
+          acquiredNow = true
+          group.fence = fence
+          group.tokenVersion = await getTokenVersion(info.id)
+          principal.withSystem({ organizationId: info.organizationId }, () =>
+            setConnectorStatus({ connectorId: info.id, status: "online" }),
+          )
+        }
+      }
+      group.info = info
+
+      group.connections.set(ws, {
+        ws,
+        tokenHash: info.tokenHash,
+        ready: false,
+        connectedAt: Date.now(),
+        lastSeen: Date.now(),
+      })
+
+      if (group.connections.size > MAX_CONNECTIONS_PER_CONNECTOR) {
+        evictOldestConnection(group)
+      }
+
+      await ensureCommandConsumer(info.id, group)
+    }
+
+    return true
   })
-
-  if (group.connections.size > MAX_CONNECTIONS_PER_CONNECTOR) {
-    evictOldestConnection(group)
-  }
-
-  await ensureCommandConsumer(info.id, group)
-  return true
 }
 
 function evictOldestConnection(group: ConnectorGroup): void {
@@ -244,12 +290,12 @@ export async function dispatchCommand<T>(
 ): Promise<T> {
   if (isOwnedLocally(connectorId)) {
     const group = connections.get(connectorId)
-    if (!group) throw new Error(`Connector ${connectorId} is not connected`)
+    if (!group) throw createError("ServiceUnavailableError", { message: "Connector is offline" })
     return dispatchLocal<T>(connectorId, group, command)
   }
 
   if (!isRedisEnabled()) {
-    throw new Error(`Connector ${connectorId} is not connected`)
+    throw createError("ServiceUnavailableError", { message: "Connector is offline" })
   }
 
   return dispatchRemoteCommand<T>(connectorId, command)
@@ -264,7 +310,7 @@ async function dispatchLocal<T>(
   const fullCommand: CloudCommand = { ...command, correlationId }
   const connection = pickConnection(group)
   if (!connection) {
-    throw new Error(`Connector ${connectorId} is not connected`)
+    throw createError("ServiceUnavailableError", { message: "Connector is offline" })
   }
 
   return new Promise<T>((resolve, reject) => {

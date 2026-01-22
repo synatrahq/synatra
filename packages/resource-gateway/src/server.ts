@@ -147,7 +147,7 @@ app.post("/query", zValidator("json", querySchema), async (c) => {
     } else if (isRestApiResource(config) && operation.type === "restapi") {
       if (config.connectionMode === "connector" && config.connectorId) {
         if (!(await coordinator.isConnectorOnline(config.connectorId))) {
-          throw createError("BadRequestError", { message: "Connector is offline" })
+          throw createError("ServiceUnavailableError", { message: "Connector is offline" })
         }
         const payload = {
           resourceType: "restapi" as const,
@@ -167,7 +167,7 @@ app.post("/query", zValidator("json", querySchema), async (c) => {
       }
     } else if (config.connectionMode === "connector" && config.connectorId) {
       if (!(await coordinator.isConnectorOnline(config.connectorId))) {
-        throw createError("BadRequestError", { message: "Connector is offline" })
+        throw createError("ServiceUnavailableError", { message: "Connector is offline" })
       }
       if (isDatabaseResource(config) && (operation.type === "postgres" || operation.type === "mysql")) {
         const payload: QueryPayload = {
@@ -237,7 +237,7 @@ app.post("/test", zValidator("json", testSchema), async (c) => {
         throw createError("BadRequestError", { message: `${type} resources cannot use connector mode` })
       }
       if (!(await coordinator.isConnectorOnline(connectorId))) {
-        return c.json({ success: false, error: "Connector is offline" })
+        throw createError("ServiceUnavailableError", { message: "Connector is offline" })
       }
       const payload: TestPayload = { resourceType: type, config }
       const result = await coordinator.dispatchCommand<{ success: boolean; error?: string; latency?: number }>(
@@ -299,7 +299,7 @@ app.post("/tables", zValidator("json", tablesSchema), async (c) => {
 
     if (config.connectionMode === "connector" && config.connectorId) {
       if (!(await coordinator.isConnectorOnline(config.connectorId))) {
-        throw createError("BadRequestError", { message: "Connector is offline" })
+        throw createError("ServiceUnavailableError", { message: "Connector is offline" })
       }
       const payload: IntrospectPayload = {
         resourceType: config.type,
@@ -346,7 +346,7 @@ app.post("/columns", zValidator("json", columnsSchema), async (c) => {
 
     if (config.connectionMode === "connector" && config.connectorId) {
       if (!(await coordinator.isConnectorOnline(config.connectorId))) {
-        throw createError("BadRequestError", { message: "Connector is offline" })
+        throw createError("ServiceUnavailableError", { message: "Connector is offline" })
       }
       const payload: IntrospectPayload = {
         resourceType: config.type,
