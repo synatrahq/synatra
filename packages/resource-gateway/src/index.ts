@@ -202,6 +202,7 @@ process.on("SIGTERM", async () => {
   })
 
   console.log(`[Shutdown] Sent shutdown notice to ${wss.clients.size} connectors`)
+  await coordinator.startDrain()
 
   await new Promise((resolve) => setTimeout(resolve, SHUTDOWN_GRACE_PERIOD_MS))
 
@@ -233,6 +234,7 @@ process.on("SIGINT", async () => {
   })
 
   console.log(`[Shutdown] Sent shutdown notice to ${wss.clients.size} connectors`)
+  await coordinator.startDrain()
 
   await new Promise((resolve) => setTimeout(resolve, SHUTDOWN_GRACE_PERIOD_MS))
 

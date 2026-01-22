@@ -5,6 +5,7 @@ import { verifyConnectorStillValid, type ConnectorInfo } from "./connector-auth"
 import {
   acquireOwnership,
   releaseOwnership,
+  releaseAllOwnership,
   isOwnedLocally,
   isConnectorOnlineInCluster,
   getLocalOwnershipCount,
@@ -25,6 +26,7 @@ interface PendingRequest {
 interface ConnectorConnection {
   ws: WebSocket
   tokenHash: string
+  ready: boolean
   connectedAt: number
   lastSeen: number
 }
@@ -104,7 +106,13 @@ export async function registerConnection(ws: WebSocket, info: ConnectorInfo): Pr
     group.info = info
   }
 
-  group.connections.set(ws, { ws, tokenHash: info.tokenHash, connectedAt: Date.now(), lastSeen: Date.now() })
+  group.connections.set(ws, {
+    ws,
+    tokenHash: info.tokenHash,
+    ready: false,
+    connectedAt: Date.now(),
+    lastSeen: Date.now(),
+  })
   await ensureCommandConsumer(info.id, group)
   return true
 }
@@ -139,7 +147,9 @@ export async function handleMessage(connectorId: string, ws: WebSocket, message:
   switch (message.type) {
     case "register": {
       group.metadata = message.payload as RegisterPayload
+      connection.ready = true
       setConnectorMetadata({ connectorId, metadata: group.metadata })
+      sendRegisterOk(connection.ws)
       break
     }
     case "heartbeat": {
@@ -296,6 +306,11 @@ export async function closeAllConnections(): Promise<void> {
   }
 }
 
+export async function startDrain(): Promise<void> {
+  stopAllCommandConsumers()
+  await releaseAllOwnership()
+}
+
 async function ensureCommandConsumer(connectorId: string, group: ConnectorGroup): Promise<void> {
   if (!isRedisEnabled()) return
   if (commandConsumerStops.has(connectorId)) return
@@ -340,8 +355,9 @@ function stopCommandConsumer(connectorId: string): void {
 function pickConnection(group: ConnectorGroup): ConnectorConnection | null {
   let selected: ConnectorConnection | null = null
   for (const conn of group.connections.values()) {
+    if (!conn.ready) continue
     if (conn.ws.readyState !== WebSocket.OPEN) continue
-    if (!selected || conn.connectedAt > selected.connectedAt) {
+    if (!selected || conn.lastSeen > selected.lastSeen) {
       selected = conn
     }
   }
@@ -354,4 +370,19 @@ function closeConnections(connectorId: string, code: number, reason: string): vo
   for (const connection of group.connections.values()) {
     connection.ws.close(code, reason)
   }
+}
+
+function stopAllCommandConsumers(): void {
+  for (const connectorId of commandConsumerStops.keys()) {
+    stopCommandConsumer(connectorId)
+  }
+}
+
+function sendRegisterOk(ws: WebSocket): void {
+  const message = {
+    type: "register_ok",
+    correlationId: randomUUID(),
+    payload: { ready: true },
+  }
+  ws.send(JSON.stringify(message))
 }

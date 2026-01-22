@@ -2,7 +2,7 @@ import { executeQuery, executeIntrospect, executeTest, executeRestApi, executeRe
 import type { QueryCommand, IntrospectCommand, TestCommand, RestApiCommand, RestApiTestCommand } from "./executor"
 
 interface CloudCommand {
-  type: "query" | "introspect" | "test" | "ping" | "restapi" | "shutdown_notice"
+  type: "query" | "introspect" | "test" | "ping" | "restapi" | "shutdown_notice" | "register_ok"
   correlationId: string
   payload: unknown
 }
@@ -37,6 +37,7 @@ let config: ConnectionConfig | null = null
 let reconnectAttempts = 0
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let pendingReconnectTimer: ReturnType<typeof setTimeout> | null = null
 let serverTimeoutTimer: ReturnType<typeof setInterval> | null = null
 let stabilityTimer: ReturnType<typeof setTimeout> | null = null
 let lastServerMessage = 0
@@ -58,6 +59,10 @@ export function disconnect(): void {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer)
     reconnectTimer = null
+  }
+  if (pendingReconnectTimer) {
+    clearTimeout(pendingReconnectTimer)
+    pendingReconnectTimer = null
   }
   if (serverTimeoutTimer) {
     clearInterval(serverTimeoutTimer)
@@ -88,34 +93,30 @@ function createConnection(): void {
 
   ws.onopen = () => {
     console.log("Connected to cloud")
-    connectedAt = Date.now()
-    lastServerMessage = Date.now()
-    messageCount = 0
-    shutdownDeadline = 0
-    if (stabilityTimer) {
-      clearTimeout(stabilityTimer)
-    }
-    stabilityTimer = setTimeout(() => {
-      if (ws?.readyState === WebSocket.OPEN) {
-        reconnectAttempts = 0
-        console.log("[WS] Connection stable, reset backoff")
-      }
-      stabilityTimer = null
-    }, STABILITY_WINDOW_MS)
-    sendRegister()
-    startHeartbeat()
-    startServerTimeoutCheck()
+    const current = ws
+    if (!current) return
+    activateConnection(current, true)
   }
 }
 
 function attachHandlers(socket: WebSocket): void {
   socket.onmessage = async (event) => {
+    if (socket !== ws && socket !== pendingWs) return
+
+    const data = typeof event.data === "string" ? event.data : await event.data.text()
+    const cmd = JSON.parse(data) as CloudCommand
+
+    if (cmd.type === "register_ok") {
+      if (socket === pendingWs) {
+        promotePending(socket)
+      }
+      return
+    }
+
     if (socket !== ws) return
 
     lastServerMessage = Date.now()
     messageCount++
-    const data = typeof event.data === "string" ? event.data : await event.data.text()
-    const cmd = JSON.parse(data) as CloudCommand
 
     if (cmd.type === "ping") {
       console.log(`[WS] Received ping from server (message #${messageCount})`)
@@ -133,55 +134,7 @@ function attachHandlers(socket: WebSocket): void {
         shutdownDeadline = Date.now() + payload.gracePeriodMs
       }
 
-      if (pendingWs) return
-
-      if (!config) return
-
-      const newUrl = new URL(config.gatewayUrl)
-      newUrl.searchParams.set("token", config.token)
-      const newWs = new WebSocket(newUrl.toString())
-      pendingWs = newWs
-      const currentWs = ws
-
-      newWs.onopen = () => {
-        console.log("[WS] New connection established, switching over")
-        if (reconnectTimer) {
-          clearTimeout(reconnectTimer)
-          reconnectTimer = null
-        }
-        if (stabilityTimer) {
-          clearTimeout(stabilityTimer)
-          stabilityTimer = null
-        }
-
-        if (currentWs && currentWs !== newWs) {
-          currentWs.close(1000, "Migrated to new connection")
-        }
-
-        ws = newWs
-        pendingWs = null
-        attachHandlers(newWs)
-
-        connectedAt = Date.now()
-        lastServerMessage = Date.now()
-        messageCount = 0
-        reconnectAttempts = 0
-
-        sendRegister()
-        startHeartbeat()
-        startServerTimeoutCheck()
-      }
-
-      newWs.onerror = () => {
-        console.log("[WS] Failed to establish new connection preemptively")
-        pendingWs = null
-      }
-
-      newWs.onclose = () => {
-        if (pendingWs === newWs) {
-          pendingWs = null
-        }
-      }
+      startPendingConnection()
 
       return
     }
@@ -193,6 +146,7 @@ function attachHandlers(socket: WebSocket): void {
     if (socket !== ws) {
       if (pendingWs === socket) {
         pendingWs = null
+        schedulePendingReconnect(jitterDelay(1000))
       }
       return
     }
@@ -219,6 +173,18 @@ function attachHandlers(socket: WebSocket): void {
 
       case "Ownership lost":
         console.log("[WS] Ownership lost to another gateway, reconnecting")
+        reconnectAttempts = 0
+        scheduleReconnect(jitterDelay(1000))
+        return
+
+      case "Connector owned by another instance":
+        console.log("[WS] Connector owned by another instance, reconnecting")
+        reconnectAttempts = 0
+        scheduleReconnect(jitterDelay(1000))
+        return
+
+      case "Registration failed":
+        console.log("[WS] Registration failed, reconnecting")
         reconnectAttempts = 0
         scheduleReconnect(jitterDelay(1000))
         return
@@ -261,6 +227,19 @@ function scheduleReconnect(minDelayMs = 0): void {
   }, delay)
 }
 
+function schedulePendingReconnect(minDelayMs = 0): void {
+  if (!config) return
+  if (pendingReconnectTimer) return
+
+  const delay = Math.min(Math.max(minDelayMs, 500), RECONNECT_MAX_MS)
+  pendingReconnectTimer = setTimeout(() => {
+    pendingReconnectTimer = null
+    if (ws?.readyState === WebSocket.OPEN && !pendingWs) {
+      startPendingConnection()
+    }
+  }, delay)
+}
+
 function getShutdownDelayMs(): number {
   if (!shutdownDeadline) return 0
   const remaining = shutdownDeadline - Date.now()
@@ -272,8 +251,8 @@ function jitterDelay(baseMs: number): number {
   return baseMs + Math.floor(Math.random() * 500)
 }
 
-function sendRegister(): void {
-  if (!ws || !config) return
+function sendRegister(socket: WebSocket): void {
+  if (!config) return
 
   const msg: ConnectorMessage = {
     type: "register",
@@ -283,7 +262,7 @@ function sendRegister(): void {
       capabilities: ["postgres", "mysql", "restapi"],
     },
   }
-  ws.send(JSON.stringify(msg))
+  socket.send(JSON.stringify(msg))
 }
 
 function startHeartbeat(): void {
@@ -379,4 +358,87 @@ function sendError(correlationId: string, message: string): void {
 
 export function isConnected(): boolean {
   return ws?.readyState === WebSocket.OPEN
+}
+
+function startPendingConnection(): void {
+  if (!config) return
+  if (pendingWs) return
+
+  const newUrl = new URL(config.gatewayUrl)
+  newUrl.searchParams.set("token", config.token)
+  const newWs = new WebSocket(newUrl.toString())
+  pendingWs = newWs
+  attachHandlers(newWs)
+
+  newWs.onopen = () => {
+    console.log("[WS] New connection established, awaiting register_ok")
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
+    sendRegister(newWs)
+  }
+
+  newWs.onerror = () => {
+    console.log("[WS] Failed to establish new connection preemptively")
+    if (pendingWs === newWs) {
+      pendingWs = null
+    }
+  }
+
+  newWs.onclose = () => {
+    if (pendingWs === newWs) {
+      pendingWs = null
+      schedulePendingReconnect(jitterDelay(1000))
+    }
+  }
+}
+
+function promotePending(next: WebSocket): void {
+  if (pendingWs !== next) return
+  const currentWs = ws
+
+  if (pendingReconnectTimer) {
+    clearTimeout(pendingReconnectTimer)
+    pendingReconnectTimer = null
+  }
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+  if (stabilityTimer) {
+    clearTimeout(stabilityTimer)
+    stabilityTimer = null
+  }
+
+  if (currentWs && currentWs !== next) {
+    currentWs.close(1000, "Migrated to new connection")
+  }
+
+  ws = next
+  pendingWs = null
+  activateConnection(next, false)
+}
+
+function activateConnection(socket: WebSocket, shouldRegister: boolean): void {
+  connectedAt = Date.now()
+  lastServerMessage = Date.now()
+  messageCount = 0
+  shutdownDeadline = 0
+  if (stabilityTimer) {
+    clearTimeout(stabilityTimer)
+  }
+  stabilityTimer = setTimeout(() => {
+    if (ws?.readyState === WebSocket.OPEN) {
+      reconnectAttempts = 0
+      console.log("[WS] Connection stable, reset backoff")
+    }
+    stabilityTimer = null
+  }, STABILITY_WINDOW_MS)
+
+  if (shouldRegister) {
+    sendRegister(socket)
+  }
+  startHeartbeat()
+  startServerTimeoutCheck()
 }

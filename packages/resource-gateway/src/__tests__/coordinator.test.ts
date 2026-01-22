@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 const mocks = vi.hoisted(() => ({
   acquireOwnership: vi.fn(),
   releaseOwnership: vi.fn(),
+  releaseAllOwnership: vi.fn(),
   setStatus: vi.fn(),
   startCommandConsumer: vi.fn(),
   isRedisEnabled: vi.fn(),
@@ -14,6 +15,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../ownership", () => ({
   acquireOwnership: mocks.acquireOwnership,
   releaseOwnership: mocks.releaseOwnership,
+  releaseAllOwnership: mocks.releaseAllOwnership,
   isOwnedLocally: vi.fn(),
   isConnectorOnlineInCluster: vi.fn(),
   getLocalOwnershipCount: vi.fn(() => 0),
@@ -125,6 +127,20 @@ describe("coordinator", () => {
     const result = await handler?.({ correlationId: "c1", replyTo: "r1" } as any)
     expect(result).toBe(false)
     expect(ws.send).not.toHaveBeenCalled()
+  })
+
+  it("sends register_ok on register", async () => {
+    const ws = { close: vi.fn(), send: vi.fn(), readyState: WebSocket.OPEN } as any
+    const info = { id: "connector-1", name: "test", tokenHash: "hash", organizationId: "org-1" } as any
+    const payload = { version: "1.0.0", platform: "test", capabilities: ["postgres"] }
+
+    await registerConnection(ws, info)
+    await handleMessage("connector-1", ws, { type: "register", payload } as any)
+
+    const messages = ws.send.mock.calls.map(([value]: [string]) => JSON.parse(value)) as Array<{
+      type?: string
+    }>
+    expect(messages.some((msg: { type?: string }) => msg.type === "register_ok")).toBe(true)
   })
 
   it("starts a single command consumer per connector", async () => {
