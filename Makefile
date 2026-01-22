@@ -48,7 +48,7 @@ connector-run:
 ifndef CONNECTOR_TOKEN
 	$(error CONNECTOR_TOKEN is required. Create a connector in Console first.)
 endif
-	@GATEWAY_URL=ws://localhost:3003/connector/ws CONNECTOR_TOKEN=$(CONNECTOR_TOKEN) bun run packages/connector/src/index.ts
+	@GATEWAY_URL=ws://localhost:10000/connector/ws CONNECTOR_TOKEN=$(CONNECTOR_TOKEN) bun run packages/connector/src/index.ts
 
 .PHONY: release
 release:
