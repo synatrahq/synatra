@@ -25,6 +25,7 @@ const RECONNECT_MAX_MS = 30000
 const HEARTBEAT_INTERVAL_MS = 25000
 const SERVER_TIMEOUT_MS = 60000
 const SERVER_TIMEOUT_CHECK_MS = 10000
+const STABILITY_WINDOW_MS = 30000
 
 let ws: WebSocket | null = null
 let config: ConnectionConfig | null = null
@@ -32,6 +33,7 @@ let reconnectAttempts = 0
 let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let serverTimeoutTimer: ReturnType<typeof setInterval> | null = null
+let stabilityTimer: ReturnType<typeof setTimeout> | null = null
 let lastServerMessage = 0
 let connectedAt = 0
 let messageCount = 0
@@ -55,6 +57,10 @@ export function disconnect(): void {
     clearInterval(serverTimeoutTimer)
     serverTimeoutTimer = null
   }
+  if (stabilityTimer) {
+    clearTimeout(stabilityTimer)
+    stabilityTimer = null
+  }
   if (ws) {
     ws.close(1000, "Disconnect requested")
     ws = null
@@ -71,10 +77,19 @@ function createConnection(): void {
 
   ws.onopen = () => {
     console.log("Connected to cloud")
-    reconnectAttempts = 0
     connectedAt = Date.now()
     lastServerMessage = Date.now()
     messageCount = 0
+    if (stabilityTimer) {
+      clearTimeout(stabilityTimer)
+    }
+    stabilityTimer = setTimeout(() => {
+      if (ws?.readyState === WebSocket.OPEN) {
+        reconnectAttempts = 0
+        console.log("[WS] Connection stable, reset backoff")
+      }
+      stabilityTimer = null
+    }, STABILITY_WINDOW_MS)
     sendRegister()
     startHeartbeat()
     startServerTimeoutCheck()
@@ -99,6 +114,10 @@ function createConnection(): void {
     )
     stopHeartbeat()
     stopServerTimeoutCheck()
+    if (stabilityTimer) {
+      clearTimeout(stabilityTimer)
+      stabilityTimer = null
+    }
     ws = null
     scheduleReconnect()
   }

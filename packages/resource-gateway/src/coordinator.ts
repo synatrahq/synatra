@@ -9,6 +9,8 @@ import {
   isConnectorOnlineInCluster,
   getLocalOwnershipCount,
   isOwnershipValid,
+  onOwnershipLost,
+  removeOwnershipLostCallback,
 } from "./ownership"
 import { dispatchRemoteCommand, publishReply, startCommandConsumer } from "./command-stream"
 import { getRedis, isRedisEnabled } from "./redis-client"
@@ -96,6 +98,14 @@ export async function registerConnection(ws: WebSocket, info: ConnectorInfo): Pr
       return true
     })
     commandConsumerStops.set(info.id, stop)
+
+    onOwnershipLost(info.id, () => {
+      const conn = connections.get(info.id)
+      if (conn) {
+        console.log(`[Coordinator] Ownership lost for ${info.id}, closing WebSocket`)
+        conn.ws.close(4006, "Ownership lost")
+      }
+    })
   }
 
   return true
@@ -111,6 +121,7 @@ export async function unregisterConnection(connectorId: string, ws?: WebSocket):
     stop()
     commandConsumerStops.delete(connectorId)
   }
+  removeOwnershipLostCallback(connectorId)
 
   const organizationId = current.info.organizationId
   connections.delete(connectorId)

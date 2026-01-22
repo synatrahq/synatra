@@ -18,6 +18,8 @@ vi.mock("../ownership", () => ({
   isConnectorOnlineInCluster: vi.fn(),
   getLocalOwnershipCount: vi.fn(() => 0),
   isOwnershipValid: mocks.isOwnershipValid,
+  onOwnershipLost: vi.fn(),
+  removeOwnershipLostCallback: vi.fn(),
 }))
 
 vi.mock("../redis-client", () => ({

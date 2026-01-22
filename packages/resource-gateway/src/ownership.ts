@@ -1,7 +1,7 @@
 import { getRedis, isRedisEnabled } from "./redis-client"
 import { config } from "./config"
 
-const OWNER_TTL_SEC = 30
+const OWNER_TTL_SEC = 60
 const STATUS_TTL_SEC = 60
 const REFRESH_INTERVAL_MS = 10000
 
@@ -11,6 +11,7 @@ interface OwnershipEntry {
 }
 
 const localOwnership = new Map<string, OwnershipEntry>()
+const ownershipLostCallbacks = new Map<string, () => void>()
 let fenceCounter = 0
 
 function ownerKey(connectorId: string): string {
@@ -102,8 +103,14 @@ async function refreshOwnership(connectorId: string, expectedFence: number): Pro
   })
 
   if (result === 0) {
+    console.log(`[Ownership] Lost ownership for ${connectorId}, closing connection`)
     clearInterval(entry.refreshTimer)
     localOwnership.delete(connectorId)
+    const callback = ownershipLostCallbacks.get(connectorId)
+    if (callback) {
+      ownershipLostCallbacks.delete(connectorId)
+      callback()
+    }
     return false
   }
 
@@ -116,6 +123,7 @@ export async function releaseOwnership(connectorId: string): Promise<void> {
     clearInterval(entry.refreshTimer)
     localOwnership.delete(connectorId)
   }
+  ownershipLostCallbacks.delete(connectorId)
 
   const redis = await getRedis()
   if (!redis) return
@@ -158,6 +166,14 @@ export function getConnectorOwnerLocal(connectorId: string): string | null {
 
 export function isOwnedLocally(connectorId: string): boolean {
   return localOwnership.has(connectorId)
+}
+
+export function onOwnershipLost(connectorId: string, callback: () => void): void {
+  ownershipLostCallbacks.set(connectorId, callback)
+}
+
+export function removeOwnershipLostCallback(connectorId: string): void {
+  ownershipLostCallbacks.delete(connectorId)
 }
 
 export async function isConnectorOnlineInCluster(connectorId: string): Promise<boolean> {

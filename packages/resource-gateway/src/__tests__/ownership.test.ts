@@ -51,7 +51,7 @@ describe("ownership", () => {
       expect(mockRedis.set).toHaveBeenCalledWith(
         "connector:connector-1:owner",
         expect.stringContaining("test-instance:"),
-        expect.objectContaining({ NX: true, EX: 30 }),
+        expect.objectContaining({ NX: true, EX: 60 }),
       )
     })
 
