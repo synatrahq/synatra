@@ -25,25 +25,58 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Run Claude Code Review
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            Review this pull request:
-            - Repository: ${{ github.repository }}
-            - PR #${{ github.event.pull_request.number }}
+            REPO: ${{ github.repository }}
+            PR_NUMBER: ${{ github.event.pull_request.number }}
 
-            Check for:
-            - Bugs and logic errors
-            - Security concerns
-            - Performance issues
-            - Adherence to CLAUDE.md guidelines
+            <investigate_before_commenting>
+            CRITICAL: Before flagging ANY issue, you MUST:
+            1. Read CLAUDE.md to understand project conventions
+            2. Search the codebase for similar patterns using Glob and Grep
+            3. Read related files to understand the full context
+            4. Verify the issue exists in code INTRODUCED by this PR (not pre-existing)
 
-            Use `gh pr comment` to leave your review as a comment on the PR.
-            Be constructive and concise.
+            Never speculate about code you have not inspected.
+            Never flag patterns that match existing codebase conventions.
+            </investigate_before_commenting>
+
+            <what_to_flag>
+            Only flag HIGH-SIGNAL issues:
+            - Syntax/type errors, missing imports, unresolved references
+            - Clear logic errors that produce wrong results
+            - Security vulnerabilities (injection, auth bypass, data exposure)
+            - Unambiguous CLAUDE.md violations (quote the exact rule violated)
+            </what_to_flag>
+
+            <what_not_to_flag>
+            Do NOT flag:
+            - Code style preferences (let linters handle this)
+            - "Potential" issues that depend on unknown inputs
+            - Subjective suggestions or nitpicks
+            - Pre-existing issues not introduced by this PR
+            - Patterns that match existing code in the repository
+            - Issues a linter would catch
+            - Code with lint-ignore comments
+            </what_not_to_flag>
+
+            <review_process>
+            1. First, read CLAUDE.md and explore related files
+            2. Review the diff with `gh pr diff`
+            3. For each potential issue, verify by reading surrounding context
+            4. Only report issues you can validate with HIGH confidence
+            5. Quality over quantity - fewer accurate comments is better
+            </review_process>
+
+            <output_format>
+            If issues found: Use inline comments via mcp__github_inline_comment for specific code issues.
+            If no issues: Post a single comment: "No issues found. Checked for bugs, security issues, and CLAUDE.md compliance."
+            </output_format>
           claude_args: |
-            --allowed-tools "Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
+            --allowed-tools "Read,Glob,Grep,mcp__github_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*)"
             --model claude-sonnet-4-20250514
