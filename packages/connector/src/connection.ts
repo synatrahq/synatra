@@ -31,6 +31,9 @@ const SERVER_TIMEOUT_MS = 60000
 const SERVER_TIMEOUT_CHECK_MS = 10000
 const STABILITY_WINDOW_MS = 30000
 const PENDING_TIMEOUT_MS = 10000
+const PENDING_MAX_ATTEMPTS = 3
+const PENDING_FAIL_RESET_MS = 60000
+const PENDING_PAUSE_MS = 30000
 
 let ws: WebSocket | null = null
 let pendingWs: WebSocket | null = null
@@ -46,6 +49,8 @@ let lastServerMessage = 0
 let connectedAt = 0
 let messageCount = 0
 let shutdownDeadline = 0
+let pendingAttempts = 0
+let lastPendingFailAt = 0
 
 export function connect(cfg: ConnectionConfig): void {
   config = cfg
@@ -114,6 +119,7 @@ function attachHandlers(socket: WebSocket): void {
 
     if (cmd.type === "register_ok") {
       if (socket === pendingWs) {
+        console.log("[WS] Pending connection register_ok received, promoting")
         promotePending(socket)
       }
       return
@@ -140,6 +146,8 @@ function attachHandlers(socket: WebSocket): void {
         shutdownDeadline = Date.now() + payload.gracePeriodMs
       }
 
+      pendingAttempts = 0
+      lastPendingFailAt = 0
       startPendingConnection()
 
       return
@@ -157,6 +165,7 @@ function attachHandlers(socket: WebSocket): void {
           clearTimeout(pendingTimeoutTimer)
           pendingTimeoutTimer = null
         }
+        notePendingFailure()
         if (!ws || ws.readyState !== WebSocket.OPEN) {
           console.log("[WS] Pending connection closed, main connection unavailable, scheduling reconnect")
           scheduleReconnect(jitterDelay(1000))
@@ -237,6 +246,7 @@ function attachHandlers(socket: WebSocket): void {
         clearTimeout(pendingTimeoutTimer)
         pendingTimeoutTimer = null
       }
+      notePendingFailure()
       if (!ws || ws.readyState !== WebSocket.OPEN) {
         console.log("[WS] Pending connection error, main connection unavailable, scheduling reconnect")
         scheduleReconnect(jitterDelay(1000))
@@ -275,6 +285,20 @@ function schedulePendingReconnect(minDelayMs = 0): void {
       startPendingConnection()
     }
   }, delay)
+}
+
+function notePendingFailure(): void {
+  const now = Date.now()
+  if (now - lastPendingFailAt > PENDING_FAIL_RESET_MS) {
+    pendingAttempts = 0
+  }
+  pendingAttempts += 1
+  lastPendingFailAt = now
+}
+
+function canStartPending(): boolean {
+  if (pendingAttempts < PENDING_MAX_ATTEMPTS) return true
+  return Date.now() - lastPendingFailAt > PENDING_PAUSE_MS
 }
 
 function getShutdownDelayMs(): number {
@@ -402,6 +426,12 @@ export function isConnected(): boolean {
 function startPendingConnection(): void {
   if (!config) return
   if (pendingWs) return
+  if (ws?.readyState === WebSocket.OPEN && !canStartPending()) {
+    console.log("[WS] Pending connection attempts exceeded, waiting before retry")
+    const waitMs = Math.max(PENDING_PAUSE_MS - (Date.now() - lastPendingFailAt), 0)
+    schedulePendingReconnect(jitterDelay(waitMs))
+    return
+  }
 
   const newUrl = new URL(config.gatewayUrl)
   newUrl.searchParams.set("token", config.token)
@@ -422,6 +452,7 @@ function startPendingConnection(): void {
           `[WS] Pending connection timeout, closing (main=${ws?.readyState === WebSocket.OPEN ? "open" : "closed"})`,
         )
         pendingWs = null
+        notePendingFailure()
         newWs.close(1000, "Pending timeout")
         if (!ws || ws.readyState !== WebSocket.OPEN) {
           console.log("[WS] Main connection unavailable, scheduling reconnect")
@@ -462,6 +493,8 @@ function promotePending(next: WebSocket): void {
 
   ws = next
   pendingWs = null
+  pendingAttempts = 0
+  lastPendingFailAt = 0
   activateConnection(next, false)
 }
 
@@ -470,6 +503,8 @@ function activateConnection(socket: WebSocket, shouldRegister: boolean): void {
   lastServerMessage = Date.now()
   messageCount = 0
   shutdownDeadline = 0
+  pendingAttempts = 0
+  lastPendingFailAt = 0
   if (stabilityTimer) {
     clearTimeout(stabilityTimer)
   }

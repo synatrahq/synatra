@@ -49,6 +49,7 @@ const registrationLocks = new Map<string, Promise<void>>()
 const COMMAND_TIMEOUT_MS = 630000
 const HEARTBEAT_INTERVAL_MS = 30000
 const MAX_CONNECTIONS_PER_CONNECTOR = 5
+const MAX_PENDING_CONNECTIONS = 1
 
 async function withRegistrationLock<T>(connectorId: string, fn: () => Promise<T>): Promise<T> {
   while (true) {
@@ -95,6 +96,23 @@ export async function incrementTokenVersion(connectorId: string): Promise<number
   if (!redis) return 0
 
   return redis.incr(tokenVersionKey(connectorId))
+}
+
+function countReadyConnections(group: ConnectorGroup): number {
+  let count = 0
+  for (const conn of group.connections.values()) {
+    if (conn.ready) count += 1
+  }
+  return count
+}
+
+function countPendingConnections(group: ConnectorGroup, exclude?: WebSocket): number {
+  let count = 0
+  for (const conn of group.connections.values()) {
+    if (conn.ws === exclude) continue
+    if (!conn.ready) count += 1
+  }
+  return count
 }
 
 export async function registerConnection(ws: WebSocket, info: ConnectorInfo): Promise<boolean> {
@@ -150,6 +168,10 @@ export async function registerConnection(ws: WebSocket, info: ConnectorInfo): Pr
       }
       group.info = info
 
+      while (countPendingConnections(group) >= MAX_PENDING_CONNECTIONS) {
+        evictOldestPending(info.id, group)
+      }
+
       group.connections.set(ws, {
         ws,
         tokenHash: info.tokenHash,
@@ -158,10 +180,6 @@ export async function registerConnection(ws: WebSocket, info: ConnectorInfo): Pr
         lastSeen: Date.now(),
       })
 
-      if (group.connections.size > MAX_CONNECTIONS_PER_CONNECTOR) {
-        evictOldestConnection(group)
-      }
-
       await ensureCommandConsumer(info.id, group)
     }
 
@@ -169,7 +187,7 @@ export async function registerConnection(ws: WebSocket, info: ConnectorInfo): Pr
   })
 }
 
-function evictOldestConnection(group: ConnectorGroup): void {
+function evictOldestPending(connectorId: string, group: ConnectorGroup): void {
   let target: { ws: WebSocket; connectedAt: number } | null = null
   for (const conn of group.connections.values()) {
     if (!conn.ready) {
@@ -178,15 +196,26 @@ function evictOldestConnection(group: ConnectorGroup): void {
       }
     }
   }
-  if (!target) {
-    for (const conn of group.connections.values()) {
+  if (target) {
+    console.log(`[Coordinator] Evicting pending connection for ${connectorId} (max ${MAX_PENDING_CONNECTIONS} pending)`)
+    target.ws.close(4009, "Connection limit exceeded")
+    group.connections.delete(target.ws)
+  }
+}
+
+function evictOldestReady(connectorId: string, group: ConnectorGroup): void {
+  let target: { ws: WebSocket; connectedAt: number } | null = null
+  for (const conn of group.connections.values()) {
+    if (conn.ready) {
       if (!target || conn.connectedAt < target.connectedAt) {
         target = { ws: conn.ws, connectedAt: conn.connectedAt }
       }
     }
   }
   if (target) {
-    console.log(`[Coordinator] Evicting connection for connector (max ${MAX_CONNECTIONS_PER_CONNECTOR} reached)`)
+    console.log(
+      `[Coordinator] Evicting ready connection for ${connectorId} (max ${MAX_CONNECTIONS_PER_CONNECTOR} ready)`,
+    )
     target.ws.close(4009, "Connection limit exceeded")
     group.connections.delete(target.ws)
   }
@@ -221,10 +250,15 @@ export async function handleMessage(connectorId: string, ws: WebSocket, message:
 
   switch (message.type) {
     case "register": {
+      console.log(`[Coordinator] Register received for ${connectorId}`)
       group.metadata = message.payload as RegisterPayload
       connection.ready = true
       setConnectorMetadata({ connectorId, metadata: group.metadata })
+      while (countReadyConnections(group) > MAX_CONNECTIONS_PER_CONNECTOR) {
+        evictOldestReady(connectorId, group)
+      }
       sendRegisterOk(connection.ws)
+      console.log(`[Coordinator] Register ok sent for ${connectorId}`)
       break
     }
     case "heartbeat": {
