@@ -579,13 +579,13 @@ function buildResourceTypes(resources: ResourceInfo[]): string {
         return `- context.resources.${r.slug}: { query(sql: string, params?: unknown[]): Promise<Record<string, unknown>[]> } (MySQL)`
       }
       if (r.type === "stripe") {
-        return `- context.resources.${r.slug}: { request(method: string, path: string, body?: object): Promise<unknown> } (Stripe API)`
+        return `- context.resources.${r.slug}: { request(method: "GET"|"POST"|"PUT"|"PATCH"|"DELETE", path: string, options?: { queryParams?: Record<string, string>, body?: unknown }): Promise<unknown> } (Stripe API)`
       }
       if (r.type === "github") {
-        return `- context.resources.${r.slug}: { request(method: string, endpoint: string, body?: object): Promise<unknown> } (GitHub API)`
+        return `- context.resources.${r.slug}: { request(method: "GET"|"POST"|"PUT"|"PATCH"|"DELETE", endpoint: string, options?: { queryParams?: Record<string, string>, body?: unknown }): Promise<unknown> } (GitHub API)`
       }
       if (r.type === "intercom") {
-        return `- context.resources.${r.slug}: { request(method: string, endpoint: string, body?: object): Promise<unknown> } (Intercom API)`
+        return `- context.resources.${r.slug}: { request(method: "GET"|"POST"|"PUT"|"PATCH"|"DELETE", endpoint: string, options?: { queryParams?: Record<string, string>, body?: unknown }): Promise<unknown> } (Intercom API)`
       }
       if (r.type === "restapi") {
         return `- context.resources.${r.slug}: { request(method: "GET"|"POST"|"PUT"|"PATCH"|"DELETE", path: string, options?: { headers?: Record<string, string>, queryParams?: Record<string, string>, body?: unknown }): Promise<unknown> } (REST API)`
@@ -626,22 +626,25 @@ const STRIPE_DOCS = `
 ### Stripe Resource
 
 \`\`\`javascript
-const data = await context.resources.[slug].request(method, path, body?)
+const data = await context.resources.[slug].request(method, path, options?)
 \`\`\`
 
 - **method**: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
 - **path**: Stripe API path (e.g., "/v1/customers", "/v1/charges")
-- **body**: Request body object (optional, for POST/PUT/PATCH)
+- **options**: Optional object with:
+  - **queryParams**: Query parameters (e.g., { limit: "10", starting_after: "cus_xxx" })
+  - **body**: Request body (for POST/PUT/PATCH)
 - **Returns**: Stripe API response (parsed JSON)
 - **Throws**: Error on API failure
 
 Example:
 \`\`\`javascript
-const customer = await context.resources.stripe.request(
+const customers = await context.resources.stripe.request(
   "GET",
-  "/v1/customers/cus_xxx"
+  "/v1/customers",
+  { queryParams: { limit: "10" } }
 )
-return customer
+return customers
 \`\`\`
 `
 
@@ -649,12 +652,14 @@ const GITHUB_DOCS = `
 ### GitHub Resource
 
 \`\`\`javascript
-const data = await context.resources.[slug].request(method, endpoint, body?)
+const data = await context.resources.[slug].request(method, endpoint, options?)
 \`\`\`
 
 - **method**: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
 - **endpoint**: GitHub API endpoint (e.g., "/repos/{owner}/{repo}/issues")
-- **body**: Request body object (optional, for POST/PUT/PATCH)
+- **options**: Optional object with:
+  - **queryParams**: Query parameters (e.g., { state: "open", per_page: "10" })
+  - **body**: Request body (for POST/PUT/PATCH)
 - **Returns**: GitHub API response (parsed JSON)
 - **Throws**: Error on API failure
 
@@ -662,7 +667,8 @@ Example:
 \`\`\`javascript
 const issues = await context.resources.github.request(
   "GET",
-  "/repos/owner/repo/issues?state=open&per_page=10"
+  "/repos/owner/repo/issues",
+  { queryParams: { state: "open", per_page: "10" } }
 )
 return issues
 \`\`\`
@@ -672,12 +678,14 @@ const INTERCOM_DOCS = `
 ### Intercom Resource
 
 \`\`\`javascript
-const data = await context.resources.[slug].request(method, endpoint, body?)
+const data = await context.resources.[slug].request(method, endpoint, options?)
 \`\`\`
 
 - **method**: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
 - **endpoint**: Intercom API endpoint (e.g., "/contacts", "/conversations")
-- **body**: Request body object (optional, for POST/PUT/PATCH)
+- **options**: Optional object with:
+  - **queryParams**: Query parameters (e.g., { per_page: "10" })
+  - **body**: Request body (for POST/PUT/PATCH)
 - **Returns**: Intercom API response (parsed JSON)
 - **Throws**: Error on API failure
 
@@ -685,7 +693,8 @@ Example:
 \`\`\`javascript
 const contacts = await context.resources.intercom.request(
   "GET",
-  "/contacts?per_page=10"
+  "/contacts",
+  { queryParams: { per_page: "10" } }
 )
 return contacts
 \`\`\`

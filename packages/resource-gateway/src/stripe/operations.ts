@@ -6,6 +6,7 @@ export const stripeOperation = z.object({
   type: z.literal("stripe"),
   method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
   path: z.string(),
+  queryParams: z.record(z.string(), z.string()).optional(),
   body: z.unknown().optional(),
 })
 
@@ -26,10 +27,13 @@ export async function executeStripeOperation(
     apiVersion: resource.config.apiVersion as Stripe.LatestApiVersion,
     timeout: STRIPE_TIMEOUT_MS,
   })
-  const data = await client.rawRequest(
-    operation.method,
-    operation.path,
-    operation.body as Record<string, unknown> | undefined,
-  )
+
+  let path = operation.path
+  if (operation.queryParams && Object.keys(operation.queryParams).length > 0) {
+    const params = new URLSearchParams(operation.queryParams).toString()
+    path = path.includes("?") ? `${path}&${params}` : `${path}?${params}`
+  }
+
+  const data = await client.rawRequest(operation.method, path, operation.body as Record<string, unknown> | undefined)
   return { data }
 }

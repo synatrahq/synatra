@@ -121,54 +121,62 @@ async function runInIsolate(pooled: PooledIsolate, input: ExecuteInput): Promise
 
     await jail.set(
       "_stripeRequestAsync",
-      new ivm.Reference(async (resourceName: string, method: string, path: string, body: string) => {
-        try {
-          const result = await resourceClient.query(resourceName, {
-            type: "stripe",
-            method,
-            path,
-            body: body ? JSON.parse(body) : undefined,
-          })
-          // Return plain string - primitives are automatically transferred
-          return JSON.stringify(result)
-        } catch (error) {
-          throw new Error(error instanceof Error ? error.message : String(error))
-        }
-      }),
+      new ivm.Reference(
+        async (resourceName: string, method: string, path: string, queryParams: string, body: string) => {
+          try {
+            const result = await resourceClient.query(resourceName, {
+              type: "stripe",
+              method,
+              path,
+              queryParams: queryParams ? JSON.parse(queryParams) : undefined,
+              body: body ? JSON.parse(body) : undefined,
+            })
+            return JSON.stringify(result)
+          } catch (error) {
+            throw new Error(error instanceof Error ? error.message : String(error))
+          }
+        },
+      ),
     )
 
     await jail.set(
       "_githubRequestAsync",
-      new ivm.Reference(async (resourceName: string, method: string, endpoint: string, body: string) => {
-        try {
-          const result = await resourceClient.query(resourceName, {
-            type: "github",
-            method,
-            endpoint,
-            body: body ? JSON.parse(body) : undefined,
-          })
-          return JSON.stringify(result)
-        } catch (error) {
-          throw new Error(error instanceof Error ? error.message : String(error))
-        }
-      }),
+      new ivm.Reference(
+        async (resourceName: string, method: string, endpoint: string, queryParams: string, body: string) => {
+          try {
+            const result = await resourceClient.query(resourceName, {
+              type: "github",
+              method,
+              endpoint,
+              queryParams: queryParams ? JSON.parse(queryParams) : undefined,
+              body: body ? JSON.parse(body) : undefined,
+            })
+            return JSON.stringify(result)
+          } catch (error) {
+            throw new Error(error instanceof Error ? error.message : String(error))
+          }
+        },
+      ),
     )
 
     await jail.set(
       "_intercomRequestAsync",
-      new ivm.Reference(async (resourceName: string, method: string, endpoint: string, body: string) => {
-        try {
-          const result = await resourceClient.query(resourceName, {
-            type: "intercom",
-            method,
-            endpoint,
-            body: body ? JSON.parse(body) : undefined,
-          })
-          return JSON.stringify(result)
-        } catch (error) {
-          throw new Error(error instanceof Error ? error.message : String(error))
-        }
-      }),
+      new ivm.Reference(
+        async (resourceName: string, method: string, endpoint: string, queryParams: string, body: string) => {
+          try {
+            const result = await resourceClient.query(resourceName, {
+              type: "intercom",
+              method,
+              endpoint,
+              queryParams: queryParams ? JSON.parse(queryParams) : undefined,
+              body: body ? JSON.parse(body) : undefined,
+            })
+            return JSON.stringify(result)
+          } catch (error) {
+            throw new Error(error instanceof Error ? error.message : String(error))
+          }
+        },
+      ),
     )
 
     await jail.set(
@@ -232,8 +240,15 @@ async function runInIsolate(pooled: PooledIsolate, input: ExecuteInput): Promise
           }
           if (type === "stripe") {
             return {
-              request: async (method, path, body) => {
-                const result = await _stripeRequestAsync.apply(null, [name, method, path, body ? JSON.stringify(body) : ""], {
+              request: async (method, path, options = {}) => {
+                const { queryParams, body } = options;
+                const result = await _stripeRequestAsync.apply(null, [
+                  name,
+                  method,
+                  path,
+                  queryParams ? JSON.stringify(queryParams) : "",
+                  body ? JSON.stringify(body) : ""
+                ], {
                   arguments: { copy: true },
                   result: { promise: true, copy: true }
                 });
@@ -243,8 +258,15 @@ async function runInIsolate(pooled: PooledIsolate, input: ExecuteInput): Promise
           }
           if (type === "github") {
             return {
-              request: async (method, endpoint, body) => {
-                const result = await _githubRequestAsync.apply(null, [name, method, endpoint, body ? JSON.stringify(body) : ""], {
+              request: async (method, endpoint, options = {}) => {
+                const { queryParams, body } = options;
+                const result = await _githubRequestAsync.apply(null, [
+                  name,
+                  method,
+                  endpoint,
+                  queryParams ? JSON.stringify(queryParams) : "",
+                  body ? JSON.stringify(body) : ""
+                ], {
                   arguments: { copy: true },
                   result: { promise: true, copy: true }
                 });
@@ -254,8 +276,15 @@ async function runInIsolate(pooled: PooledIsolate, input: ExecuteInput): Promise
           }
           if (type === "intercom") {
             return {
-              request: async (method, endpoint, body) => {
-                const result = await _intercomRequestAsync.apply(null, [name, method, endpoint, body ? JSON.stringify(body) : ""], {
+              request: async (method, endpoint, options = {}) => {
+                const { queryParams, body } = options;
+                const result = await _intercomRequestAsync.apply(null, [
+                  name,
+                  method,
+                  endpoint,
+                  queryParams ? JSON.stringify(queryParams) : "",
+                  body ? JSON.stringify(body) : ""
+                ], {
                   arguments: { copy: true },
                   result: { promise: true, copy: true }
                 });
