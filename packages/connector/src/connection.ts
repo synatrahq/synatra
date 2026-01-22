@@ -146,6 +146,8 @@ function attachHandlers(socket: WebSocket): void {
         shutdownDeadline = Date.now() + payload.gracePeriodMs
       }
 
+      pendingAttempts = 0
+      lastPendingFailAt = 0
       startPendingConnection()
 
       return
@@ -276,8 +278,7 @@ function schedulePendingReconnect(minDelayMs = 0): void {
   if (!config) return
   if (pendingReconnectTimer) return
 
-  const baseDelay = pendingAttempts > 0 ? RECONNECT_BASE_MS * Math.pow(2, pendingAttempts - 1) : 0
-  const delay = Math.min(Math.max(Math.max(minDelayMs, baseDelay), 500), RECONNECT_MAX_MS)
+  const delay = Math.min(Math.max(minDelayMs, 500), RECONNECT_MAX_MS)
   pendingReconnectTimer = setTimeout(() => {
     pendingReconnectTimer = null
     if (ws?.readyState === WebSocket.OPEN && !pendingWs) {
