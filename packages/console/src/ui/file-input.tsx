@@ -2,12 +2,11 @@ import { createSignal, Show, splitProps } from "solid-js"
 import { X } from "phosphor-solid-js"
 
 export type FileInputProps = {
-  value?: string | null
-  filename?: string | null
-  hasSaved?: boolean
+  value: string | null
+  filename: string | null
   accept?: string
   placeholder?: string
-  onChange?: (content: string | null | undefined, filename: string | null | undefined) => void
+  onChange?: (content: string | null, filename: string | null) => void
   onValidate?: (content: string) => string | null
   hasError?: boolean
   disabled?: boolean
@@ -18,7 +17,6 @@ export function FileInput(props: FileInputProps) {
   const [local] = splitProps(props, [
     "value",
     "filename",
-    "hasSaved",
     "accept",
     "placeholder",
     "onChange",
@@ -29,16 +27,16 @@ export function FileInput(props: FileInputProps) {
   ])
 
   const [error, setError] = createSignal<string | undefined>()
-  const [localFilename, setLocalFilename] = createSignal<string | undefined>(local.filename ?? undefined)
+  const [localFilename, setLocalFilename] = createSignal<string | null>(local.filename)
   let inputRef: HTMLInputElement | undefined
 
   const displayFilename = () => {
     if (localFilename()) return localFilename()
     if (local.filename) return local.filename
-    return undefined
+    return null
   }
 
-  const hasFile = () => local.value !== undefined || local.hasSaved
+  const hasFile = () => local.value !== null && local.value !== ""
 
   const handleClick = (e: MouseEvent) => {
     e.preventDefault()
@@ -79,8 +77,8 @@ export function FileInput(props: FileInputProps) {
   const handleDelete = (e: MouseEvent) => {
     e.stopPropagation()
     setError(undefined)
-    setLocalFilename(undefined)
-    local.onChange?.(null, null)
+    setLocalFilename(null)
+    local.onChange?.("", null)
   }
 
   const borderClass = () => (local.hasError || error() ? "border-danger" : "border-border")

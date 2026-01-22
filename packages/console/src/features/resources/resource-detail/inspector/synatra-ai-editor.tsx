@@ -1,6 +1,6 @@
 import { Show, For, createSignal, createEffect } from "solid-js"
 import { CaretRight } from "phosphor-solid-js"
-import type { LlmProvider } from "@synatra/core/types"
+import { ENCRYPTED_PLACEHOLDER, type LlmProvider } from "@synatra/core/types"
 import { Input, Switch, FormField, FormError } from "../../../../ui"
 import type { SynatraAiEditorConfig, SynatraAiProviderEditorConfig } from "../constants"
 import { LLM_PROVIDERS } from "./constants"
@@ -37,7 +37,7 @@ export function SynatraAiConfigEditorContent(props: {
       <For each={LLM_PROVIDERS}>
         {(p) => {
           const config = () => props.config[p.id]
-          const isConfigured = () => config().hasApiKey || Boolean(config().apiKey)
+          const isConfigured = () => config().apiKey === ENCRYPTED_PLACEHOLDER || config().apiKey !== ""
           const isExpanded = () => expanded().has(p.id)
 
           return (
@@ -78,7 +78,6 @@ export function SynatraAiConfigEditorContent(props: {
                       <SensitiveInput
                         type="password"
                         value={config().apiKey}
-                        hasSaved={config().hasApiKey}
                         placeholder={p.placeholder}
                         onChange={(v) => handleProviderChange(p.id, { apiKey: v })}
                         class="font-code"

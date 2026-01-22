@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+export const ENCRYPTED_PLACEHOLDER = "---encrypted-on-server---"
+
 export const ManagedResourceType = ["synatra_ai"] as const
 export type ManagedResourceType = (typeof ManagedResourceType)[number]
 
@@ -240,14 +242,14 @@ export type APIPostgresConfig = {
   port: number
   database: string
   user: string
-  hasPassword: boolean
+  password: string
   ssl: boolean
   sslVerification: "full" | "verify_ca" | "skip_ca"
-  hasCaCertificate: boolean
+  caCertificate: string | null
   caCertificateFilename: string | null
-  hasClientCertificate: boolean
+  clientCertificate: string | null
   clientCertificateFilename: string | null
-  hasClientKey: boolean
+  clientKey: string | null
   clientKeyFilename: string | null
 }
 
@@ -256,19 +258,19 @@ export type APIMysqlConfig = {
   port: number
   database: string
   user: string
-  hasPassword: boolean
+  password: string
   ssl: boolean
   sslVerification: "full" | "verify_ca" | "skip_ca"
-  hasCaCertificate: boolean
+  caCertificate: string | null
   caCertificateFilename: string | null
-  hasClientCertificate: boolean
+  clientCertificate: string | null
   clientCertificateFilename: string | null
-  hasClientKey: boolean
+  clientKey: string | null
   clientKeyFilename: string | null
 }
 
 export type APIStripeConfig = {
-  hasApiKey: boolean
+  apiKey: string
   apiVersion: string
 }
 
@@ -283,7 +285,7 @@ export type APIIntercomConfig = {
 export type APIRestApiConfig = {
   baseUrl: string
   authType: "none" | "api_key" | "bearer" | "basic"
-  hasAuthConfig: boolean
+  authConfig: string
   authLocation?: "header" | "query"
   authName?: string
   headers: Record<string, string>
@@ -291,7 +293,7 @@ export type APIRestApiConfig = {
 }
 
 export type APILlmProviderConfig = {
-  hasApiKey: boolean
+  apiKey: string
   baseUrl: string | null
   enabled: boolean
 }

@@ -1,39 +1,35 @@
 import { Show, For, createSignal } from "solid-js"
 import { X, Plus } from "phosphor-solid-js"
-import type { LlmProvider } from "@synatra/core/types"
+import { ENCRYPTED_PLACEHOLDER, type LlmProvider } from "@synatra/core/types"
 import { Input, IconButton } from "../../../../ui"
 import { theme } from "../../../../app"
 import { PROVIDER_ICONS } from "./constants"
 
-const MASK = "••••••••"
-
 export function SensitiveInput(props: {
   type?: "text" | "password"
-  value: string | undefined
-  hasSaved: boolean
+  value: string
   placeholder?: string
-  onChange: (value: string | undefined) => void
+  onChange: (value: string) => void
   class?: string
 }) {
   const [editing, setEditing] = createSignal(false)
 
-  const displayValue = () => {
-    if (editing()) return props.value ?? ""
-    if (props.value !== undefined) return props.value
-    if (props.hasSaved) return MASK
-    return ""
+  const isEncrypted = () => props.value === ENCRYPTED_PLACEHOLDER
+  const inputType = () => {
+    if (editing()) return "text"
+    if (isEncrypted()) return "text"
+    return props.type ?? "password"
   }
 
-  const handleFocus = () => {
+  const handleFocus = (e: FocusEvent) => {
     setEditing(true)
+    if (isEncrypted()) {
+      ;(e.target as HTMLInputElement).select()
+    }
   }
 
-  const handleBlur = (e: FocusEvent) => {
-    const val = (e.target as HTMLInputElement).value
+  const handleBlur = () => {
     setEditing(false)
-    if (val === "" && props.hasSaved) {
-      props.onChange(undefined)
-    }
   }
 
   const handleInput = (e: InputEvent) => {
@@ -42,8 +38,8 @@ export function SensitiveInput(props: {
 
   return (
     <Input
-      type={props.type ?? "text"}
-      value={displayValue()}
+      type={inputType()}
+      value={props.value}
       placeholder={props.placeholder}
       onFocus={handleFocus}
       onBlur={handleBlur}
