@@ -30,11 +30,11 @@
     "@tsconfig/node22": "^22.0.0",
     "@types/node": "^22.14.1",
     "prettier": "3.6.2",
-    "tsx": "^4.19.4",
-    "turbo": "^2.5.4",
+    "tsx": "^4.21.0",
+    "turbo": "^2.7.5",
     "typescript": "5.9.3"
   },
   "dependencies": {
-    "stripe": "^20.1.2"
+    "stripe": "^20.2.0"
   }
 }
