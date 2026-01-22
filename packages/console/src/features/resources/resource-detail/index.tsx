@@ -106,8 +106,8 @@ function createDefaultAPIConfig(type: string): APIResourceConfig {
       authType: "none",
       authConfig: "",
       authUsername: "",
-      headers: {},
-      queryParams: {},
+      headers: [],
+      queryParams: [],
     } as APIRestApiConfig
   }
   return {
@@ -154,8 +154,8 @@ function createDefaultInputConfig(type: string): InputResourceConfig {
     return {
       baseUrl: "",
       auth: { type: "none" },
-      headers: {},
-      queryParams: {},
+      headers: [],
+      queryParams: [],
     } as InputRestApiConfig
   }
   return {

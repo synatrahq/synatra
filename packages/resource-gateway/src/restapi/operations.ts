@@ -2,6 +2,7 @@ import { z } from "zod"
 import { validateExternalUrl } from "@synatra/util/url"
 import { applyAuth } from "./auth"
 import type { RestApiResource } from "../types"
+import type { KeyValuePair } from "@synatra/core/types"
 
 export const restapiOperation = z.object({
   type: z.literal("restapi"),
@@ -20,6 +21,9 @@ interface OperationResult {
 
 const RESTAPI_TIMEOUT_MS = 30000
 
+const toRecord = (pairs: KeyValuePair[]): Record<string, string> =>
+  Object.fromEntries(pairs.map((p) => [p.key, p.value]))
+
 export async function executeRestApiOperation(
   resource: RestApiResource,
   operation: RestApiOperation,
@@ -32,13 +36,17 @@ export async function executeRestApiOperation(
   const url = new URL(operation.path, baseUrl)
   await validateExternalUrl(url.toString())
 
-  const allQueryParams = { ...(configQueryParams ?? {}), ...authResult.queryParams, ...(operation.queryParams ?? {}) }
+  const allQueryParams = {
+    ...toRecord(configQueryParams ?? []),
+    ...authResult.queryParams,
+    ...(operation.queryParams ?? {}),
+  }
   for (const [key, value] of Object.entries(allQueryParams)) {
     url.searchParams.set(key, value)
   }
 
   const allHeaders: Record<string, string> = {
-    ...(configHeaders ?? {}),
+    ...toRecord(configHeaders ?? []),
     ...authResult.headers,
     ...(operation.headers ?? {}),
   }

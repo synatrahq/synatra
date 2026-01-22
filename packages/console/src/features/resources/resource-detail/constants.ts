@@ -159,8 +159,8 @@ export function createEditorState(
         bearerToken: restConfig.authType === "bearer" ? restConfig.authConfig : "",
         basicUsername: restConfig.authUsername ?? "",
         basicPassword: restConfig.authType === "basic" ? restConfig.authConfig : "",
-        headers: Object.entries(restConfig.headers).map(([key, value]) => ({ key, value })),
-        queryParams: Object.entries(restConfig.queryParams).map(([key, value]) => ({ key, value })),
+        headers: restConfig.headers,
+        queryParams: restConfig.queryParams,
       },
       connectionMode,
       connectorId,
@@ -271,18 +271,18 @@ export function hasEditorChanges(
 
     const headers = rest.headers.filter((h) => h.key)
     const params = rest.queryParams.filter((p) => p.key)
-    const origHeaders = Object.entries(original.headers)
-    const origParams = Object.entries(original.queryParams)
+    const origHeaders = original.headers.filter((h) => h.key)
+    const origParams = original.queryParams.filter((p) => p.key)
     if (headers.length !== origHeaders.length) return true
     if (params.length !== origParams.length) return true
 
     for (let i = 0; i < headers.length; i++) {
-      if (headers[i].key !== origHeaders[i]?.[0]) return true
-      if (headers[i].value !== origHeaders[i]?.[1]) return true
+      if (headers[i].key !== origHeaders[i]?.key) return true
+      if (headers[i].value !== origHeaders[i]?.value) return true
     }
     for (let i = 0; i < params.length; i++) {
-      if (params[i].key !== origParams[i]?.[0]) return true
-      if (params[i].value !== origParams[i]?.[1]) return true
+      if (params[i].key !== origParams[i]?.key) return true
+      if (params[i].value !== origParams[i]?.value) return true
     }
 
     return false
@@ -376,8 +376,8 @@ export function editorStateToInputConfig(type: ResourceType, editState: Editable
 
   if (type === "restapi") {
     const rest = editState.restapi!
-    const headers = Object.fromEntries(rest.headers.filter((h) => h.key).map((h) => [h.key, h.value]))
-    const queryParams = Object.fromEntries(rest.queryParams.filter((p) => p.key).map((p) => [p.key, p.value]))
+    const headers = rest.headers.filter((h) => h.key)
+    const queryParams = rest.queryParams.filter((p) => p.key)
 
     let auth: InputRestApiAuth | undefined
     if (rest.authType === "none") {

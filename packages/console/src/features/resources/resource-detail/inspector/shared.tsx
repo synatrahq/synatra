@@ -1,4 +1,4 @@
-import { Show, For, createSignal } from "solid-js"
+import { Show, Index, createSignal } from "solid-js"
 import { X, Plus } from "phosphor-solid-js"
 import { ENCRYPTED_PLACEHOLDER, type LlmProvider } from "@synatra/core/types"
 import { Input, IconButton } from "../../../../ui"
@@ -72,34 +72,34 @@ export function KeyValueList(props: {
 
   return (
     <div class="flex flex-col gap-1.5">
-      <For each={items()}>
+      <Index each={items()}>
         {(item, index) => (
           <div class="group flex items-center gap-1.5">
             <Input
               type="text"
-              value={item.key}
+              value={item().key}
               placeholder={props.keyPlaceholder ?? "Key"}
-              onInput={(e) => handleChange(index(), "key", e.currentTarget.value)}
+              onInput={(e) => handleChange(index, "key", e.currentTarget.value)}
               class="flex-1 font-code text-xs"
             />
             <Input
               type="text"
-              value={item.value}
+              value={item().value}
               placeholder={props.valuePlaceholder ?? "Value"}
-              onInput={(e) => handleChange(index(), "value", e.currentTarget.value)}
+              onInput={(e) => handleChange(index, "value", e.currentTarget.value)}
               class="flex-1 font-code text-xs"
             />
             <IconButton
               variant="ghost"
               size="sm"
               class="opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={() => handleRemove(index())}
+              onClick={() => handleRemove(index)}
             >
               <X class="h-3.5 w-3.5" />
             </IconButton>
           </div>
         )}
-      </For>
+      </Index>
       <button
         type="button"
         class="flex items-center gap-1 self-start text-xs text-text-muted transition-colors hover:text-text"

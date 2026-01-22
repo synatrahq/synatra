@@ -139,8 +139,8 @@ describe("toAPIResourceConfig", () => {
         baseUrl: "https://api.example.com",
         authType: "bearer",
         authConfig: encrypt(JSON.stringify({ type: "bearer", token: "secret" })),
-        headers: {},
-        queryParams: {},
+        headers: [],
+        queryParams: [],
       }
 
       const result = toAPIResourceConfig("restapi", stored) as APIRestApiConfig
@@ -151,8 +151,9 @@ describe("toAPIResourceConfig", () => {
         authConfig: ENCRYPTED_PLACEHOLDER,
         authLocation: undefined,
         authName: undefined,
-        headers: {},
-        queryParams: {},
+        authUsername: undefined,
+        headers: [],
+        queryParams: [],
       })
     })
 
@@ -161,8 +162,8 @@ describe("toAPIResourceConfig", () => {
         baseUrl: "https://api.example.com",
         authType: "none",
         authConfig: null,
-        headers: {},
-        queryParams: {},
+        headers: [],
+        queryParams: [],
       }
 
       const result = toAPIResourceConfig("restapi", stored) as APIRestApiConfig
@@ -176,8 +177,8 @@ describe("toAPIResourceConfig", () => {
         authConfig: encrypt(JSON.stringify({ type: "api_key", key: "secret" })),
         authLocation: "header",
         authName: "X-API-Key",
-        headers: {},
-        queryParams: {},
+        headers: [],
+        queryParams: [],
       }
 
       const result = toAPIResourceConfig("restapi", stored) as APIRestApiConfig

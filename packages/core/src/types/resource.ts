@@ -2,6 +2,9 @@ import { z } from "zod"
 
 export const ENCRYPTED_PLACEHOLDER = "---encrypted-on-server---"
 
+export const KeyValuePairSchema = z.object({ key: z.string(), value: z.string() })
+export type KeyValuePair = z.infer<typeof KeyValuePairSchema>
+
 export const ManagedResourceType = ["synatra_ai"] as const
 export type ManagedResourceType = (typeof ManagedResourceType)[number]
 
@@ -99,8 +102,8 @@ export type RestApiAuth =
 export type RestApiConfig = {
   baseUrl: string
   auth: RestApiAuth
-  headers: Record<string, string>
-  queryParams: Record<string, string>
+  headers: KeyValuePair[]
+  queryParams: KeyValuePair[]
 }
 
 export type LlmProviderConfig = {
@@ -203,8 +206,8 @@ export const StoredRestApiConfigSchema = z.object({
   authLocation: z.enum(["header", "query"]).optional(),
   authName: z.string().optional(),
   authUsername: z.string().optional(),
-  headers: z.record(z.string(), z.string()),
-  queryParams: z.record(z.string(), z.string()),
+  headers: z.array(KeyValuePairSchema),
+  queryParams: z.array(KeyValuePairSchema),
 })
 export type StoredRestApiConfig = z.infer<typeof StoredRestApiConfigSchema>
 
@@ -290,8 +293,8 @@ export type APIRestApiConfig = {
   authLocation?: "header" | "query"
   authName?: string
   authUsername?: string
-  headers: Record<string, string>
-  queryParams: Record<string, string>
+  headers: KeyValuePair[]
+  queryParams: KeyValuePair[]
 }
 
 export type APILlmProviderConfig = {
@@ -373,8 +376,8 @@ export type InputRestApiAuth =
 export type InputRestApiConfig = {
   baseUrl: string
   auth?: InputRestApiAuth | null
-  headers?: Record<string, string>
-  queryParams?: Record<string, string>
+  headers?: KeyValuePair[]
+  queryParams?: KeyValuePair[]
 }
 
 export type InputLlmProviderConfig = {

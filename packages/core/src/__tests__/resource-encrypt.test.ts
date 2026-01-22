@@ -167,8 +167,8 @@ MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSk
         const inputConfig: InputRestApiConfig = {
           baseUrl: "https://api.example.com",
           auth: { type: "bearer", token: "my-bearer-token" },
-          headers: { "Content-Type": "application/json" },
-          queryParams: {},
+          headers: [{ key: "Content-Type", value: "application/json" }],
+          queryParams: [],
         }
 
         const authJson = JSON.stringify(inputConfig.auth)

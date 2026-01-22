@@ -4,6 +4,7 @@ import {
   type ResourceType,
   type StoredResourceConfig,
   type APIResourceConfig,
+  type KeyValuePair,
 } from "@synatra/core/types"
 
 const toPlaceholder = (v: unknown) => (isEncryptedValue(v) ? ENCRYPTED_PLACEHOLDER : "")
@@ -70,7 +71,7 @@ export function toAPIResourceConfig(type: ResourceType, stored: StoredResourceCo
     authLocation: s.authLocation as "header" | "query" | undefined,
     authName: s.authName as string | undefined,
     authUsername: s.authUsername as string | undefined,
-    headers: (s.headers as Record<string, string>) ?? {},
-    queryParams: (s.queryParams as Record<string, string>) ?? {},
+    headers: (s.headers as KeyValuePair[]) ?? [],
+    queryParams: (s.queryParams as KeyValuePair[]) ?? [],
   }
 }

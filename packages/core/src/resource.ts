@@ -93,8 +93,8 @@ function encryptSensitiveFields(
     const restapiInput = config as InputRestApiConfig
     const existingRestapi = existingConfig as StoredRestApiConfig | undefined
     result.baseUrl = restapiInput.baseUrl
-    result.headers = restapiInput.headers ?? existingRestapi?.headers ?? {}
-    result.queryParams = restapiInput.queryParams ?? existingRestapi?.queryParams ?? {}
+    result.headers = restapiInput.headers ?? existingRestapi?.headers ?? []
+    result.queryParams = restapiInput.queryParams ?? existingRestapi?.queryParams ?? []
     if (restapiInput.auth !== undefined) {
       if (restapiInput.auth === null || restapiInput.auth.type === "none") {
         result.authType = "none"

@@ -10,8 +10,12 @@ import type {
   GitHubConfig,
   IntercomConfig,
   RestApiConfig,
+  KeyValuePair,
 } from "@synatra/core/types"
 import { applyAuth } from "./restapi/auth"
+
+const toRecord = (pairs: KeyValuePair[]): Record<string, string> =>
+  Object.fromEntries(pairs.map((p) => [p.key, p.value]))
 
 const CONNECTION_TIMEOUT_MS = 5000
 const QUERY_TIMEOUT_MS = 15000
@@ -118,11 +122,14 @@ export async function testConnection(
       const url = new URL(restapiConfig.baseUrl)
       await validateExternalUrl(url.toString())
 
-      for (const [key, value] of Object.entries({ ...(restapiConfig.queryParams ?? {}), ...authResult.queryParams })) {
+      for (const [key, value] of Object.entries({
+        ...toRecord(restapiConfig.queryParams ?? []),
+        ...authResult.queryParams,
+      })) {
         url.searchParams.set(key, value)
       }
 
-      const headers: Record<string, string> = { ...(restapiConfig.headers ?? {}), ...authResult.headers }
+      const headers: Record<string, string> = { ...toRecord(restapiConfig.headers ?? []), ...authResult.headers }
 
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), RESTAPI_TIMEOUT_MS)
