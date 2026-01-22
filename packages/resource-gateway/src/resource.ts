@@ -1,7 +1,7 @@
 import pg from "pg"
 import mysql from "mysql2/promise"
 import { getResourceExecutionConfig, getAppAccountGitHubTokenInfo, getAppAccountCredentials } from "@synatra/core"
-import { validateExternalUrl } from "@synatra/util/url"
+import { validateExternalUrl, validateHost } from "@synatra/util/url"
 import type { ResourceType } from "./types"
 import type {
   PostgresConfig,
@@ -30,6 +30,7 @@ export async function testConnection(
   try {
     if (type === "postgres") {
       const pgConfig = configInput as PostgresConfig
+      await validateHost(pgConfig.host)
       const client = new pg.Client({
         host: pgConfig.host,
         port: pgConfig.port,
@@ -50,6 +51,7 @@ export async function testConnection(
 
     if (type === "mysql") {
       const mysqlConfig = configInput as MysqlConfig
+      await validateHost(mysqlConfig.host)
       const connection = await mysql.createConnection({
         host: mysqlConfig.host,
         port: mysqlConfig.port,

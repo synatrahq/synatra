@@ -68,14 +68,42 @@ const BLOCKED_HOSTNAMES = [
   "metadata", // GCP metadata shortname
   "kubernetes.default.svc", // Kubernetes API
   "kubernetes.default", // Kubernetes API
+  "db", // common internal db alias
+  "redis", // common internal redis alias
+  "postgres", // common internal postgres alias
+  "mysql", // common internal mysql alias
 ]
 
+function getRenderServicePrefix(): string | null {
+  const serviceName = process.env.RENDER_SERVICE_NAME
+  if (!serviceName) return null
+  const lastHyphen = serviceName.lastIndexOf("-")
+  if (lastHyphen === -1) return null
+  return serviceName.slice(0, lastHyphen + 1)
+}
+
+function isBlockedHostname(host: string): boolean {
+  if (BLOCKED_HOSTNAMES.includes(host)) return true
+  if (host.endsWith(".internal")) return true
+  if (host.endsWith("-discovery")) return true
+  const renderPrefix = getRenderServicePrefix()
+  if (renderPrefix && host.startsWith(renderPrefix)) return true
+  return false
+}
+
+async function resolveHostAddresses(host: string): Promise<string[]> {
+  const results = await dns.lookup(host, { all: true }).catch(() => [])
+  return results.map((r) => r.address)
+}
+
 export async function validateExternalUrl(urlString: string): Promise<void> {
+  if (process.env.NODE_ENV !== "production") return
+
   const url = new URL(urlString)
   const rawHost = url.hostname.toLowerCase()
   const host = rawHost.startsWith("[") && rawHost.endsWith("]") ? rawHost.slice(1, -1) : rawHost
 
-  if (BLOCKED_HOSTNAMES.includes(host) || host.endsWith(".internal")) {
+  if (isBlockedHostname(host)) {
     throw new SsrfError(`Access to ${host} is not allowed`)
   }
 
@@ -86,9 +114,36 @@ export async function validateExternalUrl(urlString: string): Promise<void> {
     return
   }
 
-  const v4 = await dns.resolve4(host).catch(() => [] as string[])
-  const v6 = await dns.resolve6(host).catch(() => [] as string[])
-  const addresses = [...v4, ...v6]
+  const addresses = await resolveHostAddresses(host)
+
+  if (addresses.length === 0) {
+    throw new SsrfError(`Failed to resolve hostname: ${host}`)
+  }
+
+  for (const ip of addresses) {
+    if (isBlockedIp(ip)) {
+      throw new SsrfError(`Access to internal IP ${ip} (resolved from ${host}) is not allowed`)
+    }
+  }
+}
+
+export async function validateHost(host: string): Promise<void> {
+  if (process.env.NODE_ENV !== "production") return
+
+  const normalized = host.toLowerCase()
+
+  if (isBlockedHostname(normalized)) {
+    throw new SsrfError(`Access to ${host} is not allowed`)
+  }
+
+  if (isIP(host)) {
+    if (isBlockedIp(host)) {
+      throw new SsrfError(`Access to internal IP ${host} is not allowed`)
+    }
+    return
+  }
+
+  const addresses = await resolveHostAddresses(normalized)
 
   if (addresses.length === 0) {
     throw new SsrfError(`Failed to resolve hostname: ${host}`)
