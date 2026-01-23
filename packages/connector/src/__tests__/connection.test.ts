@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test"
-import { connect, disconnect } from "../connection"
+import { connect, disconnect, maskTokens } from "../connection"
 
 type TimerEntry = {
   id: number
@@ -167,4 +167,16 @@ test("rearms pending retry after pause", () => {
   const countBeforePause = MockWebSocket.instances.length
   advance(60000)
   expect(MockWebSocket.instances.length).toBeGreaterThan(countBeforePause)
+})
+
+test("masks tokens in log strings", () => {
+  const input =
+    'wss://example.com/connector/ws?token=conn_123&x=1 Authorization: Bearer secret-token {"token":"json-secret"}'
+  const masked = maskTokens(input)
+  expect(masked).not.toContain("conn_123")
+  expect(masked).not.toContain("secret-token")
+  expect(masked).not.toContain("json-secret")
+  expect(masked).toContain("token=[redacted]")
+  expect(masked).toContain("Bearer [redacted]")
+  expect(masked).toContain('"token":"[redacted]"')
 })

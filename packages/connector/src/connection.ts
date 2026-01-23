@@ -1,3 +1,4 @@
+import { inspect } from "util"
 import { executeQuery, executeIntrospect, executeTest, executeRestApi, executeRestApiTest } from "./executor"
 import type { QueryCommand, IntrospectCommand, TestCommand, RestApiCommand, RestApiTestCommand } from "./executor"
 
@@ -34,6 +35,26 @@ const PENDING_TIMEOUT_MS = 10000
 const PENDING_MAX_ATTEMPTS = 3
 const PENDING_FAIL_RESET_MS = 60000
 const PENDING_PAUSE_MS = 30000
+
+export function maskTokens(text: string): string {
+  return text
+    .replace(/([?&](?:access_token|refresh_token|token)=)[^&\s]+/gi, "$1[redacted]")
+    .replace(/(token=)[^&\s]+/gi, "$1[redacted]")
+    .replace(/(authorization:\s*bearer\s+)[^\s]+/gi, "$1[redacted]")
+    .replace(/(bearer\s+)[^\s]+/gi, "$1[redacted]")
+    .replace(/("token"\s*:\s*")[^"]+("?)/gi, "$1[redacted]$2")
+    .replace(/('token'\s*:\s*')[^']+('?)/gi, "$1[redacted]$2")
+}
+
+function formatLog(value: unknown): string {
+  const raw =
+    typeof value === "string"
+      ? value
+      : value instanceof Error
+        ? (value.stack ?? value.message)
+        : inspect(value, { depth: 5 })
+  return maskTokens(raw)
+}
 
 let ws: WebSocket | null = null
 let pendingWs: WebSocket | null = null
@@ -240,7 +261,7 @@ function attachHandlers(socket: WebSocket): void {
 
   socket.onerror = (error) => {
     if (socket === pendingWs) {
-      console.error("[WS] Pending connection error:", error)
+      console.error(`[WS] Pending connection error: ${formatLog(error)}`)
       pendingWs = null
       if (pendingTimeoutTimer) {
         clearTimeout(pendingTimeoutTimer)
@@ -256,7 +277,7 @@ function attachHandlers(socket: WebSocket): void {
       return
     }
     if (socket !== ws) return
-    console.error("WebSocket error:", error)
+    console.error(`WebSocket error: ${formatLog(error)}`)
   }
 }
 

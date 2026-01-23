@@ -1,4 +1,4 @@
-import { connect, disconnect, isConnected } from "./connection"
+import { connect, disconnect, isConnected, maskTokens } from "./connection"
 import * as pool from "./pool"
 import { config } from "./config"
 
@@ -10,7 +10,7 @@ const PLATFORM = connectorConfig.platform
 
 console.log(`synatra-connector v${VERSION}`)
 console.log(`Platform: ${PLATFORM}`)
-console.log(`Connecting to: ${GATEWAY_URL}`)
+console.log(`Connecting to: ${maskTokens(GATEWAY_URL)}`)
 
 connect({
   gatewayUrl: GATEWAY_URL,
