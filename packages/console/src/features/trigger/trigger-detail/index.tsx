@@ -14,6 +14,7 @@ import {
 import { AppIcon } from "../../../components"
 import { Broadcast, Timer, PencilSimple, Lightning, Cube, Check } from "phosphor-solid-js"
 import { activeOrg, api, apiBaseURL } from "../../../app"
+import { ScheduleMode } from "@synatra/core/types"
 import { AddEnvironmentModal } from "./add-environment-modal"
 import { generateSampleFromSchema, ensureObjectSchema, getAppPayloadSchema } from "./utils"
 import { VersionControl, type TriggerRelease } from "./version-control"
@@ -78,6 +79,7 @@ export type TriggerDetailData = {
   slug: string
   type: "webhook" | "schedule" | "app"
   cron: string | null
+  scheduleMode: ScheduleMode
   timezone: string
   input: Record<string, unknown> | null
   appAccountId: string | null
@@ -105,6 +107,7 @@ export type TriggerWorkingCopy = {
   payloadSchema: unknown
   type: "webhook" | "schedule" | "app"
   cron: string | null
+  scheduleMode: ScheduleMode
   timezone: string
   input: Record<string, unknown> | null
   appAccountId: string | null
@@ -201,6 +204,7 @@ type TriggerConfig = {
   payloadSchema: unknown
   type: "webhook" | "schedule" | "app"
   cron: string | null
+  scheduleMode: ScheduleMode
   timezone: string
   input: Record<string, unknown> | null
   appAccountId: string | null
@@ -242,6 +246,7 @@ export function TriggerDetail(props: TriggerDetailProps) {
   const [promptMode, setPromptMode] = createSignal<PromptMode>("template")
   const [editedScript, setEditedScript] = createSignal("")
   const [editedCron, setEditedCron] = createSignal("")
+  const [editedScheduleMode, setEditedScheduleMode] = createSignal<ScheduleMode>("interval")
   const [editedTimezone, setEditedTimezone] = createSignal("UTC")
   const [editedInput, setEditedInput] = createSignal("")
   const [editedAppAccountId, setEditedAppAccountId] = createSignal<string | null>(null)
@@ -270,6 +275,7 @@ export function TriggerDetail(props: TriggerDetailProps) {
     payloadSchema: editedPayloadSchema(),
     type: editedType(),
     cron: editedCron() || null,
+    scheduleMode: editedScheduleMode(),
     timezone: editedTimezone(),
     input: editedInput().trim() ? JSON.parse(editedInput()) : null,
     appAccountId: editedAppAccountId(),
@@ -363,6 +369,7 @@ export function TriggerDetail(props: TriggerDetailProps) {
       payloadSchema: ensureObjectSchema(trigger.payloadSchema),
       type: trigger.type,
       cron: trigger.cron,
+      scheduleMode: trigger.scheduleMode,
       timezone: trigger.timezone,
       input: trigger.input,
       appAccountId: trigger.appAccountId,
@@ -417,6 +424,7 @@ export function TriggerDetail(props: TriggerDetailProps) {
     setEditedPayloadSchema(ensureObjectSchema(source.payloadSchema))
     setPromptMode(source.mode)
     setEditedCron(source.cron || (source.type === "schedule" ? "0 9 * * *" : ""))
+    setEditedScheduleMode(source.scheduleMode || "interval")
     setEditedTimezone(source.timezone || "UTC")
     setEditedInput(source.input ? JSON.stringify(source.input, null, 2) : "")
     setEditedAppAccountId(source.appAccountId)
@@ -678,9 +686,14 @@ export function TriggerDetail(props: TriggerDetailProps) {
                     markDirty()
                   }}
                   cron={editedCron()}
+                  scheduleMode={editedScheduleMode()}
                   timezone={editedTimezone()}
                   onCronChange={(v) => {
                     setEditedCron(v)
+                    markDirty()
+                  }}
+                  onScheduleModeChange={(v) => {
+                    setEditedScheduleMode(v)
                     markDirty()
                   }}
                   onTimezoneChange={(v) => {

@@ -8,6 +8,13 @@
       "when": 1768758414192,
       "tag": "0000_smooth_brood",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769152337764,
+      "tag": "0001_glorious_jane_foster",
+      "breakpoints": true
     }
   ]
 }

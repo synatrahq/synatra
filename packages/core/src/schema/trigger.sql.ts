@@ -18,11 +18,12 @@ import { EnvironmentTable } from "./environment.sql"
 import { ChannelTable } from "./channel.sql"
 import { UserTable } from "./user.sql"
 import { AppAccountTable } from "./app-account.sql"
-import { TriggerType, VersionMode, TriggerMode } from "../types"
+import { TriggerType, VersionMode, TriggerMode, ScheduleMode } from "../types"
 
 export const triggerTypeEnum = pgEnum("trigger_type", TriggerType)
 export const versionModeEnum = pgEnum("version_mode", VersionMode)
 export const triggerModeEnum = pgEnum("trigger_mode", TriggerMode)
+export const scheduleModeEnum = pgEnum("schedule_mode", ScheduleMode)
 
 export const TriggerTable = pgTable(
   "trigger",
@@ -75,6 +76,7 @@ export const TriggerReleaseTable = pgTable(
     payloadSchema: jsonb("payload_schema"),
     type: triggerTypeEnum("type").notNull(),
     cron: text("cron"),
+    scheduleMode: scheduleModeEnum("schedule_mode").default("interval").notNull(),
     timezone: text("timezone").default("UTC").notNull(),
     input: jsonb("input"),
     appAccountId: uuid("app_account_id").references(() => AppAccountTable.id, { onDelete: "set null" }),
@@ -110,6 +112,7 @@ export const TriggerWorkingCopyTable = pgTable("trigger_working_copy", {
   payloadSchema: jsonb("payload_schema"),
   type: triggerTypeEnum("type").default("webhook").notNull(),
   cron: text("cron"),
+  scheduleMode: scheduleModeEnum("schedule_mode").default("interval").notNull(),
   timezone: text("timezone").default("UTC").notNull(),
   input: jsonb("input"),
   appAccountId: uuid("app_account_id").references(() => AppAccountTable.id, { onDelete: "set null" }),

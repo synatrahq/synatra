@@ -4,6 +4,7 @@ import { SettingsInspector, type AppAccountInfo } from "./inspector/settings-ins
 import { EnvironmentInspector } from "./inspector/environment-inspector"
 import { PromptInspector, type PromptMode, type PromptVersionMode } from "./inspector/prompt-inspector"
 import type { Prompts, Channels } from "../../../app/api"
+import { ScheduleMode } from "@synatra/core/types"
 
 type AgentRelease = {
   id: string
@@ -69,8 +70,10 @@ type InspectorPanelProps = {
   onAgentVersionModeChange: (mode: "current" | "fixed") => void
   onAgentReleaseIdChange: (id: string | null) => void
   onCronChange: (cron: string) => void
+  onScheduleModeChange: (mode: ScheduleMode) => void
   onTimezoneChange: (timezone: string) => void
   cron: string
+  scheduleMode: ScheduleMode
   timezone: string
   onAppAccountChange: (id: string | null) => void
   onAppEventsChange: (events: string[]) => void
@@ -119,8 +122,10 @@ export function InspectorPanel(props: InspectorPanelProps) {
               onAgentVersionModeChange={props.onAgentVersionModeChange}
               onAgentReleaseIdChange={props.onAgentReleaseIdChange}
               cron={props.cron}
+              scheduleMode={props.scheduleMode}
               timezone={props.timezone}
               onCronChange={props.onCronChange}
+              onScheduleModeChange={props.onScheduleModeChange}
               onTimezoneChange={props.onTimezoneChange}
               appAccounts={props.appAccounts}
               selectedAppAccountId={props.selectedAppAccountId}
