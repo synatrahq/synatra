@@ -57,11 +57,24 @@ export async function createSchedule(params: CreateScheduleParams) {
   })
 }
 
-export async function deleteSchedule(scheduleId: string) {
+type DeleteScheduleResult = {
+  deleted: boolean
+  notFound?: boolean
+}
+
+export async function deleteSchedule(scheduleId: string): Promise<DeleteScheduleResult> {
   const client = await getTemporalClient()
   try {
     await client.schedule.getHandle(scheduleId).delete()
-  } catch {}
+    return { deleted: true }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : ""
+    const isNotFound = msg.includes("not found") || msg.includes("NotFound")
+    if (isNotFound) {
+      return { deleted: false, notFound: true }
+    }
+    throw error
+  }
 }
 
 export async function updateSchedule(scheduleId: string, params: CreateScheduleParams) {

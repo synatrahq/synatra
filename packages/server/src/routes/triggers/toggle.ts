@@ -88,6 +88,15 @@ export const toggle = new Hono().post(
           })
         }
       }
+      try {
+        const updated = await toggleTriggerEnvironment({ triggerId: id, environmentId })
+        return c.json(updated)
+      } catch (error) {
+        try {
+          await handle.unpause()
+        } catch {}
+        throw error
+      }
     }
 
     const updated = await toggleTriggerEnvironment({ triggerId: id, environmentId })
