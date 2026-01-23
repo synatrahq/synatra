@@ -41,7 +41,7 @@ export const toggle = new Hono().post(
         throw createError("BadRequestError", { message: "Agent has no published release" })
       }
 
-      const scheduleId = getScheduleId(trigger.id, environmentId)
+      const scheduleId = getScheduleId(env.id)
 
       if (willBeActive) {
         const releaseId =
@@ -87,6 +87,15 @@ export const toggle = new Hono().post(
             message: `Failed to pause schedule: ${msg || "Unknown error"}`,
           })
         }
+      }
+      try {
+        const updated = await toggleTriggerEnvironment({ triggerId: id, environmentId })
+        return c.json(updated)
+      } catch (error) {
+        try {
+          await handle.unpause()
+        } catch {}
+        throw error
       }
     }
 

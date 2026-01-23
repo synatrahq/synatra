@@ -1,7 +1,16 @@
 import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
-import { getTriggerById, updateTriggerEnvironment, UpdateTriggerEnvironmentSchema, getChannelById } from "@synatra/core"
+import {
+  getTriggerById,
+  updateTriggerEnvironment,
+  UpdateTriggerEnvironmentSchema,
+  getChannelById,
+  listTriggerEnvironments,
+  getAgentById,
+  principal,
+} from "@synatra/core"
 import { requirePermission } from "../../../middleware/principal"
+import { getScheduleId, updateSchedule } from "../schedule"
 
 export const update = new Hono().patch(
   "/:id/environments/:environmentId",
@@ -11,9 +20,41 @@ export const update = new Hono().patch(
     const triggerId = c.req.param("id")
     const environmentId = c.req.param("environmentId")
     const body = c.req.valid("json")
-    await getTriggerById(triggerId)
+    const trigger = await getTriggerById(triggerId)
     if (body.channelId) await getChannelById(body.channelId)
     const result = await updateTriggerEnvironment({ triggerId, environmentId, ...body })
+
+    if (body.channelId && trigger.type === "schedule" && trigger.cron && trigger.timezone) {
+      const environments = await listTriggerEnvironments(triggerId)
+      const env = environments.find((e) => e.environmentId === environmentId)
+      if (env?.active) {
+        const agent = await getAgentById(trigger.agentId!)
+        const organizationId = principal.orgId()
+        const agentReleaseId =
+          trigger.agentVersionMode === "fixed"
+            ? (trigger.agentReleaseId ?? agent.currentReleaseId ?? undefined)
+            : undefined
+        const payload = (trigger.input as Record<string, unknown>) ?? {}
+        const subject = (payload.subject as string) || trigger.slug
+
+        await updateSchedule(getScheduleId(env.id), {
+          scheduleId: getScheduleId(env.id),
+          cron: trigger.cron,
+          timezone: trigger.timezone,
+          triggerId,
+          triggerReleaseId: trigger.currentReleaseId ?? undefined,
+          agentId: trigger.agentId!,
+          agentReleaseId,
+          agentVersionMode: trigger.agentVersionMode!,
+          organizationId,
+          environmentId,
+          channelId: body.channelId,
+          subject,
+          payload,
+        })
+      }
+    }
+
     return c.json(result)
   },
 )
