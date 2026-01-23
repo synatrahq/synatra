@@ -37,8 +37,8 @@ export const update = new Hono().patch(
         const payload = (trigger.input as Record<string, unknown>) ?? {}
         const subject = (payload.subject as string) || trigger.slug
 
-        await updateSchedule(getScheduleId(triggerId, environmentId), {
-          scheduleId: getScheduleId(triggerId, environmentId),
+        await updateSchedule(getScheduleId(env.id), {
+          scheduleId: getScheduleId(env.id),
           cron: trigger.cron,
           timezone: trigger.timezone,
           triggerId,

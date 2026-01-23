@@ -41,7 +41,7 @@ export const toggle = new Hono().post(
         throw createError("BadRequestError", { message: "Agent has no published release" })
       }
 
-      const scheduleId = getScheduleId(trigger.id, environmentId)
+      const scheduleId = getScheduleId(env.id)
 
       if (willBeActive) {
         const releaseId =

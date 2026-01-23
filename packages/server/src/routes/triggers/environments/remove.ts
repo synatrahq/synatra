@@ -13,8 +13,8 @@ export const remove = new Hono().post(
     if (trigger.type === "schedule") {
       const environments = await listTriggerEnvironments(id)
       const env = environments.find((e) => e.environmentId === environmentId)
-      if (env?.active) {
-        await deleteSchedule(getScheduleId(id, environmentId))
+      if (env) {
+        await deleteSchedule(getScheduleId(env.id))
       }
     }
 

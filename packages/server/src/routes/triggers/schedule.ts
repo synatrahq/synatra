@@ -3,8 +3,8 @@ import { threadWorkflow } from "@synatra/workflows"
 import { getTemporalClient } from "../../temporal"
 import { config } from "../../config"
 
-export function getScheduleId(triggerId: string, environmentId: string): string {
-  return `schedule-${triggerId}-${environmentId}`
+export function getScheduleId(triggerEnvironmentId: string): string {
+  return `schedule-${triggerEnvironmentId}`
 }
 
 type CreateScheduleParams = {

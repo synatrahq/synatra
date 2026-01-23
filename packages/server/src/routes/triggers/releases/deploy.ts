@@ -39,7 +39,7 @@ export const deploy = new Hono().post(
 
         const failures: { environmentId: string; error: string }[] = []
         for (const env of activeEnvs) {
-          const scheduleId = getScheduleId(triggerId, env.environmentId)
+          const scheduleId = getScheduleId(env.id)
           try {
             await updateSchedule(scheduleId, {
               scheduleId,
