@@ -12,7 +12,7 @@ import {
   ModalFooter,
 } from "../../../ui"
 import { AppIcon } from "../../../components"
-import { Broadcast, Timer, PencilSimple, Lightning, Cube, Check } from "phosphor-solid-js"
+import { Broadcast, Timer, PencilSimple, Lightning, Cube, Check, WarningCircle } from "phosphor-solid-js"
 import { activeOrg, api, apiBaseURL } from "../../../app"
 import { ScheduleMode } from "@synatra/core/types"
 import { AddEnvironmentModal } from "./add-environment-modal"
@@ -255,6 +255,7 @@ export function TriggerDetail(props: TriggerDetailProps) {
   const [isDirty, setIsDirty] = createSignal(false)
   const [lastSavedHash, setLastSavedHash] = createSignal("")
   const [savingName, setSavingName] = createSignal(false)
+  const [deployError, setDeployError] = createSignal<string | null>(null)
   const [selection, setSelection] = createSignal<Selection | null>({ type: "settings" })
 
   let autoSaveTimer: ReturnType<typeof setTimeout> | null = null
@@ -395,9 +396,15 @@ export function TriggerDetail(props: TriggerDetailProps) {
   const handleDeploy = async (data: { bump: "major" | "minor" | "patch"; description: string }) => {
     const trigger = props.trigger
     if (!trigger || !props.onDeploy) return
+    setDeployError(null)
     await saveImmediately()
     if (isDirty() || saveStatus() === "error") return
-    await props.onDeploy(trigger.id, data.bump, data.description)
+    try {
+      await props.onDeploy(trigger.id, data.bump, data.description)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Deploy failed"
+      setDeployError(message)
+    }
   }
 
   const fetchAgentReleases = async (agentId: string) => {
@@ -612,6 +619,12 @@ export function TriggerDetail(props: TriggerDetailProps) {
                 </Show>
                 <Show when={saveStatus() === "error"}>
                   <span class="text-xs text-danger">Save failed</span>
+                </Show>
+                <Show when={deployError()}>
+                  <div class="flex items-center gap-1.5 rounded bg-danger-soft px-2 py-1">
+                    <WarningCircle size={12} weight="fill" class="shrink-0 text-danger" />
+                    <span class="text-xs text-danger">{deployError()}</span>
+                  </div>
                 </Show>
                 <Show when={hasUndeployedChanges()}>
                   <span class="rounded bg-surface-muted px-1.5 py-0.5 text-[10px] font-medium text-text-muted">
