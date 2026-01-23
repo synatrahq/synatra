@@ -231,17 +231,14 @@ export function SettingsInspector(props: SettingsInspectorProps) {
   const [cronDayOfMonth, setCronDayOfMonth] = createSignal("*")
   const [cronMonth, setCronMonth] = createSignal("*")
   const [cronDayOfWeek, setCronDayOfWeek] = createSignal("*")
-  const [prevCron, setPrevCron] = createSignal<string | null>(null)
 
   createEffect(
     on(
-      () => props.cron,
-      (cron) => {
-        if (cron === prevCron()) return
-        setPrevCron(cron)
+      () => [props.cron, props.scheduleMode] as const,
+      ([cron, mode]) => {
         if (!cron) return
 
-        if (props.scheduleMode === "interval") {
+        if (mode === "interval") {
           const parsed = parseCronToInterval(cron)
           if (parsed) {
             setInterval(parsed.interval)
@@ -275,13 +272,17 @@ export function SettingsInspector(props: SettingsInspectorProps) {
       updateCronFromInterval()
       return
     }
-    const parts = props.cron.trim().split(/\s+/)
+    const cron = props.cron || intervalToCron(interval(), minute(), hour(), weekday(), dayOfMonth())
+    const parts = cron.trim().split(/\s+/)
     if (parts.length === 5) {
       setCronMinutes(parts[0])
       setCronHours(parts[1])
       setCronDayOfMonth(parts[2])
       setCronMonth(parts[3])
       setCronDayOfWeek(parts[4])
+      if (!props.cron) {
+        props.onCronChange(cron)
+      }
     }
   }
 

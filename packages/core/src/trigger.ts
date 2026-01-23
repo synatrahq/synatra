@@ -587,11 +587,13 @@ export async function deployTrigger(input: z.input<typeof DeployTriggerSchema>) 
   const working = await withDb((db) =>
     db.select().from(TriggerWorkingCopyTable).where(eq(TriggerWorkingCopyTable.triggerId, data.triggerId)).then(first),
   )
-  if (!working) throw new Error("Working copy not found")
-  if (working.mode === "prompt" && !working.promptId) throw new Error("Prompt mode requires a prompt to be selected")
+  if (!working) throw createError("NotFoundError", { type: "TriggerWorkingCopy", id: data.triggerId })
+  if (working.mode === "prompt" && !working.promptId)
+    throw createError("BadRequestError", { message: "Prompt mode requires a prompt to be selected" })
   if (working.mode === "template" && isBlank(working.template))
-    throw new Error("Template mode requires a non-empty template")
-  if (working.mode === "script" && isBlank(working.script)) throw new Error("Script mode requires a non-empty script")
+    throw createError("BadRequestError", { message: "Template mode requires a non-empty template" })
+  if (working.mode === "script" && isBlank(working.script))
+    throw createError("BadRequestError", { message: "Script mode requires a non-empty script" })
   if (data.version && data.bump) throw new Error("Specify either version or bump, not both")
 
   const userId = principal.userId()

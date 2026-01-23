@@ -294,6 +294,10 @@ export default function TriggersPage() {
     mutationFn: async (data: { triggerId: string } & TriggerDeployInput) => {
       const { triggerId, ...json } = data
       const res = await api.api.triggers[":id"].deploy.$post({ param: { id: triggerId }, json })
+      if (!res.ok) {
+        const err = (await res.json()) as { data?: { message?: string } }
+        throw new Error(err.data?.message ?? "Deploy failed")
+      }
       return res.json()
     },
     onSuccess: (_, variables) => {
