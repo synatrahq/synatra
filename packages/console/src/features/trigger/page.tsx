@@ -163,6 +163,7 @@ export default function TriggersPage() {
           slug: data.slug,
           type: data.type,
           cron: data.cron,
+          scheduleMode: data.scheduleMode ?? "interval",
           timezone: data.timezone,
           input: data.input as Record<string, unknown> | null,
           appAccountId: data.appAccountId ?? null,

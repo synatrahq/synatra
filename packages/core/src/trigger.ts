@@ -12,6 +12,7 @@ import {
   versionModeEnum,
   triggerModeEnum,
   triggerTypeEnum,
+  scheduleModeEnum,
 } from "./schema/trigger.sql"
 import { AgentTable } from "./schema/agent.sql"
 import { AppAccountTable } from "./schema/app-account.sql"
@@ -75,6 +76,7 @@ const releaseColumns = {
   payloadSchema: TriggerReleaseTable.payloadSchema,
   type: TriggerReleaseTable.type,
   cron: TriggerReleaseTable.cron,
+  scheduleMode: TriggerReleaseTable.scheduleMode,
   timezone: TriggerReleaseTable.timezone,
   input: TriggerReleaseTable.input,
   appAccountId: TriggerReleaseTable.appAccountId,
@@ -110,6 +112,7 @@ export const CreateTriggerSchema = z.object({
   payloadSchema: z.unknown().nullable().optional(),
   type: z.enum(triggerTypeEnum.enumValues).default("schedule"),
   cron: z.string().nullable().optional(),
+  scheduleMode: z.enum(scheduleModeEnum.enumValues).default("interval"),
   timezone: z
     .string()
     .refine((tz) => VALID_TIMEZONES.includes(tz), { message: "Invalid timezone" })
@@ -138,6 +141,7 @@ export const SaveTriggerWorkingCopySchema = z.object({
   payloadSchema: z.unknown().nullable().optional(),
   type: z.enum(triggerTypeEnum.enumValues).optional(),
   cron: z.string().nullable().optional(),
+  scheduleMode: z.enum(scheduleModeEnum.enumValues).optional(),
   timezone: z
     .string()
     .refine((tz) => VALID_TIMEZONES.includes(tz), { message: "Invalid timezone" })
@@ -242,6 +246,7 @@ export async function listTriggers(input?: z.input<typeof ListTriggersSchema>) {
         payloadSchema: TriggerReleaseTable.payloadSchema,
         type: TriggerReleaseTable.type,
         cron: TriggerReleaseTable.cron,
+        scheduleMode: TriggerReleaseTable.scheduleMode,
         timezone: TriggerReleaseTable.timezone,
         input: TriggerReleaseTable.input,
         appAccountId: TriggerReleaseTable.appAccountId,
@@ -337,6 +342,7 @@ export async function createTrigger(input: z.input<typeof CreateTriggerSchema>) 
     payloadSchema: normalizeInputSchema(data.payloadSchema),
     type: triggerType,
     cron: data.cron ?? (triggerType === "schedule" ? "0 9 * * *" : null),
+    scheduleMode: data.scheduleMode ?? "interval",
     timezone: data.timezone ?? "UTC",
     input: data.input ?? null,
     appAccountId: data.appAccountId ?? null,
@@ -379,6 +385,7 @@ export async function createTrigger(input: z.input<typeof CreateTriggerSchema>) 
           payloadSchema: config.payloadSchema,
           type: config.type,
           cron: config.cron,
+          scheduleMode: config.scheduleMode,
           timezone: config.timezone,
           input: config.input,
           appAccountId: config.appAccountId,
@@ -402,6 +409,7 @@ export async function createTrigger(input: z.input<typeof CreateTriggerSchema>) 
         payloadSchema: config.payloadSchema,
         type: config.type,
         cron: config.cron,
+        scheduleMode: config.scheduleMode,
         timezone: config.timezone,
         input: config.input,
         appAccountId: config.appAccountId,
@@ -482,6 +490,7 @@ export async function saveTriggerWorkingCopy(input: z.input<typeof SaveTriggerWo
   const payloadSchema = normalizeInputSchema(data.payloadSchema ?? existing?.payloadSchema)
   const type = data.type ?? existing?.type ?? "webhook"
   const cron = data.cron ?? existing?.cron ?? null
+  const scheduleMode = data.scheduleMode ?? existing?.scheduleMode ?? "interval"
   const timezone = data.timezone ?? existing?.timezone ?? "UTC"
   const triggerInput = (data.input ?? existing?.input ?? null) as Record<string, unknown> | null
   const appAccountId = data.appAccountId ?? existing?.appAccountId ?? null
@@ -500,6 +509,7 @@ export async function saveTriggerWorkingCopy(input: z.input<typeof SaveTriggerWo
     payloadSchema,
     type,
     cron,
+    scheduleMode,
     timezone,
     input: triggerInput,
     appAccountId,
@@ -523,6 +533,7 @@ export async function saveTriggerWorkingCopy(input: z.input<typeof SaveTriggerWo
         payloadSchema,
         type,
         cron,
+        scheduleMode,
         timezone,
         input: triggerInput,
         appAccountId,
@@ -544,6 +555,7 @@ export async function saveTriggerWorkingCopy(input: z.input<typeof SaveTriggerWo
           payloadSchema,
           type,
           cron,
+          scheduleMode,
           timezone,
           input: triggerInput,
           appAccountId,
@@ -621,6 +633,7 @@ export async function deployTrigger(input: z.input<typeof DeployTriggerSchema>) 
         payloadSchema: working.payloadSchema,
         type: working.type,
         cron: working.cron,
+        scheduleMode: working.scheduleMode,
         timezone: working.timezone,
         input: working.input,
         appAccountId: working.appAccountId,
@@ -680,6 +693,7 @@ export async function checkoutTrigger(input: z.input<typeof CheckoutTriggerSchem
         payloadSchema: release.payloadSchema,
         type: release.type,
         cron: release.cron,
+        scheduleMode: release.scheduleMode,
         timezone: release.timezone,
         input: release.input,
         appAccountId: release.appAccountId,
@@ -701,6 +715,7 @@ export async function checkoutTrigger(input: z.input<typeof CheckoutTriggerSchem
           payloadSchema: release.payloadSchema,
           type: release.type,
           cron: release.cron,
+          scheduleMode: release.scheduleMode,
           timezone: release.timezone,
           input: release.input,
           appAccountId: release.appAccountId,
@@ -950,6 +965,7 @@ export async function listActiveTriggersByAppAccountAndEvent(
         payloadSchema: TriggerReleaseTable.payloadSchema,
         type: TriggerReleaseTable.type,
         cron: TriggerReleaseTable.cron,
+        scheduleMode: TriggerReleaseTable.scheduleMode,
         timezone: TriggerReleaseTable.timezone,
         input: TriggerReleaseTable.input,
         appAccountId: TriggerReleaseTable.appAccountId,

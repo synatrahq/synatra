@@ -1,4 +1,5 @@
-import { Show, createSignal, createEffect } from "solid-js"
+import { Show, createSignal, createEffect, on } from "solid-js"
+import { ScheduleMode } from "@synatra/core/types"
 import { Broadcast, Timer, Cube, ArrowsClockwise, Terminal, Plus } from "phosphor-solid-js"
 import { FormField, Select, Input, MultiSelect, CollapsibleSection } from "../../../../ui"
 import { AppIcon } from "../../../../components"
@@ -109,7 +110,6 @@ const APP_EVENTS: Record<string, { value: string; label: string }[]> = {
   ],
 }
 
-type ScheduleMode = "interval" | "cron"
 type IntervalType = "minute" | "hour" | "day" | "week" | "month"
 
 function parseCronToInterval(cron: string): {
@@ -207,8 +207,10 @@ type SettingsInspectorProps = {
   onAgentVersionModeChange: (mode: "current" | "fixed") => void
   onAgentReleaseIdChange: (id: string | null) => void
   cron: string
+  scheduleMode: ScheduleMode
   timezone: string
   onCronChange: (cron: string) => void
+  onScheduleModeChange: (mode: ScheduleMode) => void
   onTimezoneChange: (timezone: string) => void
   appAccounts: AppAccountInfo[]
   selectedAppAccountId: string | null
@@ -219,7 +221,6 @@ type SettingsInspectorProps = {
 }
 
 export function SettingsInspector(props: SettingsInspectorProps) {
-  const [scheduleMode, setScheduleMode] = createSignal<ScheduleMode>("interval")
   const [interval, setInterval] = createSignal<IntervalType>("day")
   const [minute, setMinute] = createSignal("0")
   const [hour, setHour] = createSignal("9")
@@ -232,33 +233,36 @@ export function SettingsInspector(props: SettingsInspectorProps) {
   const [cronDayOfWeek, setCronDayOfWeek] = createSignal("*")
   const [prevCron, setPrevCron] = createSignal<string | null>(null)
 
-  createEffect(() => {
-    const cron = props.cron
-    if (cron === prevCron()) return
-    setPrevCron(cron)
-    if (!cron) return
+  createEffect(
+    on(
+      () => props.cron,
+      (cron) => {
+        if (cron === prevCron()) return
+        setPrevCron(cron)
+        if (!cron) return
 
-    const parsed = parseCronToInterval(cron)
-    if (parsed) {
-      setScheduleMode("interval")
-      setInterval(parsed.interval)
-      setMinute(parsed.minute)
-      setHour(parsed.hour)
-      setWeekday(parsed.weekday)
-      setDayOfMonth(parsed.dayOfMonth)
-      return
-    }
-
-    setScheduleMode("cron")
-    const parts = cron.trim().split(/\s+/)
-    if (parts.length === 5) {
-      setCronMinutes(parts[0])
-      setCronHours(parts[1])
-      setCronDayOfMonth(parts[2])
-      setCronMonth(parts[3])
-      setCronDayOfWeek(parts[4])
-    }
-  })
+        if (props.scheduleMode === "interval") {
+          const parsed = parseCronToInterval(cron)
+          if (parsed) {
+            setInterval(parsed.interval)
+            setMinute(parsed.minute)
+            setHour(parsed.hour)
+            setWeekday(parsed.weekday)
+            setDayOfMonth(parsed.dayOfMonth)
+          }
+        } else {
+          const parts = cron.trim().split(/\s+/)
+          if (parts.length === 5) {
+            setCronMinutes(parts[0])
+            setCronHours(parts[1])
+            setCronDayOfMonth(parts[2])
+            setCronMonth(parts[3])
+            setCronDayOfWeek(parts[4])
+          }
+        }
+      },
+    ),
+  )
 
   const updateCronFromInterval = () => {
     const cron = intervalToCron(interval(), minute(), hour(), weekday(), dayOfMonth())
@@ -266,7 +270,7 @@ export function SettingsInspector(props: SettingsInspectorProps) {
   }
 
   const handleScheduleModeChange = (newMode: ScheduleMode) => {
-    setScheduleMode(newMode)
+    props.onScheduleModeChange(newMode)
     if (newMode === "interval") {
       updateCronFromInterval()
       return
@@ -410,8 +414,8 @@ export function SettingsInspector(props: SettingsInspectorProps) {
                   type="button"
                   class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
                   classList={{
-                    "border-accent bg-accent/5 text-text": scheduleMode() === "interval",
-                    "border-border text-text-muted hover:border-border-strong": scheduleMode() !== "interval",
+                    "border-accent bg-accent/5 text-text": props.scheduleMode === "interval",
+                    "border-border text-text-muted hover:border-border-strong": props.scheduleMode !== "interval",
                   }}
                   onClick={() => handleScheduleModeChange("interval")}
                 >
@@ -422,8 +426,8 @@ export function SettingsInspector(props: SettingsInspectorProps) {
                   type="button"
                   class="flex items-center gap-1.5 rounded border px-2 py-1 text-xs transition-colors"
                   classList={{
-                    "border-accent bg-accent/5 text-text": scheduleMode() === "cron",
-                    "border-border text-text-muted hover:border-border-strong": scheduleMode() !== "cron",
+                    "border-accent bg-accent/5 text-text": props.scheduleMode === "cron",
+                    "border-border text-text-muted hover:border-border-strong": props.scheduleMode !== "cron",
                   }}
                   onClick={() => handleScheduleModeChange("cron")}
                 >
@@ -440,7 +444,7 @@ export function SettingsInspector(props: SettingsInspectorProps) {
                 class="h-7 text-xs"
               />
             </FormField>
-            <Show when={scheduleMode() === "interval"}>
+            <Show when={props.scheduleMode === "interval"}>
               <FormField horizontal labelWidth="5rem" label="Run every" align="start">
                 <div class="flex flex-wrap items-center gap-2">
                   <Select
@@ -481,7 +485,7 @@ export function SettingsInspector(props: SettingsInspectorProps) {
                 </div>
               </FormField>
             </Show>
-            <Show when={scheduleMode() === "cron"}>
+            <Show when={props.scheduleMode === "cron"}>
               <FormField horizontal labelWidth="5rem" label="Minutes">
                 <Input
                   type="text"
