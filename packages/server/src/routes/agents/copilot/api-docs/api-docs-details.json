@@ -2618,9 +2618,7 @@
       },
       "responseExample": {
         "total_count": 0,
-        "repositories": [
-          {}
-        ],
+        "repositories": [],
         "repository_selection": "selected"
       }
     },
@@ -4358,6 +4356,16 @@
         "enable_static_ip": {
           "type": "boolean",
           "description": "Whether this runner should be updated with a static public IP. Note limit on account. To list limits on account, use `GET actions/hosted-runners/limits`",
+          "required": false
+        },
+        "size": {
+          "type": "string",
+          "description": "The machine size of the runner. To list available sizes, use `GET actions/hosted-runners/machine-sizes`",
+          "required": false
+        },
+        "image_id": {
+          "type": "string",
+          "description": "The unique identifier of the runner image. To list all available images, use `GET /actions/hosted-runners/images/github-owned` or `GET /actions/hosted-runners/images/partner`.",
           "required": false
         },
         "image_version": {
@@ -13093,7 +13101,7 @@
         },
         "network_settings_ids": {
           "type": "string[]",
-          "description": "The identifier of the network settings to use for the network configuration. Exactly one network settings must be specified.",
+          "description": "A list of identifiers of the network settings resources to use for the network configuration. Exactly one resource identifier must be specified in the list.",
           "required": true
         }
       },
@@ -13160,7 +13168,7 @@
         },
         "network_settings_ids": {
           "type": "string[]",
-          "description": "The identifier of the network settings to use for the network configuration. Exactly one network settings must be specified.",
+          "description": "A list of identifiers of the network settings resources to use for the network configuration. Exactly one resource identifier must be specified in the list.",
           "required": false
         }
       },
@@ -33307,9 +33315,7 @@
       "responseExample": {
         "total_count": 0,
         "repository_selection": "string",
-        "repositories": [
-          {}
-        ]
+        "repositories": []
       }
     },
     {
@@ -39186,7 +39192,7 @@
         },
         "source": {
           "type": "string",
-          "description": "Only returns the original transaction.",
+          "description": "Only returns transactions associated with the given object.",
           "required": false
         },
         "starting_after": {
@@ -39196,7 +39202,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Only returns transactions of the given type. One of: `adjustment`, `advance`, `advance_funding`, `anticipation_repayment`, `application_fee`, `application_fee_refund`, `charge`, `climate_order_purchase`, `climate_order_refund`, `connect_collection_transfer`, `contribution`, `issuing_authorization_hold`, `issuing_authorization_release`, `issuing_dispute`, `issuing_transaction`, `obligation_outbound`, `obligation_reversal_inbound`, `payment`, `payment_failure_refund`, `payment_network_reserve_hold`, `payment_network_reserve_release`, `payment_refund`, `payment_reversal`, `payment_unreconciled`, `payout`, `payout_cancel`, `payout_failure`, `payout_minimum_balance_hold`, `payout_minimum_balance_release`, `refund`, `refund_failure`, `reserve_transaction`, `reserved_funds`, `stripe_fee`, `stripe_fx_fee`, `stripe_balance_payment_debit`, `stripe_balance_payment_debit_reversal`, `tax_fee`, `topup`, `topup_reversal`, `transfer`, `transfer_cancel`, `transfer_failure`, or `transfer_refund`.",
+          "description": "Only returns transactions of the given type. One of: `adjustment`, `advance`, `advance_funding`, `anticipation_repayment`, `application_fee`, `application_fee_refund`, `charge`, `climate_order_purchase`, `climate_order_refund`, `connect_collection_transfer`, `contribution`, `issuing_authorization_hold`, `issuing_authorization_release`, `issuing_dispute`, `issuing_transaction`, `obligation_outbound`, `obligation_reversal_inbound`, `payment`, `payment_failure_refund`, `payment_network_reserve_hold`, `payment_network_reserve_release`, `payment_refund`, `payment_reversal`, `payment_unreconciled`, `payout`, `payout_cancel`, `payout_failure`, `payout_minimum_balance_hold`, `payout_minimum_balance_release`, `refund`, `refund_failure`, `reserve_transaction`, `reserved_funds`, `reserve_hold`, `reserve_release`, `stripe_fee`, `stripe_fx_fee`, `stripe_balance_payment_debit`, `stripe_balance_payment_debit_reversal`, `tax_fee`, `topup`, `topup_reversal`, `transfer`, `transfer_cancel`, `transfer_failure`, or `transfer_refund`.",
           "required": false
         }
       },
@@ -39312,7 +39318,7 @@
         },
         "source": {
           "type": "string",
-          "description": "Only returns the original transaction.",
+          "description": "Only returns transactions associated with the given object.",
           "required": false
         },
         "starting_after": {
@@ -39322,7 +39328,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Only returns transactions of the given type. One of: `adjustment`, `advance`, `advance_funding`, `anticipation_repayment`, `application_fee`, `application_fee_refund`, `charge`, `climate_order_purchase`, `climate_order_refund`, `connect_collection_transfer`, `contribution`, `issuing_authorization_hold`, `issuing_authorization_release`, `issuing_dispute`, `issuing_transaction`, `obligation_outbound`, `obligation_reversal_inbound`, `payment`, `payment_failure_refund`, `payment_network_reserve_hold`, `payment_network_reserve_release`, `payment_refund`, `payment_reversal`, `payment_unreconciled`, `payout`, `payout_cancel`, `payout_failure`, `payout_minimum_balance_hold`, `payout_minimum_balance_release`, `refund`, `refund_failure`, `reserve_transaction`, `reserved_funds`, `stripe_fee`, `stripe_fx_fee`, `stripe_balance_payment_debit`, `stripe_balance_payment_debit_reversal`, `tax_fee`, `topup`, `topup_reversal`, `transfer`, `transfer_cancel`, `transfer_failure`, or `transfer_refund`.",
+          "description": "Only returns transactions of the given type. One of: `adjustment`, `advance`, `advance_funding`, `anticipation_repayment`, `application_fee`, `application_fee_refund`, `charge`, `climate_order_purchase`, `climate_order_refund`, `connect_collection_transfer`, `contribution`, `issuing_authorization_hold`, `issuing_authorization_release`, `issuing_dispute`, `issuing_transaction`, `obligation_outbound`, `obligation_reversal_inbound`, `payment`, `payment_failure_refund`, `payment_network_reserve_hold`, `payment_network_reserve_release`, `payment_refund`, `payment_reversal`, `payment_unreconciled`, `payout`, `payout_cancel`, `payout_failure`, `payout_minimum_balance_hold`, `payout_minimum_balance_release`, `refund`, `refund_failure`, `reserve_transaction`, `reserved_funds`, `reserve_hold`, `reserve_release`, `stripe_fee`, `stripe_fx_fee`, `stripe_balance_payment_debit`, `stripe_balance_payment_debit_reversal`, `tax_fee`, `topup`, `topup_reversal`, `transfer`, `transfer_cancel`, `transfer_failure`, or `transfer_refund`.",
           "required": false
         }
       },
@@ -41405,7 +41411,7 @@
         },
         "after_expiration": {
           "type": "object",
-          "description": "Configure actions after a Checkout Session has expired.",
+          "description": "Configure actions after a Checkout Session has expired. You can't set this parameter if `ui_mode` is `custom`.",
           "required": false
         },
         "allow_promotion_codes": {
@@ -41450,12 +41456,12 @@
         },
         "custom_fields": {
           "type": "object[]",
-          "description": "Collect additional information from your customer using custom fields. Up to 3 fields are supported.",
+          "description": "Collect additional information from your customer using custom fields. Up to 3 fields are supported. You can't set this parameter if `ui_mode` is `custom`.",
           "required": false
         },
         "custom_text": {
           "type": "object",
-          "description": "Display additional text for your customers using custom text.",
+          "description": "Display additional text for your customers using custom text. You can't set this parameter if `ui_mode` is `custom`.",
           "required": false
         },
         "customer": {
@@ -41530,17 +41536,17 @@
         },
         "name_collection": {
           "type": "object",
-          "description": "Controls name collection settings for the session.\n\nYou can configure Checkout to collect your customers' business names, individual names, or both. Each name field can be either required or optional.\n\nIf a [Customer](https://docs.stripe.com/api/customers) is created or provided, the names can be saved to the Customer object as well.",
+          "description": "Controls name collection settings for the session.\n\nYou can configure Checkout to collect your customers' business names, individual names, or both. Each name field can be either required or optional.\n\nIf a [Customer](https://docs.stripe.com/api/customers) is created or provided, the names can be saved to the Customer object as well.\n\nYou can't set this parameter if `ui_mode` is `custom`.",
           "required": false
         },
         "optional_items": {
           "type": "object[]",
-          "description": "A list of optional items the customer can add to their order at checkout. Use this parameter to pass one-time or recurring [Prices](https://docs.stripe.com/api/prices).\n\nThere is a maximum of 10 optional items allowed on a Checkout Session, and the existing limits on the number of line items allowed on a Checkout Session apply to the combined number of line items and optional items.\n\nFor `payment` mode, there is a maximum of 100 combined line items and optional items, however it is recommended to consolidate items if there are more than a few dozen.\n\nFor `subscription` mode, there is a maximum of 20 line items and optional items with recurring Prices and 20 line items and optional items with one-time Prices.",
+          "description": "A list of optional items the customer can add to their order at checkout. Use this parameter to pass one-time or recurring [Prices](https://docs.stripe.com/api/prices).\n\nThere is a maximum of 10 optional items allowed on a Checkout Session, and the existing limits on the number of line items allowed on a Checkout Session apply to the combined number of line items and optional items.\n\nFor `payment` mode, there is a maximum of 100 combined line items and optional items, however it is recommended to consolidate items if there are more than a few dozen.\n\nFor `subscription` mode, there is a maximum of 20 line items and optional items with recurring Prices and 20 line items and optional items with one-time Prices.\n\nYou can't set this parameter if `ui_mode` is `custom`.",
           "required": false
         },
         "origin_context": {
           "type": "\"mobile_app\" | \"web\"",
-          "description": "Where the user is coming from. This informs the optimizations that are applied to the session.",
+          "description": "Where the user is coming from. This informs the optimizations that are applied to the session. You can't set this parameter if `ui_mode` is `custom`.",
           "required": false
         },
         "payment_intent_data": {
@@ -41615,7 +41621,7 @@
         },
         "submit_type": {
           "type": "\"auto\" | \"book\" | \"donate\" | \"pay\" | \"subscribe\"",
-          "description": "Describes the type of transaction being performed by Checkout in order\nto customize relevant text on the page, such as the submit button.\n `submit_type` can only be specified on Checkout Sessions in\n`payment` or `subscription` mode. If blank or `auto`, `pay` is used.",
+          "description": "Describes the type of transaction being performed by Checkout in order\nto customize relevant text on the page, such as the submit button.\n `submit_type` can only be specified on Checkout Sessions in\n`payment` or `subscription` mode. If blank or `auto`, `pay` is used.\nYou can't set this parameter if `ui_mode` is `custom`.",
           "required": false
         },
         "subscription_data": {
@@ -42353,7 +42359,7 @@
         },
         "redeem_by": {
           "type": "number",
-          "description": "Unix timestamp specifying the last time at which the coupon can be redeemed. After the redeem_by date, the coupon can no longer be applied to new customers.",
+          "description": "Unix timestamp specifying the last time at which the coupon can be redeemed (cannot be set to more than 5 years in the future). After the redeem_by date, the coupon can no longer be applied to new customers.",
           "required": false
         }
       },
@@ -45268,8 +45274,8 @@
           "required": false
         },
         "type": {
-          "type": "\"ad_nrt\" | \"ae_trn\" | \"al_tin\" | \"am_tin\" | \"ao_tin\" | \"ar_cuit\" | \"au_abn\" | \"au_arn\" | \"aw_tin\" | \"az_tin\" | \"ba_tin\" | \"bb_tin\" | \"bd_bin\" | \"bf_ifu\" | \"bg_uic\" | \"bh_vat\" | \"bj_ifu\" | \"bo_tin\" | \"br_cnpj\" | \"br_cpf\" | \"bs_tin\" | \"by_tin\" | \"ca_bn\" | \"ca_gst_hst\" | \"ca_pst_bc\" | \"ca_pst_mb\" | \"ca_pst_sk\" | \"ca_qst\" | \"cd_nif\" | \"ch_uid\" | \"ch_vat\" | \"cl_tin\" | \"cm_niu\" | \"cn_tin\" | \"co_nit\" | \"cr_tin\" | \"cv_nif\" | \"de_stn\" | \"do_rcn\" | \"ec_ruc\" | \"eg_tin\" | \"es_cif\" | \"et_tin\" | \"eu_oss_vat\" | \"eu_vat\" | \"gb_vat\" | \"ge_vat\" | \"gn_nif\" | \"hk_br\" | \"hr_oib\" | \"hu_tin\" | \"id_npwp\" | \"il_vat\" | \"in_gst\" | \"is_vat\" | \"jp_cn\" | \"jp_rn\" | \"jp_trn\" | \"ke_pin\" | \"kg_tin\" | \"kh_tin\" | \"kr_brn\" | \"kz_bin\" | \"la_tin\" | \"li_uid\" | \"li_vat\" | \"ma_vat\" | \"md_vat\" | \"me_pib\" | \"mk_vat\" | \"mr_nif\" | \"mx_rfc\" | \"my_frp\" | \"my_itn\" | \"my_sst\" | \"ng_tin\" | \"no_vat\" | \"no_voec\" | \"np_pan\" | \"nz_gst\" | \"om_vat\" | \"pe_ruc\" | \"ph_tin\" | \"ro_tin\" | \"rs_pib\" | \"ru_inn\" | \"ru_kpp\" | \"sa_vat\" | \"sg_gst\" | \"sg_uen\" | \"si_tin\" | \"sn_ninea\" | \"sr_fin\" | \"sv_nit\" | \"th_vat\" | \"tj_tin\" | \"tr_tin\" | \"tw_vat\" | \"tz_vat\" | \"ua_vat\" | \"ug_tin\" | \"us_ein\" | \"uy_ruc\" | \"uz_tin\" | \"uz_vat\" | \"ve_rif\" | \"vn_tin\" | \"za_vat\" | \"zm_tin\" | \"zw_tin\"",
-          "description": "Type of the tax ID, one of `ad_nrt`, `ae_trn`, `al_tin`, `am_tin`, `ao_tin`, `ar_cuit`, `au_abn`, `au_arn`, `aw_tin`, `az_tin`, `ba_tin`, `bb_tin`, `bd_bin`, `bf_ifu`, `bg_uic`, `bh_vat`, `bj_ifu`, `bo_tin`, `br_cnpj`, `br_cpf`, `bs_tin`, `by_tin`, `ca_bn`, `ca_gst_hst`, `ca_pst_bc`, `ca_pst_mb`, `ca_pst_sk`, `ca_qst`, `cd_nif`, `ch_uid`, `ch_vat`, `cl_tin`, `cm_niu`, `cn_tin`, `co_nit`, `cr_tin`, `cv_nif`, `de_stn`, `do_rcn`, `ec_ruc`, `eg_tin`, `es_cif`, `et_tin`, `eu_oss_vat`, `eu_vat`, `gb_vat`, `ge_vat`, `gn_nif`, `hk_br`, `hr_oib`, `hu_tin`, `id_npwp`, `il_vat`, `in_gst`, `is_vat`, `jp_cn`, `jp_rn`, `jp_trn`, `ke_pin`, `kg_tin`, `kh_tin`, `kr_brn`, `kz_bin`, `la_tin`, `li_uid`, `li_vat`, `ma_vat`, `md_vat`, `me_pib`, `mk_vat`, `mr_nif`, `mx_rfc`, `my_frp`, `my_itn`, `my_sst`, `ng_tin`, `no_vat`, `no_voec`, `np_pan`, `nz_gst`, `om_vat`, `pe_ruc`, `ph_tin`, `ro_tin`, `rs_pib`, `ru_inn`, `ru_kpp`, `sa_vat`, `sg_gst`, `sg_uen`, `si_tin`, `sn_ninea`, `sr_fin`, `sv_nit`, `th_vat`, `tj_tin`, `tr_tin`, `tw_vat`, `tz_vat`, `ua_vat`, `ug_tin`, `us_ein`, `uy_ruc`, `uz_tin`, `uz_vat`, `ve_rif`, `vn_tin`, `za_vat`, `zm_tin`, or `zw_tin`",
+          "type": "\"ad_nrt\" | \"ae_trn\" | \"al_tin\" | \"am_tin\" | \"ao_tin\" | \"ar_cuit\" | \"au_abn\" | \"au_arn\" | \"aw_tin\" | \"az_tin\" | \"ba_tin\" | \"bb_tin\" | \"bd_bin\" | \"bf_ifu\" | \"bg_uic\" | \"bh_vat\" | \"bj_ifu\" | \"bo_tin\" | \"br_cnpj\" | \"br_cpf\" | \"bs_tin\" | \"by_tin\" | \"ca_bn\" | \"ca_gst_hst\" | \"ca_pst_bc\" | \"ca_pst_mb\" | \"ca_pst_sk\" | \"ca_qst\" | \"cd_nif\" | \"ch_uid\" | \"ch_vat\" | \"cl_tin\" | \"cm_niu\" | \"cn_tin\" | \"co_nit\" | \"cr_tin\" | \"cv_nif\" | \"de_stn\" | \"do_rcn\" | \"ec_ruc\" | \"eg_tin\" | \"es_cif\" | \"et_tin\" | \"eu_oss_vat\" | \"eu_vat\" | \"gb_vat\" | \"ge_vat\" | \"gn_nif\" | \"hk_br\" | \"hr_oib\" | \"hu_tin\" | \"id_npwp\" | \"il_vat\" | \"in_gst\" | \"is_vat\" | \"jp_cn\" | \"jp_rn\" | \"jp_trn\" | \"ke_pin\" | \"kg_tin\" | \"kh_tin\" | \"kr_brn\" | \"kz_bin\" | \"la_tin\" | \"li_uid\" | \"li_vat\" | \"ma_vat\" | \"md_vat\" | \"me_pib\" | \"mk_vat\" | \"mr_nif\" | \"mx_rfc\" | \"my_frp\" | \"my_itn\" | \"my_sst\" | \"ng_tin\" | \"no_vat\" | \"no_voec\" | \"np_pan\" | \"nz_gst\" | \"om_vat\" | \"pe_ruc\" | \"ph_tin\" | \"pl_nip\" | \"ro_tin\" | \"rs_pib\" | \"ru_inn\" | \"ru_kpp\" | \"sa_vat\" | \"sg_gst\" | \"sg_uen\" | \"si_tin\" | \"sn_ninea\" | \"sr_fin\" | \"sv_nit\" | \"th_vat\" | \"tj_tin\" | \"tr_tin\" | \"tw_vat\" | \"tz_vat\" | \"ua_vat\" | \"ug_tin\" | \"us_ein\" | \"uy_ruc\" | \"uz_tin\" | \"uz_vat\" | \"ve_rif\" | \"vn_tin\" | \"za_vat\" | \"zm_tin\" | \"zw_tin\"",
+          "description": "Type of the tax ID, one of `ad_nrt`, `ae_trn`, `al_tin`, `am_tin`, `ao_tin`, `ar_cuit`, `au_abn`, `au_arn`, `aw_tin`, `az_tin`, `ba_tin`, `bb_tin`, `bd_bin`, `bf_ifu`, `bg_uic`, `bh_vat`, `bj_ifu`, `bo_tin`, `br_cnpj`, `br_cpf`, `bs_tin`, `by_tin`, `ca_bn`, `ca_gst_hst`, `ca_pst_bc`, `ca_pst_mb`, `ca_pst_sk`, `ca_qst`, `cd_nif`, `ch_uid`, `ch_vat`, `cl_tin`, `cm_niu`, `cn_tin`, `co_nit`, `cr_tin`, `cv_nif`, `de_stn`, `do_rcn`, `ec_ruc`, `eg_tin`, `es_cif`, `et_tin`, `eu_oss_vat`, `eu_vat`, `gb_vat`, `ge_vat`, `gn_nif`, `hk_br`, `hr_oib`, `hu_tin`, `id_npwp`, `il_vat`, `in_gst`, `is_vat`, `jp_cn`, `jp_rn`, `jp_trn`, `ke_pin`, `kg_tin`, `kh_tin`, `kr_brn`, `kz_bin`, `la_tin`, `li_uid`, `li_vat`, `ma_vat`, `md_vat`, `me_pib`, `mk_vat`, `mr_nif`, `mx_rfc`, `my_frp`, `my_itn`, `my_sst`, `ng_tin`, `no_vat`, `no_voec`, `np_pan`, `nz_gst`, `om_vat`, `pe_ruc`, `ph_tin`, `pl_nip`, `ro_tin`, `rs_pib`, `ru_inn`, `ru_kpp`, `sa_vat`, `sg_gst`, `sg_uen`, `si_tin`, `sn_ninea`, `sr_fin`, `sv_nit`, `th_vat`, `tj_tin`, `tr_tin`, `tw_vat`, `tz_vat`, `ua_vat`, `ug_tin`, `us_ein`, `uy_ruc`, `uz_tin`, `uz_vat`, `ve_rif`, `vn_tin`, `za_vat`, `zm_tin`, or `zw_tin`",
           "required": true
         },
         "value": {
@@ -51744,12 +51750,12 @@
         },
         "custom_fields": {
           "type": "object[]",
-          "description": "Collect additional information from your customer using custom fields. Up to 3 fields are supported.",
+          "description": "Collect additional information from your customer using custom fields. Up to 3 fields are supported. You can't set this parameter if `ui_mode` is `custom`.",
           "required": false
         },
         "custom_text": {
           "type": "object",
-          "description": "Display additional text for your customers using custom text.",
+          "description": "Display additional text for your customers using custom text. You can't set this parameter if `ui_mode` is `custom`.",
           "required": false
         },
         "customer_creation": {
@@ -51938,12 +51944,12 @@
         },
         "custom_fields": {
           "type": "object",
-          "description": "Collect additional information from your customer using custom fields. Up to 3 fields are supported.",
+          "description": "Collect additional information from your customer using custom fields. Up to 3 fields are supported. You can't set this parameter if `ui_mode` is `custom`.",
           "required": false
         },
         "custom_text": {
           "type": "object",
-          "description": "Display additional text for your customers using custom text.",
+          "description": "Display additional text for your customers using custom text. You can't set this parameter if `ui_mode` is `custom`.",
           "required": false
         },
         "customer_creation": {
@@ -52238,7 +52244,7 @@
         },
         "fr_meal_voucher_conecs": {
           "type": "object",
-          "description": "Meal vouchers in France, or “titres-restaurant”, is a local benefits program commonly offered by employers for their employees to purchase prepared food and beverages on working days. Check this [page](https://docs.stripe.com/payments/benefits/fr-meal-vouchers) for more details.",
+          "description": "Meal vouchers in France, or “titres-restaurant”, is a local benefits program commonly offered by employers for their employees to purchase prepared food and beverages on working days. Check this [page](https://docs.stripe.com/payments/meal-vouchers/fr-meal-vouchers) for more details.",
           "required": false
         },
         "giropay": {
@@ -52617,7 +52623,7 @@
         },
         "fr_meal_voucher_conecs": {
           "type": "object",
-          "description": "Meal vouchers in France, or “titres-restaurant”, is a local benefits program commonly offered by employers for their employees to purchase prepared food and beverages on working days. Check this [page](https://docs.stripe.com/payments/benefits/fr-meal-vouchers) for more details.",
+          "description": "Meal vouchers in France, or “titres-restaurant”, is a local benefits program commonly offered by employers for their employees to purchase prepared food and beverages on working days. Check this [page](https://docs.stripe.com/payments/meal-vouchers/fr-meal-vouchers) for more details.",
           "required": false
         },
         "giropay": {
@@ -56237,6 +56243,59 @@
         "livemode": true,
         "object": "radar.early_fraud_warning",
         "payment_intent": "string"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/v1/radar/payment_evaluations",
+      "bodyParams": {
+        "client_device_metadata_details": {
+          "type": "object",
+          "description": "Details about the Client Device Metadata to associate with the payment evaluation.",
+          "required": false
+        },
+        "customer_details": {
+          "type": "object",
+          "description": "Details about the customer associated with the payment evaluation.",
+          "required": true
+        },
+        "expand": {
+          "type": "string[]",
+          "description": "Specifies which fields in the response should be expanded.",
+          "required": false
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Set of [key-value pairs](https://docs.stripe.com/api/metadata) that you can attach to an object. This can be useful for storing additional information about the object in a structured format. Individual keys can be unset by posting an empty value to them. All keys can be unset by posting an empty value to `metadata`.",
+          "required": false
+        },
+        "payment_details": {
+          "type": "object",
+          "description": "Details about the payment.",
+          "required": true
+        }
+      },
+      "responseExample": {
+        "client_device_metadata_details": {
+          "radar_session": "string"
+        },
+        "created_at": 0,
+        "customer_details": {
+          "customer": "string",
+          "customer_account": "string",
+          "email": "string",
+          "name": "string",
+          "phone": "string"
+        },
+        "events": [
+          {}
+        ],
+        "id": "string",
+        "insights": {
+          "evaluated_at": 0
+        },
+        "livemode": true,
+        "metadata": {}
       }
     },
     {
@@ -60259,8 +60318,8 @@
           "required": false
         },
         "type": {
-          "type": "\"ad_nrt\" | \"ae_trn\" | \"al_tin\" | \"am_tin\" | \"ao_tin\" | \"ar_cuit\" | \"au_abn\" | \"au_arn\" | \"aw_tin\" | \"az_tin\" | \"ba_tin\" | \"bb_tin\" | \"bd_bin\" | \"bf_ifu\" | \"bg_uic\" | \"bh_vat\" | \"bj_ifu\" | \"bo_tin\" | \"br_cnpj\" | \"br_cpf\" | \"bs_tin\" | \"by_tin\" | \"ca_bn\" | \"ca_gst_hst\" | \"ca_pst_bc\" | \"ca_pst_mb\" | \"ca_pst_sk\" | \"ca_qst\" | \"cd_nif\" | \"ch_uid\" | \"ch_vat\" | \"cl_tin\" | \"cm_niu\" | \"cn_tin\" | \"co_nit\" | \"cr_tin\" | \"cv_nif\" | \"de_stn\" | \"do_rcn\" | \"ec_ruc\" | \"eg_tin\" | \"es_cif\" | \"et_tin\" | \"eu_oss_vat\" | \"eu_vat\" | \"gb_vat\" | \"ge_vat\" | \"gn_nif\" | \"hk_br\" | \"hr_oib\" | \"hu_tin\" | \"id_npwp\" | \"il_vat\" | \"in_gst\" | \"is_vat\" | \"jp_cn\" | \"jp_rn\" | \"jp_trn\" | \"ke_pin\" | \"kg_tin\" | \"kh_tin\" | \"kr_brn\" | \"kz_bin\" | \"la_tin\" | \"li_uid\" | \"li_vat\" | \"ma_vat\" | \"md_vat\" | \"me_pib\" | \"mk_vat\" | \"mr_nif\" | \"mx_rfc\" | \"my_frp\" | \"my_itn\" | \"my_sst\" | \"ng_tin\" | \"no_vat\" | \"no_voec\" | \"np_pan\" | \"nz_gst\" | \"om_vat\" | \"pe_ruc\" | \"ph_tin\" | \"ro_tin\" | \"rs_pib\" | \"ru_inn\" | \"ru_kpp\" | \"sa_vat\" | \"sg_gst\" | \"sg_uen\" | \"si_tin\" | \"sn_ninea\" | \"sr_fin\" | \"sv_nit\" | \"th_vat\" | \"tj_tin\" | \"tr_tin\" | \"tw_vat\" | \"tz_vat\" | \"ua_vat\" | \"ug_tin\" | \"us_ein\" | \"uy_ruc\" | \"uz_tin\" | \"uz_vat\" | \"ve_rif\" | \"vn_tin\" | \"za_vat\" | \"zm_tin\" | \"zw_tin\"",
-          "description": "Type of the tax ID, one of `ad_nrt`, `ae_trn`, `al_tin`, `am_tin`, `ao_tin`, `ar_cuit`, `au_abn`, `au_arn`, `aw_tin`, `az_tin`, `ba_tin`, `bb_tin`, `bd_bin`, `bf_ifu`, `bg_uic`, `bh_vat`, `bj_ifu`, `bo_tin`, `br_cnpj`, `br_cpf`, `bs_tin`, `by_tin`, `ca_bn`, `ca_gst_hst`, `ca_pst_bc`, `ca_pst_mb`, `ca_pst_sk`, `ca_qst`, `cd_nif`, `ch_uid`, `ch_vat`, `cl_tin`, `cm_niu`, `cn_tin`, `co_nit`, `cr_tin`, `cv_nif`, `de_stn`, `do_rcn`, `ec_ruc`, `eg_tin`, `es_cif`, `et_tin`, `eu_oss_vat`, `eu_vat`, `gb_vat`, `ge_vat`, `gn_nif`, `hk_br`, `hr_oib`, `hu_tin`, `id_npwp`, `il_vat`, `in_gst`, `is_vat`, `jp_cn`, `jp_rn`, `jp_trn`, `ke_pin`, `kg_tin`, `kh_tin`, `kr_brn`, `kz_bin`, `la_tin`, `li_uid`, `li_vat`, `ma_vat`, `md_vat`, `me_pib`, `mk_vat`, `mr_nif`, `mx_rfc`, `my_frp`, `my_itn`, `my_sst`, `ng_tin`, `no_vat`, `no_voec`, `np_pan`, `nz_gst`, `om_vat`, `pe_ruc`, `ph_tin`, `ro_tin`, `rs_pib`, `ru_inn`, `ru_kpp`, `sa_vat`, `sg_gst`, `sg_uen`, `si_tin`, `sn_ninea`, `sr_fin`, `sv_nit`, `th_vat`, `tj_tin`, `tr_tin`, `tw_vat`, `tz_vat`, `ua_vat`, `ug_tin`, `us_ein`, `uy_ruc`, `uz_tin`, `uz_vat`, `ve_rif`, `vn_tin`, `za_vat`, `zm_tin`, or `zw_tin`",
+          "type": "\"ad_nrt\" | \"ae_trn\" | \"al_tin\" | \"am_tin\" | \"ao_tin\" | \"ar_cuit\" | \"au_abn\" | \"au_arn\" | \"aw_tin\" | \"az_tin\" | \"ba_tin\" | \"bb_tin\" | \"bd_bin\" | \"bf_ifu\" | \"bg_uic\" | \"bh_vat\" | \"bj_ifu\" | \"bo_tin\" | \"br_cnpj\" | \"br_cpf\" | \"bs_tin\" | \"by_tin\" | \"ca_bn\" | \"ca_gst_hst\" | \"ca_pst_bc\" | \"ca_pst_mb\" | \"ca_pst_sk\" | \"ca_qst\" | \"cd_nif\" | \"ch_uid\" | \"ch_vat\" | \"cl_tin\" | \"cm_niu\" | \"cn_tin\" | \"co_nit\" | \"cr_tin\" | \"cv_nif\" | \"de_stn\" | \"do_rcn\" | \"ec_ruc\" | \"eg_tin\" | \"es_cif\" | \"et_tin\" | \"eu_oss_vat\" | \"eu_vat\" | \"gb_vat\" | \"ge_vat\" | \"gn_nif\" | \"hk_br\" | \"hr_oib\" | \"hu_tin\" | \"id_npwp\" | \"il_vat\" | \"in_gst\" | \"is_vat\" | \"jp_cn\" | \"jp_rn\" | \"jp_trn\" | \"ke_pin\" | \"kg_tin\" | \"kh_tin\" | \"kr_brn\" | \"kz_bin\" | \"la_tin\" | \"li_uid\" | \"li_vat\" | \"ma_vat\" | \"md_vat\" | \"me_pib\" | \"mk_vat\" | \"mr_nif\" | \"mx_rfc\" | \"my_frp\" | \"my_itn\" | \"my_sst\" | \"ng_tin\" | \"no_vat\" | \"no_voec\" | \"np_pan\" | \"nz_gst\" | \"om_vat\" | \"pe_ruc\" | \"ph_tin\" | \"pl_nip\" | \"ro_tin\" | \"rs_pib\" | \"ru_inn\" | \"ru_kpp\" | \"sa_vat\" | \"sg_gst\" | \"sg_uen\" | \"si_tin\" | \"sn_ninea\" | \"sr_fin\" | \"sv_nit\" | \"th_vat\" | \"tj_tin\" | \"tr_tin\" | \"tw_vat\" | \"tz_vat\" | \"ua_vat\" | \"ug_tin\" | \"us_ein\" | \"uy_ruc\" | \"uz_tin\" | \"uz_vat\" | \"ve_rif\" | \"vn_tin\" | \"za_vat\" | \"zm_tin\" | \"zw_tin\"",
+          "description": "Type of the tax ID, one of `ad_nrt`, `ae_trn`, `al_tin`, `am_tin`, `ao_tin`, `ar_cuit`, `au_abn`, `au_arn`, `aw_tin`, `az_tin`, `ba_tin`, `bb_tin`, `bd_bin`, `bf_ifu`, `bg_uic`, `bh_vat`, `bj_ifu`, `bo_tin`, `br_cnpj`, `br_cpf`, `bs_tin`, `by_tin`, `ca_bn`, `ca_gst_hst`, `ca_pst_bc`, `ca_pst_mb`, `ca_pst_sk`, `ca_qst`, `cd_nif`, `ch_uid`, `ch_vat`, `cl_tin`, `cm_niu`, `cn_tin`, `co_nit`, `cr_tin`, `cv_nif`, `de_stn`, `do_rcn`, `ec_ruc`, `eg_tin`, `es_cif`, `et_tin`, `eu_oss_vat`, `eu_vat`, `gb_vat`, `ge_vat`, `gn_nif`, `hk_br`, `hr_oib`, `hu_tin`, `id_npwp`, `il_vat`, `in_gst`, `is_vat`, `jp_cn`, `jp_rn`, `jp_trn`, `ke_pin`, `kg_tin`, `kh_tin`, `kr_brn`, `kz_bin`, `la_tin`, `li_uid`, `li_vat`, `ma_vat`, `md_vat`, `me_pib`, `mk_vat`, `mr_nif`, `mx_rfc`, `my_frp`, `my_itn`, `my_sst`, `ng_tin`, `no_vat`, `no_voec`, `np_pan`, `nz_gst`, `om_vat`, `pe_ruc`, `ph_tin`, `pl_nip`, `ro_tin`, `rs_pib`, `ru_inn`, `ru_kpp`, `sa_vat`, `sg_gst`, `sg_uen`, `si_tin`, `sn_ninea`, `sr_fin`, `sv_nit`, `th_vat`, `tj_tin`, `tr_tin`, `tw_vat`, `tz_vat`, `ua_vat`, `ug_tin`, `us_ein`, `uy_ruc`, `uz_tin`, `uz_vat`, `ve_rif`, `vn_tin`, `za_vat`, `zm_tin`, or `zw_tin`",
           "required": true
         },
         "value": {
@@ -60620,7 +60679,7 @@
         },
         "tipping": {
           "type": "object",
-          "description": "Tipping configurations for readers. supporting on-reader tips",
+          "description": "Tipping configurations for readers that support on-reader tips.",
           "required": false
         },
         "verifone_p400": {
