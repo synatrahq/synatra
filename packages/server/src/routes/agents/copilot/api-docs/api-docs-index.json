@@ -7278,6 +7278,11 @@
       "description": "Retrieve an early fraud warning"
     },
     {
+      "method": "POST",
+      "path": "/v1/radar/payment_evaluations",
+      "description": "Create a Payment Evaluation"
+    },
+    {
       "method": "GET",
       "path": "/v1/radar/value_list_items",
       "description": "List all value list items"
