@@ -2,14 +2,8 @@ import { Hono } from "hono"
 import { z } from "zod"
 import { zValidator } from "@hono/zod-validator"
 import { generateText, Output, jsonSchema, type JSONSchema7 } from "ai"
-import { createOpenAI } from "@ai-sdk/openai"
-import { createAnthropic } from "@ai-sdk/anthropic"
-import {
-  loadConversationContext,
-  buildRecipeExtractionPrompt,
-  validateRecipeSteps,
-  getResourceProviderConfig,
-} from "@synatra/core"
+import { loadConversationContext, buildRecipeExtractionPrompt, validateRecipeSteps } from "@synatra/core"
+import { getModel } from "../agents/copilot/models"
 import type { RecipeStep, RecipeInput, RecipeOutput, ParamBinding } from "@synatra/core/types"
 
 const ExtractRequestSchema = z.object({
@@ -113,28 +107,7 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
   const context = await loadConversationContext(body)
   const prompt = buildRecipeExtractionPrompt(context)
 
-  const llmConfig = await getResourceProviderConfig({
-    environmentId: body.environmentId,
-    provider: "anthropic",
-  })
-
-  if (!llmConfig) {
-    const openaiConfig = await getResourceProviderConfig({
-      environmentId: body.environmentId,
-      provider: "openai",
-    })
-    if (!openaiConfig) {
-      return c.json({ error: "No LLM provider configured" }, 400)
-    }
-  }
-
-  const useAnthropic = !!llmConfig
-  const config =
-    llmConfig ?? (await getResourceProviderConfig({ environmentId: body.environmentId, provider: "openai" }))!
-
-  const model = useAnthropic
-    ? createAnthropic({ apiKey: config.apiKey, baseURL: config.baseUrl ?? undefined })("claude-sonnet-4-20250514")
-    : createOpenAI({ apiKey: config.apiKey, baseURL: config.baseUrl ?? undefined })("gpt-4o")
+  const { model } = await getModel(body.modelId)
 
   const result = await generateText({
     model,

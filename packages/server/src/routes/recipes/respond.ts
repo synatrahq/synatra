@@ -23,6 +23,7 @@ import { toErrorMessage } from "@synatra/util/error"
 const schema = z.object({
   response: z.record(z.string(), z.unknown()),
   environmentId: z.string().optional(),
+  threadId: z.string().optional(),
 })
 
 export const respond = new Hono().post(
@@ -93,6 +94,23 @@ export const respond = new Hono().post(
 
       if (isOutputTool(step.toolName)) {
         stepResults[step.id] = params
+        if (body.threadId) {
+          const output = recipe.outputs.find((o) => o.stepId === step.id)
+          if (output) {
+            const [item] = await withDb((db) =>
+              db
+                .insert(OutputItemTable)
+                .values({
+                  threadId: body.threadId!,
+                  kind: output.kind,
+                  name: output.name ?? null,
+                  payload: params,
+                })
+                .returning(),
+            )
+            outputItemIds.push(item.id)
+          }
+        }
         continue
       }
 
