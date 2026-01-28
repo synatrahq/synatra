@@ -388,7 +388,7 @@ export default function InboxPage() {
   const recipeDetailQuery = useQuery(() => {
     const recipe = selectedRecipe()
     return {
-      queryKey: ["recipe", recipe?.id ?? ""],
+      queryKey: ["recipe", recipe?.id ?? "", activeOrg()?.id],
       queryFn: async (): Promise<Recipe | null> => {
         if (!recipe) return null
         const res = await api.api.recipes[":id"].$get({ param: { id: recipe.id } })
@@ -401,7 +401,7 @@ export default function InboxPage() {
   const recipeExecutionsQuery = useQuery(() => {
     const recipe = selectedRecipe()
     return {
-      queryKey: ["recipe-executions", recipe?.id ?? ""],
+      queryKey: ["recipe-executions", recipe?.id ?? "", activeOrg()?.id],
       queryFn: async (): Promise<RecipeExecutions> => {
         if (!recipe) return []
         const res = await api.api.recipes[":id"].executions.$get({ param: { id: recipe.id } })
@@ -418,7 +418,7 @@ export default function InboxPage() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["recipes"] })
-      queryClient.invalidateQueries({ queryKey: ["recipe", variables.id] })
+      queryClient.invalidateQueries({ queryKey: ["recipe", variables.id, activeOrg()?.id] })
     },
   }))
 
@@ -439,7 +439,7 @@ export default function InboxPage() {
       return res.json()
     },
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ["recipe-executions", id] })
+      queryClient.invalidateQueries({ queryKey: ["recipe-executions", id, activeOrg()?.id] })
     },
   }))
 
@@ -471,7 +471,7 @@ export default function InboxPage() {
         param: { id: recipe.id, executionId },
         json: { response, environmentId: envId },
       })
-      queryClient.invalidateQueries({ queryKey: ["recipe-executions", recipe.id] })
+      queryClient.invalidateQueries({ queryKey: ["recipe-executions", recipe.id, activeOrg()?.id] })
     } finally {
       setRecipeResponding(false)
     }

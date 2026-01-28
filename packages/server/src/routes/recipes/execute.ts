@@ -6,6 +6,7 @@ import {
   updateRecipeExecution,
   getRecipeById,
   getAgentById,
+  getEnvironmentById,
   listResources,
   withDb,
   OutputItemTable,
@@ -33,6 +34,7 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
 
   const recipe = await getRecipeById(recipeId)
   const agent = await getAgentById(recipe.agentId)
+  await getEnvironmentById(body.environmentId)
 
   const execution = await createRecipeExecution({
     recipeId,
