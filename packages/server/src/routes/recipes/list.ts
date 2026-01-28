@@ -13,5 +13,5 @@ const schema = z.object({
 export const list = new Hono().get("/", zValidator("query", schema), async (c) => {
   const query = c.req.valid("query")
   const result = await listRecipes(query)
-  return c.json(result.items)
+  return c.json(result)
 })

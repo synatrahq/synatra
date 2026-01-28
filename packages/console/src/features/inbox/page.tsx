@@ -228,7 +228,7 @@ export default function InboxPage() {
   } | null>(null)
   const [recipeSaving, setRecipeSaving] = createSignal(false)
   const [recipeDeleteModalOpen, setRecipeDeleteModalOpen] = createSignal(false)
-  const [recipeToDelete, setRecipeToDelete] = createSignal<Recipes[number] | null>(null)
+  const [recipeToDelete, setRecipeToDelete] = createSignal<Recipes["items"][number] | null>(null)
   const [selectedEnvironmentId, setSelectedEnvironmentId] = createSignal<string | null>(null)
 
   const channelsQuery = useQuery(() => ({
@@ -360,7 +360,7 @@ export default function InboxPage() {
     return {
       queryKey: ["recipes", channelId ?? "", activeOrg()?.id],
       queryFn: async (): Promise<Recipes> => {
-        if (!channelId) return []
+        if (!channelId) return { items: [], nextCursor: null }
         const res = await api.api.recipes.$get({ query: { channelId } })
         return res.json()
       },
@@ -382,7 +382,7 @@ export default function InboxPage() {
   const selectedRecipe = createMemo(() => {
     const id = searchParams.recipe
     if (!id || !recipesQuery.data) return null
-    return recipesQuery.data.find((r) => r.id === id) ?? null
+    return recipesQuery.data.items.find((r) => r.id === id) ?? null
   })
 
   const recipeDetailQuery = useQuery(() => {
@@ -479,7 +479,7 @@ export default function InboxPage() {
 
   const allAgents = () => allAgentsQuery.data ?? []
   const environments = () => environmentsQuery.data ?? []
-  const recipes = () => recipesQuery.data ?? []
+  const recipes = () => recipesQuery.data?.items ?? []
 
   const statusFilter = (): StatusFilter => {
     const s = searchParams.status

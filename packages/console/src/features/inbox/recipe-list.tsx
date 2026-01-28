@@ -5,7 +5,7 @@ import { DropdownMenu, IconButton, Skeleton, type DropdownMenuItem } from "../..
 import { EntityIcon } from "../../components"
 import type { Recipes, Agents } from "../../app/api"
 
-type RecipeListItem = Recipes[number] & {
+type RecipeListItem = Recipes["items"][number] & {
   agent?: Agents[number]
 }
 
