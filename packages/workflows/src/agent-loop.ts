@@ -610,6 +610,68 @@ export async function executeAgentLoop(
   return { result: { status: "failed", error: "Max iterations reached", tokenUsage }, state }
 }
 
+interface ValidateSystemToolCallParams {
+  call: ToolCallRecord
+  depth: number
+  subagents: ResolvedSubagent[]
+  activities: AgentLoopActivities
+  persistence: AgentLoopPersistence
+  messages: ConversationMessage[]
+  organizationId: string
+  threadId: string
+  runId: string
+}
+
+type ValidateSystemToolCallResult = { valid: true } | { valid: false }
+
+async function validateSystemToolCall(params: ValidateSystemToolCallParams): Promise<ValidateSystemToolCallResult> {
+  const { call, depth, subagents, activities, persistence, messages, organizationId, threadId, runId } = params
+
+  const systemTool = getSystemTools(depth, MAX_SUBAGENT_DEPTH, subagents).find((tool) => tool.name === call.name)
+  if (!systemTool) {
+    await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
+    await persistence.addMessage({
+      organizationId,
+      threadId,
+      runId,
+      type: "tool_result",
+      toolResult: { toolCallId: call.id, result: null, error: `Tool not allowed: ${call.name}` },
+    })
+    messages.push({
+      role: "tool",
+      toolCallId: call.id,
+      toolName: call.name,
+      result: JSON.stringify({ error: `Tool not allowed: ${call.name}` }),
+    })
+    return { valid: false }
+  }
+
+  const validation = await activities.validateToolParams({
+    params: call.params as Record<string, unknown>,
+    schema: systemTool.params as Record<string, unknown>,
+  })
+  if (!validation.valid) {
+    const errorMsg = `System tool parameters failed validation: ${validation.errors?.join(", ")}`
+    await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
+    await persistence.addMessage({
+      organizationId,
+      threadId,
+      runId,
+      type: "tool_result",
+      toolResult: { toolCallId: call.id, result: null, error: errorMsg },
+    })
+    messages.push({
+      role: "tool",
+      toolCallId: call.id,
+      toolName: call.name,
+      result: JSON.stringify({ error: errorMsg }),
+    })
+    return { valid: false }
+  }
+
+  return { valid: true }
+}
+
 interface HandleSystemToolsParams {
   context: AgentLoopContext
   state: AgentLoopState
@@ -749,47 +811,18 @@ async function handleSystemTools(
   if (completionCalls[0]) orderedSystemCalls.push(completionCalls[0])
 
   for (const call of orderedSystemCalls) {
-    const systemTool = getSystemTools(depth, MAX_SUBAGENT_DEPTH, subagents).find((tool) => tool.name === call.name)
-    if (!systemTool) {
-      await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
-      await persistence.addMessage({
-        organizationId,
-        threadId,
-        runId,
-        type: "tool_result",
-        toolResult: { toolCallId: call.id, result: null, error: `Tool not allowed: ${call.name}` },
-      })
-      messages.push({
-        role: "tool",
-        toolCallId: call.id,
-        toolName: call.name,
-        result: JSON.stringify({ error: `Tool not allowed: ${call.name}` }),
-      })
-      continue
-    }
-
-    const validation = await activities.validateToolParams({
-      params: call.params as Record<string, unknown>,
-      schema: systemTool.params as Record<string, unknown>,
+    const validated = await validateSystemToolCall({
+      call,
+      depth,
+      subagents,
+      activities,
+      persistence,
+      messages,
+      organizationId,
+      threadId,
+      runId,
     })
-    if (!validation.valid) {
-      const errorMsg = `System tool parameters failed validation: ${validation.errors?.join(", ")}`
-      await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
-      await persistence.addMessage({
-        organizationId,
-        threadId,
-        runId,
-        type: "tool_result",
-        toolResult: { toolCallId: call.id, result: null, error: errorMsg },
-      })
-      messages.push({
-        role: "tool",
-        toolCallId: call.id,
-        toolName: call.name,
-        result: JSON.stringify({ error: errorMsg }),
-      })
-      continue
-    }
+    if (!validated.valid) continue
 
     await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
 
@@ -891,47 +924,18 @@ async function handleSystemTools(
 
   if (completionCalls.length === 0) {
     for (const call of computeCalls) {
-      const systemTool = getSystemTools(depth, MAX_SUBAGENT_DEPTH, subagents).find((tool) => tool.name === call.name)
-      if (!systemTool) {
-        await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
-        await persistence.addMessage({
-          organizationId,
-          threadId,
-          runId,
-          type: "tool_result",
-          toolResult: { toolCallId: call.id, result: null, error: `Tool not allowed: ${call.name}` },
-        })
-        messages.push({
-          role: "tool",
-          toolCallId: call.id,
-          toolName: call.name,
-          result: JSON.stringify({ error: `Tool not allowed: ${call.name}` }),
-        })
-        continue
-      }
-
-      const validation = await activities.validateToolParams({
-        params: call.params as Record<string, unknown>,
-        schema: systemTool.params as Record<string, unknown>,
+      const validated = await validateSystemToolCall({
+        call,
+        depth,
+        subagents,
+        activities,
+        persistence,
+        messages,
+        organizationId,
+        threadId,
+        runId,
       })
-      if (!validation.valid) {
-        const errorMsg = `System tool parameters failed validation: ${validation.errors?.join(", ")}`
-        await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
-        await persistence.addMessage({
-          organizationId,
-          threadId,
-          runId,
-          type: "tool_result",
-          toolResult: { toolCallId: call.id, result: null, error: errorMsg },
-        })
-        messages.push({
-          role: "tool",
-          toolCallId: call.id,
-          toolName: call.name,
-          result: JSON.stringify({ error: errorMsg }),
-        })
-        continue
-      }
+      if (!validated.valid) continue
 
       await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
 
