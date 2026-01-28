@@ -16,6 +16,7 @@ type ThreadDetailProps = {
   onHumanRequestRespond?: (requestId: string, action: "respond" | "cancel" | "skip", data?: unknown) => void
   onReply?: (message: string) => void
   onAgentClick?: (agentId: string) => void
+  onCreateRecipe?: (runId: string) => void
   responding?: boolean
   replying?: boolean
 }
@@ -49,6 +50,20 @@ export function ThreadDetail(props: ThreadDetailProps) {
       threadStatus: props.thread.status,
     })
   })
+
+  const isLastAgentInRun = (item: ReturnType<typeof timeline>[number], index: number): boolean => {
+    if (item.type !== "agent") return true
+    const runId = item.message?.runId ?? item.tools[0]?.call.runId ?? null
+    if (!runId) return true
+    const items = timeline()
+    for (let i = index + 1; i < items.length; i++) {
+      const next = items[i]
+      if (next.type !== "agent") continue
+      const nextRunId = next.message?.runId ?? next.tools[0]?.call.runId ?? null
+      if (nextRunId === runId) return false
+    }
+    return true
+  }
 
   createEffect(
     on(
@@ -94,7 +109,7 @@ export function ThreadDetail(props: ThreadDetailProps) {
             <div ref={scrollRef} class="flex-1 overflow-y-auto scrollbar-thin">
               <div class="flex flex-col gap-4 px-4 py-4">
                 <For each={timeline()}>
-                  {(item) => (
+                  {(item, index) => (
                     <>
                       <Show when={item.type === "user"}>
                         <UserMessage message={(item as { type: "user"; message: ThreadMessage }).message} />
@@ -115,6 +130,8 @@ export function ThreadDetail(props: ThreadDetailProps) {
                             isChannelOwner={props.isChannelOwner}
                             onHumanRequestRespond={props.onHumanRequestRespond}
                             onAgentClick={props.onAgentClick}
+                            onCreateRecipe={props.onCreateRecipe}
+                            isLastInRun={isLastAgentInRun(item, index())}
                             responding={props.responding}
                             status={agentItem().status}
                             delegatedTo={agentItem().delegatedTo}

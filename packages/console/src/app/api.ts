@@ -138,3 +138,13 @@ export type UsagePeriod = UsageHistory["periods"][number]
 
 export type SubscriptionCurrent = InferResponseType<(typeof api.api.subscriptions)["current"]["$get"]>
 export type CheckoutSessionResponse = InferResponseType<(typeof api.api.subscriptions)["create-checkout"]["$post"]>
+
+export type Recipe = InferResponseType<(typeof api.api.recipes)[":id"]["$get"]>
+export type Recipes = InferResponseType<(typeof api.api.recipes)["$get"]>
+export type RecipeExecutions = InferResponseType<(typeof api.api.recipes)[":id"]["executions"]["$get"]>
+export type RecipeExecution = RecipeExecutions[number]
+export type RecipeCreateInput = InferRequestType<(typeof api.api.recipes)["$post"]>["json"]
+export type RecipeUpdateInput = InferRequestType<(typeof api.api.recipes)[":id"]["$patch"]>["json"]
+export type RecipeExtractInput = InferRequestType<(typeof api.api.recipes)["extract"]["$post"]>["json"]
+export type RecipeExtractResult = InferResponseType<(typeof api.api.recipes)["extract"]["$post"]>
+export type RecipeExecuteInput = InferRequestType<(typeof api.api.recipes)[":id"]["execute"]["$post"]>["json"]

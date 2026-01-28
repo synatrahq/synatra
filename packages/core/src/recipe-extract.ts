@@ -175,18 +175,9 @@ export function validateRecipeSteps(steps: RecipeStep[]): { valid: boolean; erro
 
 export function formatConversationForLLM(context: ConversationContext): string {
   const lines: string[] = []
-  const toolCallPairs = extractToolCallPairs(context.messages)
-  const assistantMessages = extractAssistantMessages(context.messages)
 
   lines.push("# Conversation Log")
   lines.push("")
-
-  const messagesByType = new Map<string, ExtractedMessage[]>()
-  for (const msg of context.messages) {
-    const existing = messagesByType.get(msg.type) ?? []
-    existing.push(msg)
-    messagesByType.set(msg.type, existing)
-  }
 
   for (const msg of context.messages) {
     if (msg.type === "user") {

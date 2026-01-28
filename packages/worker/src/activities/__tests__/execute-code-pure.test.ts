@@ -172,7 +172,7 @@ test("executeCodePure passes input data with paramAlias", async () => {
 
   expect(mockExecuteCode).toHaveBeenCalledWith("org-1", {
     code: "return input.name",
-    params: { input: { name: "Alice", age: 30 } },
+    params: { name: "Alice", age: 30 },
     paramAlias: "input",
     context: { resources: [] },
     environmentId: "env-1",

@@ -35,7 +35,7 @@ export type { DropdownMenuItem } from "./dropdown-menu"
 export { PopoverSelect } from "./popover-select"
 export type { PopoverSelectOption } from "./popover-select"
 
-export { Badge } from "./badge"
+export { Badge, type BadgeVariant } from "./badge"
 export { Avatar, AvatarGroup } from "./avatar"
 export { Markdown } from "./markdown"
 

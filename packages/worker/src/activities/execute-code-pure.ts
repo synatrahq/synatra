@@ -28,7 +28,7 @@ export async function executeCodePure(execInput: ExecuteCodePureInput): Promise<
 
   const result = await executeCode(organizationId, {
     code,
-    params: inputData !== undefined ? { input: inputData } : {},
+    params: (inputData as Record<string, unknown>) ?? {},
     paramAlias: inputData !== undefined ? "input" : undefined,
     context: { resources: [] },
     environmentId,

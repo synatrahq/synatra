@@ -2,6 +2,7 @@ import { Show, createEffect, onCleanup } from "solid-js"
 import { Portal } from "solid-js/web"
 import type { JSX } from "solid-js"
 import { X, CaretLeft } from "phosphor-solid-js"
+import { Badge, type BadgeVariant } from "./badge"
 
 type ModalProps = {
   open: boolean
@@ -88,7 +89,8 @@ export function ModalContainer(props: ModalContainerProps) {
 // Modal Header
 type ModalHeaderProps = {
   title: string
-  onClose: () => void
+  badge?: { label: string; variant?: BadgeVariant }
+  onClose?: () => void
   onBack?: () => void
 }
 
@@ -106,14 +108,19 @@ export function ModalHeader(props: ModalHeaderProps) {
           </button>
         </Show>
         <span class="text-xs font-medium text-text">{props.title}</span>
+        <Show when={props.badge}>
+          <Badge variant={props.badge!.variant}>{props.badge!.label}</Badge>
+        </Show>
       </div>
-      <button
-        type="button"
-        class="flex h-6 w-6 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-muted hover:text-text"
-        onClick={props.onClose}
-      >
-        <X class="h-3.5 w-3.5" />
-      </button>
+      <Show when={props.onClose}>
+        <button
+          type="button"
+          class="flex h-6 w-6 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-muted hover:text-text"
+          onClick={props.onClose}
+        >
+          <X class="h-3.5 w-3.5" />
+        </button>
+      </Show>
     </div>
   )
 }

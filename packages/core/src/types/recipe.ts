@@ -68,8 +68,8 @@ export type RecipeStep = z.infer<typeof RecipeStepSchema>
 export const RecipeInputSchema = z.object({
   key: z.string(),
   label: z.string(),
+  type: z.enum(["string", "number", "date", "dateRange", "select"]),
   description: z.string().optional(),
-  schema: z.record(z.string(), z.unknown()),
   required: z.boolean().optional(),
   defaultValue: z.unknown().optional(),
 })
@@ -77,7 +77,8 @@ export type RecipeInput = z.infer<typeof RecipeInputSchema>
 
 export const RecipeOutputSchema = z.object({
   stepId: z.string(),
-  label: z.string().optional(),
+  kind: z.enum(["table", "chart", "markdown", "key_value"]),
+  name: z.string().optional(),
 })
 export type RecipeOutput = z.infer<typeof RecipeOutputSchema>
 
