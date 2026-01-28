@@ -116,6 +116,21 @@ export type ExecuteFunctionResult =
   | { ok: true; result: unknown; logs: unknown[][]; durationMs: number }
   | { ok: false; error: string; durationMs: number }
 
+export interface ExecuteCodePureInput {
+  organizationId: string
+  environmentId: string
+  code: string
+  timeout?: number
+}
+
+export interface ExecuteCodePureResult {
+  success: boolean
+  result?: unknown
+  error?: string
+  logs: unknown[][]
+  duration: number
+}
+
 export interface ExecuteScriptInput {
   script: string
   payload: Record<string, unknown>
@@ -296,6 +311,7 @@ export type Activities = {
   callLLM: (input: CallLLMInput) => Promise<CallLLMResult>
   evaluateToolRules: (input: EvaluateToolRulesInput) => Promise<EvaluateToolRulesResult>
   executeFunction: (input: ExecuteFunctionInput) => Promise<ExecuteFunctionResult>
+  executeCodePure: (input: ExecuteCodePureInput) => Promise<ExecuteCodePureResult>
   executeScript: (input: ExecuteScriptInput) => Promise<ExecuteScriptResult>
   ensureThread: (input: EnsureThreadInput) => Promise<{ threadId: string }>
   updateThread: (input: UpdateThreadInput) => Promise<void>

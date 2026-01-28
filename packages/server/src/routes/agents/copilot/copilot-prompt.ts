@@ -126,6 +126,27 @@ Unified tool to request user input. Execution pauses until user responds.
 | select_rows | Table row selection | columns, data, selectionMode (single/multiple) |
 | confirm | Yes/No confirmation | confirmLabel, rejectLabel, variant (info/warning/danger) |
 
+### code_execute (pure computation)
+
+Execute JavaScript code for reliable calculations and data transformations.
+
+\`\`\`typescript
+{
+  code: string,      // JavaScript code with 'return' statement
+  timeout?: number   // Optional timeout 100-30000ms, default 10s
+}
+\`\`\`
+
+**Use cases:**
+- Mathematical calculations (LLMs can make arithmetic errors)
+- Data transformations (sort, filter, aggregate arrays)
+- String manipulation and parsing
+- Date calculations
+
+**Constraints:**
+- No database or API access (use custom tools for that)
+- Pure JavaScript only
+
 ### task_complete
 
 Marks the task as completed.
@@ -193,6 +214,8 @@ Agent action: Call task_complete
 | Collect structured input | human_request (form field) |
 | Ask multiple-choice question | human_request (question field) |
 | Confirm destructive action | human_request (confirm field) |
+| Calculations (math, aggregations) | code_execute |
+| Data transformations | code_execute |
 
 ### Anti-Patterns in Tool Code
 

@@ -1,5 +1,12 @@
 import { condition, upsertSearchAttributes, executeChild } from "@temporalio/workflow"
-import { getSystemTools, isSystemTool, isOutputTool, isHumanTool, isDelegationTool } from "@synatra/core/system-tools"
+import {
+  getSystemTools,
+  isSystemTool,
+  isOutputTool,
+  isHumanTool,
+  isDelegationTool,
+  isComputeTool,
+} from "@synatra/core/system-tools"
 import {
   type ThreadKind,
   type ThreadStatus,
@@ -132,6 +139,14 @@ export interface AgentLoopActivities {
     agentReleaseId: string
     agentConfig: AgentRuntimeConfig
     agentConfigHash: string
+  }>
+
+  executeCodePure(input: { organizationId: string; environmentId: string; code: string; timeout?: number }): Promise<{
+    success: boolean
+    result?: unknown
+    error?: string
+    logs: unknown[][]
+    duration: number
   }>
 }
 
@@ -631,10 +646,12 @@ async function handleSystemTools(
   const outputCalls = systemCalls.filter((tc) => isOutputTool(tc.name))
   const completionCalls = systemCalls.filter((tc) => tc.name === "task_complete" || tc.name === "return_to_parent")
   const delegationCalls = systemCalls.filter((tc) => isDelegationTool(tc.name))
+  const computeCalls = systemCalls.filter((tc) => isComputeTool(tc.name))
   const otherSystemCalls = systemCalls.filter(
     (tc) =>
       !isHumanTool(tc.name) &&
       !isOutputTool(tc.name) &&
+      !isComputeTool(tc.name) &&
       tc.name !== "task_complete" &&
       tc.name !== "return_to_parent" &&
       !isDelegationTool(tc.name),
@@ -663,6 +680,84 @@ async function handleSystemTools(
       })
     }
     return null
+  }
+
+  const depth = context.depth ?? 0
+  const subagents = context.resolvedSubagents ?? []
+
+  for (const call of computeCalls) {
+    const systemTool = getSystemTools(depth, MAX_SUBAGENT_DEPTH, subagents).find((tool) => tool.name === call.name)
+    if (!systemTool) {
+      await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
+      await persistence.addMessage({
+        organizationId,
+        threadId,
+        runId,
+        type: "tool_result",
+        toolResult: { toolCallId: call.id, result: null, error: `Tool not allowed: ${call.name}` },
+      })
+      messages.push({
+        role: "tool",
+        toolCallId: call.id,
+        toolName: call.name,
+        result: JSON.stringify({ error: `Tool not allowed: ${call.name}` }),
+      })
+      continue
+    }
+
+    const validation = await activities.validateToolParams({
+      params: call.params as Record<string, unknown>,
+      schema: systemTool.params as Record<string, unknown>,
+    })
+    if (!validation.valid) {
+      const errorMsg = `System tool parameters failed validation: ${validation.errors?.join(", ")}`
+      await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
+      await persistence.addMessage({
+        organizationId,
+        threadId,
+        runId,
+        type: "tool_result",
+        toolResult: { toolCallId: call.id, result: null, error: errorMsg },
+      })
+      messages.push({
+        role: "tool",
+        toolCallId: call.id,
+        toolName: call.name,
+        result: JSON.stringify({ error: errorMsg }),
+      })
+      continue
+    }
+
+    await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
+
+    if (call.name === "code_execute") {
+      const callParams = call.params as { code: string; timeout?: number }
+
+      const execResult = await activities.executeCodePure({
+        organizationId,
+        environmentId: context.environmentId,
+        code: callParams.code,
+        timeout: callParams.timeout,
+      })
+
+      const toolResult = execResult.success
+        ? { success: true, result: execResult.result, logs: execResult.logs, duration: execResult.duration }
+        : { success: false, error: execResult.error, logs: execResult.logs, duration: execResult.duration }
+
+      await persistence.addMessage({
+        organizationId,
+        threadId,
+        runId,
+        type: "tool_result",
+        toolResult: { toolCallId: call.id, result: toolResult },
+      })
+      messages.push({
+        role: "tool",
+        toolCallId: call.id,
+        toolName: call.name,
+        result: JSON.stringify(toolResult),
+      })
+    }
   }
 
   if (delegationCalls.length === 1) {
@@ -714,9 +809,6 @@ async function handleSystemTools(
 
   const orderedSystemCalls = [...outputCalls]
   if (completionCalls[0]) orderedSystemCalls.push(completionCalls[0])
-
-  const depth = context.depth ?? 0
-  const subagents = context.resolvedSubagents ?? []
 
   for (const call of orderedSystemCalls) {
     const systemTool = getSystemTools(depth, MAX_SUBAGENT_DEPTH, subagents).find((tool) => tool.name === call.name)

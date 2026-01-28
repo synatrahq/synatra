@@ -10,6 +10,9 @@ export type { EvaluateToolRulesInput, EvaluateToolRulesResult } from "./evaluate
 export { executeFunction } from "./execute-function"
 export type { ExecuteFunctionInput, ExecuteFunctionResult } from "./execute-function"
 
+export { executeCodePure } from "./execute-code-pure"
+export type { ExecuteCodePureInput, ExecuteCodePureResult } from "./execute-code-pure"
+
 export { executeScript } from "./execute-script"
 export type { ExecuteScriptInput, ExecuteScriptResult } from "./execute-script"
 
