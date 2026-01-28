@@ -8,8 +8,7 @@ import {
   getAgentById,
   getEnvironmentById,
   listResources,
-  withDb,
-  OutputItemTable,
+  createOutputItemAndIncrementSeq,
   resolveStepParams,
   getStepExecutionOrder,
   isHumanInputStep,
@@ -86,17 +85,12 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
       if (body.threadId) {
         const output = recipe.outputs.find((o) => o.stepId === step.id)
         if (output) {
-          const [item] = await withDb((db) =>
-            db
-              .insert(OutputItemTable)
-              .values({
-                threadId: body.threadId!,
-                kind: output.kind,
-                name: output.name ?? null,
-                payload: params,
-              })
-              .returning(),
-          )
+          const { item } = await createOutputItemAndIncrementSeq({
+            threadId: body.threadId,
+            kind: output.kind,
+            name: output.name,
+            payload: params as Record<string, unknown>,
+          })
           outputItemIds.push(item.id)
         }
       }
