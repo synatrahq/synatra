@@ -423,10 +423,18 @@ export default function InboxPage() {
   }))
 
   const recipeExecuteMutation = useMutation(() => ({
-    mutationFn: async ({ id, environmentId }: { id: string; environmentId: string }) => {
+    mutationFn: async ({
+      id,
+      environmentId,
+      inputs,
+    }: {
+      id: string
+      environmentId: string
+      inputs: Record<string, unknown>
+    }) => {
       const res = await api.api.recipes[":id"].execute.$post({
         param: { id },
-        json: { inputs: {}, environmentId },
+        json: { inputs, environmentId },
       })
       return res.json()
     },
@@ -1556,11 +1564,11 @@ export default function InboxPage() {
                   await recipeUpdateMutation.mutateAsync({ id: recipe.id, description })
                 }
               }}
-              onExecute={() => {
+              onExecute={(inputs) => {
                 const recipe = selectedRecipe()
                 const envId = selectedEnvironmentId()
                 if (recipe && envId) {
-                  recipeExecuteMutation.mutate({ id: recipe.id, environmentId: envId })
+                  recipeExecuteMutation.mutate({ id: recipe.id, environmentId: envId, inputs })
                 }
               }}
               executing={recipeExecuteMutation.isPending}

@@ -693,7 +693,7 @@ type RecipeDetailProps = {
   loading?: boolean
   onUpdateName?: (name: string) => Promise<void>
   onUpdateDescription?: (description: string) => Promise<void>
-  onExecute?: () => void
+  onExecute?: (inputs: Record<string, unknown>) => void
   executing?: boolean
   onRespond?: (executionId: string, response: Record<string, unknown>) => void
   responding?: boolean
@@ -705,6 +705,8 @@ export function RecipeDetail(props: RecipeDetailProps) {
   const [editedName, setEditedName] = createSignal("")
   const [editedDescription, setEditedDescription] = createSignal("")
   const [saving, setSaving] = createSignal(false)
+  const [inputModalOpen, setInputModalOpen] = createSignal(false)
+  const [inputValues, setInputValues] = createSignal<Record<string, unknown>>({})
 
   const agent = createMemo(() => {
     if (!props.recipe) return null
@@ -766,7 +768,26 @@ export function RecipeDetail(props: RecipeDetailProps) {
   }
 
   const handleExecute = () => {
-    props.onExecute?.()
+    if (!props.recipe) return
+    if (props.recipe.inputs.length > 0) {
+      const defaults: Record<string, unknown> = {}
+      for (const input of props.recipe.inputs) {
+        defaults[input.key] = input.defaultValue ?? ""
+      }
+      setInputValues(defaults)
+      setInputModalOpen(true)
+    } else {
+      props.onExecute?.({})
+    }
+  }
+
+  const handleInputSubmit = () => {
+    props.onExecute?.(inputValues())
+    setInputModalOpen(false)
+  }
+
+  const handleInputChange = (key: string, value: unknown) => {
+    setInputValues((prev) => ({ ...prev, [key]: value }))
   }
 
   return (
@@ -1082,6 +1103,74 @@ export function RecipeDetail(props: RecipeDetailProps) {
                       <Spinner size="xs" class="border-white border-t-transparent" />
                     </Show>
                     {saving() ? "Saving..." : "Save"}
+                  </Button>
+                </ModalFooter>
+              </ModalContainer>
+            </Modal>
+
+            <Modal
+              open={inputModalOpen()}
+              onBackdropClick={() => setInputModalOpen(false)}
+              onEscape={() => setInputModalOpen(false)}
+            >
+              <ModalContainer size="sm">
+                <div class="border-b border-border px-4 py-3">
+                  <h3 class="text-xs font-medium text-text">Run recipe</h3>
+                  <p class="text-2xs text-text-muted mt-0.5">Enter input values</p>
+                </div>
+                <ModalBody>
+                  <div class="flex flex-col gap-3">
+                    <For each={recipe().inputs}>
+                      {(input) => (
+                        <div class="flex flex-col gap-1.5">
+                          <label class="text-xs text-text-muted flex items-center gap-1">
+                            {input.label ?? input.key}
+                            <Show when={input.required}>
+                              <span class="text-warning">*</span>
+                            </Show>
+                          </label>
+                          <Switch>
+                            <Match when={input.type === "number"}>
+                              <Input
+                                type="number"
+                                value={String(inputValues()[input.key] ?? "")}
+                                onInput={(e) => handleInputChange(input.key, Number(e.currentTarget.value))}
+                                class="h-8 text-xs"
+                                placeholder={input.description}
+                              />
+                            </Match>
+                            <Match when={input.type === "date"}>
+                              <Input
+                                type="date"
+                                value={String(inputValues()[input.key] ?? "")}
+                                onInput={(e) => handleInputChange(input.key, e.currentTarget.value)}
+                                class="h-8 text-xs"
+                              />
+                            </Match>
+                            <Match when={true}>
+                              <Input
+                                type="text"
+                                value={String(inputValues()[input.key] ?? "")}
+                                onInput={(e) => handleInputChange(input.key, e.currentTarget.value)}
+                                class="h-8 text-xs"
+                                placeholder={input.description}
+                              />
+                            </Match>
+                          </Switch>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </ModalBody>
+                <ModalFooter>
+                  <Button variant="ghost" size="sm" onClick={() => setInputModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button variant="default" size="sm" onClick={handleInputSubmit} disabled={props.executing}>
+                    <Show when={props.executing} fallback={<Play class="h-3.5 w-3.5" weight="fill" />}>
+                      <Spinner size="xs" class="border-white border-t-transparent" />
+                    </Show>
+                    {props.executing ? "Running..." : "Run"}
                   </Button>
                 </ModalFooter>
               </ModalContainer>
