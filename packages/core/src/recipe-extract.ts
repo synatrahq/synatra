@@ -4,9 +4,11 @@ import { withDb } from "./database"
 import { MessageTable } from "./schema/message.sql"
 import { RunTable } from "./schema/run.sql"
 import { ThreadTable } from "./schema/thread.sql"
+import { AgentReleaseTable, AgentWorkingCopyTable } from "./schema/agent.sql"
 import { createError } from "@synatra/util/error"
 import { principal } from "./principal"
-import type { RecipeStep, RecipeInput, RecipeOutput, ParamBinding } from "./types"
+import { COMPUTE_TOOLS, OUTPUT_TOOLS, HUMAN_TOOLS } from "./system-tools"
+import type { RecipeStep, RecipeInput, RecipeOutput, ParamBinding, AgentRuntimeConfig, AgentTool } from "./types"
 
 function first<T>(arr: T[]): T | undefined {
   return arr[0]
@@ -15,6 +17,8 @@ function first<T>(arr: T[]): T | undefined {
 export interface ConversationContext {
   threadId: string
   runId: string
+  agentId: string
+  agentTools: AgentTool[]
   messages: ExtractedMessage[]
 }
 
@@ -72,6 +76,24 @@ export async function loadConversationContext(
     throw createError("BadRequestError", { message: "Run must be completed to extract recipe" })
   }
 
+  let agentTools: AgentTool[] = []
+
+  if (thread.agentReleaseId) {
+    const release = await withDb((db) =>
+      db.select().from(AgentReleaseTable).where(eq(AgentReleaseTable.id, thread.agentReleaseId!)).then(first),
+    )
+    if (release) {
+      agentTools = release.runtimeConfig.tools ?? []
+    }
+  } else {
+    const workingCopy = await withDb((db) =>
+      db.select().from(AgentWorkingCopyTable).where(eq(AgentWorkingCopyTable.agentId, thread.agentId)).then(first),
+    )
+    if (workingCopy) {
+      agentTools = workingCopy.runtimeConfig.tools ?? []
+    }
+  }
+
   const messages = await withDb((db) =>
     db
       .select()
@@ -85,6 +107,8 @@ export async function loadConversationContext(
   return {
     threadId: input.threadId,
     runId: input.runId,
+    agentId: thread.agentId,
+    agentTools,
     messages: runMessages.map((m) => ({
       id: m.id,
       runId: m.runId,
@@ -171,6 +195,48 @@ export function validateRecipeSteps(steps: RecipeStep[]): { valid: boolean; erro
   }
 
   return { valid: errors.length === 0, errors }
+}
+
+export function formatToolSchemas(agentTools: AgentTool[]): string {
+  const lines: string[] = []
+
+  lines.push("# Available Tools")
+  lines.push("")
+
+  lines.push("## Agent Tools")
+  lines.push("")
+  for (const tool of agentTools) {
+    lines.push(`### ${tool.name}`)
+    lines.push(`${tool.description}`)
+    lines.push("")
+    lines.push("**Parameters:**")
+    lines.push("```json")
+    lines.push(JSON.stringify(tool.params, null, 2))
+    lines.push("```")
+    lines.push("")
+    lines.push("**Returns:**")
+    lines.push("```json")
+    lines.push(JSON.stringify(tool.returns, null, 2))
+    lines.push("```")
+    lines.push("")
+  }
+
+  lines.push("## System Tools (for Recipe)")
+  lines.push("")
+
+  const systemTools = [...COMPUTE_TOOLS, ...OUTPUT_TOOLS, ...HUMAN_TOOLS]
+  for (const tool of systemTools) {
+    lines.push(`### ${tool.name}`)
+    lines.push(`${tool.description}`)
+    lines.push("")
+    lines.push("**Parameters:**")
+    lines.push("```json")
+    lines.push(JSON.stringify(tool.params, null, 2))
+    lines.push("```")
+    lines.push("")
+  }
+
+  return lines.join("\n")
 }
 
 export function formatConversationForLLM(context: ConversationContext): string {
@@ -263,21 +329,31 @@ Use path to access nested values or array elements:
 ## When to use code_execute
 
 When the LLM performed data transformation that cannot be expressed with simple path:
-- Filtering: \`input.filter(x => x.active)\`
-- Mapping with transformation: \`input.map(x => ({ id: x.id, label: x.name }))\`
+- Filtering: \`input.data.filter(x => x.active)\`
+- Mapping with transformation: \`input.data.map(x => ({ id: x.id, label: x.name }))\`
 - Conditional logic: \`input.count > 0 ? input.items[0] : null\`
 - String formatting: \`\\\`Total: \\\${input.items.length}\\\`\`
 
-For code_execute steps:
+IMPORTANT: The \`input\` parameter of code_execute MUST be an object (not an array or primitive).
+If you need to pass an array from a previous step, wrap it using the "object" binding type:
+
+Example - transforming array data from a previous step:
 {
   "id": "step_N",
   "toolName": "code_execute",
   "params": {
-    "code": { "type": "static", "value": "return input.filter(x => x.active)" },
-    "input": { "type": "step", "stepId": "step_M" }
+    "code": { "type": "static", "value": "return input.data.filter(x => x.active)" },
+    "input": {
+      "type": "object",
+      "entries": {
+        "data": { "type": "step", "stepId": "step_M" }
+      }
+    }
   },
   "dependsOn": ["step_M"]
 }
+
+The code then accesses the array via \`input.data\`.
 
 ## System Tools Handling
 
@@ -287,24 +363,34 @@ For code_execute steps:
 
 ## Guidelines
 
-1. Analyze the conversation to identify:
+1. **Consult the Tool Schemas section** to understand:
+   - Parameter types for each tool (what input types are expected)
+   - Return types for each tool (what output types are produced)
+   - Use this information to create correct bindings between steps
+
+2. Analyze the conversation to identify:
    - Tool calls and their parameters
    - Data transformations between tool calls
    - User inputs that should become recipe inputs
    - Outputs that should be displayed
 
-2. Create steps in execution order with proper dependencies
+3. Create steps in execution order with proper dependencies
 
-3. Identify values that should be parameterized as recipe inputs
+4. Identify values that should be parameterized as recipe inputs
 
-4. Use code_execute for any LLM reasoning/transformation between steps
+5. Use code_execute for any LLM reasoning/transformation between steps
 
-5. Ensure all step references are valid and there are no circular dependencies
+6. Ensure all step references are valid and there are no circular dependencies
 `
 
 export function buildRecipeExtractionPrompt(context: ConversationContext): string {
+  const toolSchemas = formatToolSchemas(context.agentTools)
   const conversationLog = formatConversationForLLM(context)
   return `${RECIPE_EXTRACTION_PROMPT}
+
+---
+
+${toolSchemas}
 
 ---
 

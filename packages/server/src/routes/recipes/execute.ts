@@ -18,6 +18,7 @@ import { isManagedResourceType } from "@synatra/core/types"
 import { isOutputTool, isComputeTool } from "@synatra/core/system-tools"
 import { loadConfig, createCodeExecutor } from "@synatra/service-call"
 import { principal } from "@synatra/core"
+import { toErrorMessage } from "@synatra/util/error"
 
 const schema = z.object({
   inputs: z.record(z.string(), z.unknown()).default({}),
@@ -113,7 +114,7 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
       })
 
       if (!result.ok || !result.data.success) {
-        const error = !result.ok ? String(result.error) : (result.data.error ?? "Compute execution failed")
+        const error = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Compute execution failed")
         await updateRecipeExecution({ id: execution.id, status: "failed", error })
         return c.json({ executionId: execution.id, ok: false, error })
       }
@@ -142,7 +143,7 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
     })
 
     if (!result.ok || !result.data.success) {
-      const error = !result.ok ? String(result.error) : (result.data.error ?? "Code execution failed")
+      const error = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Code execution failed")
       await updateRecipeExecution({ id: execution.id, status: "failed", error })
       return c.json({ executionId: execution.id, ok: false, error })
     }

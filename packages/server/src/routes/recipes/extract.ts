@@ -6,8 +6,7 @@ import { createOpenAI } from "@ai-sdk/openai"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import {
   loadConversationContext,
-  formatConversationForLLM,
-  RECIPE_EXTRACTION_PROMPT,
+  buildRecipeExtractionPrompt,
   validateRecipeSteps,
   getResourceProviderConfig,
 } from "@synatra/core"
@@ -112,8 +111,7 @@ type ExtractedRecipe = {
 export const extract = new Hono().post("/extract", zValidator("json", ExtractRequestSchema), async (c) => {
   const body = c.req.valid("json")
   const context = await loadConversationContext(body)
-  const conversationLog = formatConversationForLLM(context)
-  const prompt = `${RECIPE_EXTRACTION_PROMPT}\n\n---\n\n${conversationLog}\n\n---\n\nExtract the recipe from the above conversation log. Return only the JSON object.`
+  const prompt = buildRecipeExtractionPrompt(context)
 
   const llmConfig = await getResourceProviderConfig({
     environmentId: body.environmentId,
