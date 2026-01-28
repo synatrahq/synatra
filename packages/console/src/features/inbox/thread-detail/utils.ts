@@ -68,7 +68,11 @@ function collectToolsForRun(
   const tools: ToolPair[] = []
   for (const msg of messages) {
     if (msg.runId !== runId) continue
-    if (msg.type === "tool_call" && msg.toolCall && !isSystemTool(msg.toolCall.name)) {
+    if (
+      msg.type === "tool_call" &&
+      msg.toolCall &&
+      (!isSystemTool(msg.toolCall.name) || isComputeTool(msg.toolCall.name))
+    ) {
       const r = resultMap.get(msg.toolCall.id) ?? null
       const hr = humanRequestByToolCallId.get(msg.toolCall.id)
       tools.push({ call: msg, result: r, status: getToolStatus(r), humanRequest: hr })

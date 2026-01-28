@@ -59,6 +59,22 @@ type PendingInputConfig = {
   fields: HumanRequestFieldConfig[]
 }
 
+function formatBindingRef(binding: ParamBinding): string {
+  switch (binding.type) {
+    case "static":
+      return JSON.stringify(binding.value)
+    case "input":
+      return `input.${binding.inputKey}`
+    case "step": {
+      const path = binding.path?.replace(/^\$\.?/, "") ?? ""
+      return path ? `${binding.stepId}.${path}` : binding.stepId
+    }
+    case "template":
+    case "object":
+      return "[complex]"
+  }
+}
+
 function resolveBinding(binding: ParamBinding): unknown {
   switch (binding.type) {
     case "static":
@@ -68,6 +84,13 @@ function resolveBinding(binding: ParamBinding): unknown {
     case "step": {
       const path = binding.path?.replace(/^\$\.?/, "") ?? ""
       return path ? `$step.${binding.stepId}.${path}` : `$step.${binding.stepId}`
+    }
+    case "template": {
+      let result = binding.template
+      for (const [k, v] of Object.entries(binding.variables)) {
+        result = result.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), `{{ ${formatBindingRef(v)} }}`)
+      }
+      return result
     }
     case "object": {
       const result: Record<string, unknown> = {}
