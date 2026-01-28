@@ -65,8 +65,10 @@ function resolveBinding(binding: ParamBinding): unknown {
       return binding.value
     case "input":
       return `$input.${binding.inputKey}`
-    case "step":
-      return binding.path ? `$step.${binding.stepId}.${binding.path}` : `$step.${binding.stepId}`
+    case "step": {
+      const path = binding.path?.replace(/^\$\.?/, "") ?? ""
+      return path ? `$step.${binding.stepId}.${path}` : `$step.${binding.stepId}`
+    }
     case "object": {
       const result: Record<string, unknown> = {}
       for (const [k, v] of Object.entries(binding.entries)) {
