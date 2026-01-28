@@ -18,7 +18,7 @@ import { isManagedResourceType } from "@synatra/core/types"
 import { isOutputTool, isComputeTool } from "@synatra/core/system-tools"
 import { loadConfig, createCodeExecutor } from "@synatra/service-call"
 import { principal } from "@synatra/core"
-import { toErrorMessage } from "@synatra/util/error"
+import { toErrorMessage, createError } from "@synatra/util/error"
 
 const schema = z.object({
   response: z.record(z.string(), z.unknown()),
@@ -40,6 +40,10 @@ export const respond = new Hono().post(
       response: body.response,
     })
 
+    if (execution.recipeId !== recipeId) {
+      throw createError("BadRequestError", { message: "Execution does not belong to this recipe" })
+    }
+
     const recipe = await getRecipeById(recipeId)
     const agent = await getAgentById(recipe.agentId)
 
@@ -56,7 +60,7 @@ export const respond = new Hono().post(
 
     const currentStepIndex = sortedSteps.findIndex((s) => s.id === execution.currentStepId)
     if (currentStepIndex === -1) {
-      return c.json({ error: "Current step not found" }, 400)
+      throw createError("BadRequestError", { message: "Current step not found" })
     }
 
     stepResults[execution.currentStepId!] = response

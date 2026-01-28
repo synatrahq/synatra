@@ -5,6 +5,7 @@ import { generateText, Output, jsonSchema, type JSONSchema7 } from "ai"
 import { loadConversationContext, buildRecipeExtractionPrompt, validateRecipeSteps } from "@synatra/core"
 import { getModel } from "../agents/copilot/models"
 import type { RecipeStep, RecipeInput, RecipeOutput, ParamBinding } from "@synatra/core/types"
+import { createError } from "@synatra/util/error"
 
 const ExtractRequestSchema = z.object({
   threadId: z.string(),
@@ -116,6 +117,8 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
   })
 
   const extracted = result.output as ExtractedRecipe
+  const inputs = extracted.inputs ?? []
+  const outputs = extracted.outputs ?? []
 
   const steps: RecipeStep[] = extracted.steps.map((s) => ({
     id: s.id,
@@ -126,20 +129,20 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
 
   const validation = validateRecipeSteps(steps)
   if (!validation.valid) {
-    return c.json({ error: `Invalid recipe: ${validation.errors.join(", ")}` }, 400)
+    throw createError("BadRequestError", { message: `Invalid recipe: ${validation.errors.join(", ")}` })
   }
 
   return c.json({
     name: extracted.name,
     description: extracted.description,
-    inputs: extracted.inputs.map((i) => ({
+    inputs: inputs.map((i) => ({
       key: i.key,
       label: i.label,
       type: i.type as RecipeInput["type"],
       required: i.required,
     })),
     steps,
-    outputs: extracted.outputs.map((o) => ({
+    outputs: outputs.map((o) => ({
       stepId: o.stepId,
       kind: o.kind as RecipeOutput["kind"],
       name: o.name,
