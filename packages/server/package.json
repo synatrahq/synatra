@@ -7,9 +7,9 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.52",
-    "@ai-sdk/google": "^2.0.47",
-    "@ai-sdk/openai": "^2.0.75",
+    "@ai-sdk/anthropic": "^3.0.0",
+    "@ai-sdk/google": "^3.0.0",
+    "@ai-sdk/openai": "^3.0.0",
     "@hono/node-server": "1.19.6",
     "@hono/zod-validator": "^0.7.5",
     "@octokit/auth-app": "^7.1.1",
@@ -18,7 +18,7 @@
     "@synatra/util": "workspace:*",
     "@synatra/workflows": "workspace:*",
     "@temporalio/client": "1.13.2",
-    "ai": "^5.0.105",
+    "ai": "^6.0.0",
     "ajv": "8.17.1",
     "better-auth": "1.4.5",
     "drizzle-orm": "0.43.0",

@@ -17,9 +17,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^2.0.52",
-    "@ai-sdk/google": "^2.0.44",
-    "@ai-sdk/openai": "^2.0.75",
+    "@ai-sdk/anthropic": "^3.0.0",
+    "@ai-sdk/google": "^3.0.0",
+    "@ai-sdk/openai": "^3.0.0",
     "@synatra/core": "workspace:*",
     "@synatra/service-call": "workspace:*",
     "@synatra/util": "workspace:*",
@@ -28,7 +28,7 @@
     "@temporalio/client": "1.13.2",
     "@temporalio/worker": "1.13.2",
     "@temporalio/workflow": "1.13.2",
-    "ai": "^5.0.105",
+    "ai": "^6.0.0",
     "ajv": "8.17.1",
     "redis": "5.10.0",
     "zod": "4.1.13"
