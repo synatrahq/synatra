@@ -503,15 +503,13 @@ function ExecutionDetail(props: { execution: RecipeExecution; recipe: Recipe; to
     const results = props.execution.results
     if (!results) return []
 
-    const outputStepIds = new Set(props.recipe.outputs.map((o) => o.stepId))
+    const stepOrder = new Map(props.recipe.steps.map((s, i) => [s.id, i]))
     const entries = Object.entries(results)
 
     return entries.sort(([a], [b]) => {
-      const aIsOutput = outputStepIds.has(a)
-      const bIsOutput = outputStepIds.has(b)
-      if (aIsOutput && !bIsOutput) return 1
-      if (!aIsOutput && bIsOutput) return -1
-      return 0
+      const aOrder = stepOrder.get(a) ?? Number.MAX_VALUE
+      const bOrder = stepOrder.get(b) ?? Number.MAX_VALUE
+      return aOrder - bOrder
     })
   })
 
