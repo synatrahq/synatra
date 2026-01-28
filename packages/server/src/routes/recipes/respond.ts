@@ -122,6 +122,10 @@ export const respond = new Hono().post(
       if (isComputeTool(step.toolName)) {
         const code = params.code as string
         const input = params.input as Record<string, unknown> | undefined
+        const timeout =
+          typeof params.timeout === "number" && params.timeout >= 100 && params.timeout <= 30000
+            ? params.timeout
+            : 10000
 
         const result = await executor.execute(organizationId, {
           code,
@@ -129,7 +133,7 @@ export const respond = new Hono().post(
           paramAlias: input !== undefined ? "input" : undefined,
           context: { resources: [] },
           environmentId: execution.environmentId,
-          timeout: 30000,
+          timeout,
         })
 
         if (!result.ok || !result.data.success) {

@@ -106,6 +106,8 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
     if (isComputeTool(step.toolName)) {
       const code = params.code as string
       const input = params.input as Record<string, unknown> | undefined
+      const timeout =
+        typeof params.timeout === "number" && params.timeout >= 100 && params.timeout <= 30000 ? params.timeout : 10000
 
       const result = await executor.execute(organizationId, {
         code,
@@ -113,7 +115,7 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
         paramAlias: input !== undefined ? "input" : undefined,
         context: { resources: [] },
         environmentId: body.environmentId,
-        timeout: 30000,
+        timeout,
       })
 
       if (!result.ok || !result.data.success) {
