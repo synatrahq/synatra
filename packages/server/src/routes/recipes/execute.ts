@@ -70,6 +70,7 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
         pendingInputConfig,
         results: stepResults,
         resolvedParams,
+        outputItemIds,
       })
       return c.json({
         executionId: execution.id,

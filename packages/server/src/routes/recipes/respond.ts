@@ -86,6 +86,7 @@ export const respond = new Hono().post(
           pendingInputConfig,
           results: stepResults,
           resolvedParams,
+          outputItemIds,
         })
         return c.json({
           executionId,
