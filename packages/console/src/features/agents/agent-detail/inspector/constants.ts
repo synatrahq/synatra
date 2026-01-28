@@ -137,6 +137,10 @@ export const TOOL_SAMPLES: Record<string, object> = {
     result: { status: "success", data: { userId: "123" } },
     summary: "Fetched user data successfully.",
   },
+  code_execute: {
+    code: "const sum = Array.from({length: 100}, (_, i) => i + 1).reduce((a, b) => a + b, 0);\nreturn { sum, average: sum / 100 };",
+    timeout: 10000,
+  },
 }
 
 export const TOOL_PARAMS: Record<string, ParameterDef[]> = {
@@ -215,5 +219,14 @@ export const TOOL_PARAMS: Record<string, ParameterDef[]> = {
   return_to_parent: [
     { name: "result", type: "object", required: true, description: "Structured result data to return to parent." },
     { name: "summary", type: "string", description: "Brief summary of what was accomplished." },
+  ],
+  code_execute: [
+    {
+      name: "code",
+      type: "string",
+      required: true,
+      description: "JavaScript code to execute. Use 'return' to output results.",
+    },
+    { name: "timeout", type: "number", description: "Execution timeout in milliseconds (100-30000, default: 10000)." },
   ],
 }

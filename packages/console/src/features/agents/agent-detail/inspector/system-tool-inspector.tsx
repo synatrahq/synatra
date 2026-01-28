@@ -10,6 +10,7 @@ import {
   Queue,
   CheckCircle,
   ArrowUUpLeft,
+  Terminal,
 } from "phosphor-solid-js"
 import type { SystemToolDefinition } from "@synatra/core/system-tools"
 import { Markdown, CollapsibleSection } from "../../../../ui"
@@ -449,6 +450,62 @@ function ReturnToParentInspector() {
   )
 }
 
+function CodeExecuteInspector() {
+  const [showParams, setShowParams] = createSignal(false)
+  const sample = TOOL_SAMPLES.code_execute as { code: string; timeout: number }
+
+  return (
+    <div class="space-y-0">
+      <CollapsibleSection title="Overview">
+        <p class="text-xs text-text-muted leading-relaxed">
+          Execute JavaScript code for reliable calculations and data transformations. Runs in an isolated sandbox with
+          no database or API access. Use this instead of mental math for accurate results.
+        </p>
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Parameters">
+        <ParameterList params={TOOL_PARAMS.code_execute} />
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Preview">
+        <div class="space-y-2">
+          <div class="rounded-lg border border-border bg-surface overflow-hidden">
+            <div class="flex items-center gap-1.5 px-2.5 py-2 border-b border-border">
+              <Terminal class="h-3.5 w-3.5 text-accent" weight="duotone" />
+              <span class="text-[10px] font-medium text-text">Code Execution</span>
+              <span class="ml-auto text-[9px] text-text-muted">{sample.timeout}ms timeout</span>
+            </div>
+            <div class="p-2.5 bg-surface-muted">
+              <pre class="font-code text-[10px] text-text whitespace-pre-wrap">{sample.code}</pre>
+            </div>
+            <div class="flex items-center gap-1.5 px-2.5 py-2 border-t border-border bg-success/5">
+              <CheckCircle class="h-3 w-3 text-success" weight="fill" />
+              <span class="text-[10px] text-success">Result:</span>
+              <code class="text-[10px] text-text">{`{ sum: 5050, average: 50.5 }`}</code>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="flex items-center gap-1 text-[9px] text-text-muted hover:text-text transition-colors"
+            onClick={() => setShowParams(!showParams())}
+          >
+            <Show when={showParams()} fallback={<CaretRight class="h-2 w-2" />}>
+              <CaretDown class="h-2 w-2" />
+            </Show>
+            <Code class="h-2.5 w-2.5" />
+            <span>Parameters</span>
+          </button>
+          <Show when={showParams()}>
+            <div class="rounded border border-border/50 bg-surface-muted p-1.5 font-code text-[9px] text-text-muted overflow-x-auto max-h-32">
+              <pre class="whitespace-pre-wrap">{JSON.stringify(TOOL_SAMPLES.code_execute, null, 2)}</pre>
+            </div>
+          </Show>
+        </div>
+      </CollapsibleSection>
+    </div>
+  )
+}
+
 export function SystemToolInspector(props: { tool: SystemToolDefinition }) {
   const name = () => props.tool.name
 
@@ -475,6 +532,9 @@ export function SystemToolInspector(props: { tool: SystemToolDefinition }) {
       <Show when={name() === "return_to_parent"}>
         <ReturnToParentInspector />
       </Show>
+      <Show when={name() === "code_execute"}>
+        <CodeExecuteInspector />
+      </Show>
       <Show
         when={
           ![
@@ -485,6 +545,7 @@ export function SystemToolInspector(props: { tool: SystemToolDefinition }) {
             "human_request",
             "task_complete",
             "return_to_parent",
+            "code_execute",
           ].includes(name())
         }
       >
