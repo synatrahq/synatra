@@ -15,6 +15,13 @@
       "when": 1769152337764,
       "tag": "0001_glorious_jane_foster",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769598780027,
+      "tag": "0002_icy_punisher",
+      "breakpoints": true
     }
   ]
 }

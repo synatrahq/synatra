@@ -30,6 +30,7 @@ import { HumanRequestTable, HumanResponseTable } from "./human-request.sql"
 import { UsageMonthTable } from "./usage.sql"
 import { SubscriptionTable } from "./subscription.sql"
 import { StripeEventTable } from "./stripe-event.sql"
+import { RecipeTable, RecipeExecutionTable } from "./recipe.sql"
 
 import { MemberRole } from "../types"
 import { InvitationStatus } from "../types"
@@ -43,6 +44,7 @@ import { AppId } from "../types"
 import { OutputKind } from "../types"
 import { HumanRequestKind, HumanRequestStatus, HumanResponseStatus } from "../types"
 import { LlmProvider } from "../types"
+import { RecipeExecutionStatus } from "../types"
 
 export * from "./user.sql"
 export * from "./session.sql"
@@ -69,6 +71,7 @@ export * from "./human-request.sql"
 export * from "./usage.sql"
 export * from "./subscription.sql"
 export * from "./stripe-event.sql"
+export * from "./recipe.sql"
 
 export const schema = {
   user: UserTable,
@@ -126,4 +129,7 @@ export const schema = {
   usageMonth: UsageMonthTable,
   subscription: SubscriptionTable,
   stripeEvent: StripeEventTable,
+  recipe: RecipeTable,
+  recipeExecution: RecipeExecutionTable,
+  RecipeExecutionStatus,
 }

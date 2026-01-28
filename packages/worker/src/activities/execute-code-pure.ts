@@ -5,6 +5,7 @@ export interface ExecuteCodePureInput {
   organizationId: string
   environmentId: string
   code: string
+  input?: unknown
   timeout?: number
 }
 
@@ -20,14 +21,15 @@ const DEFAULT_TIMEOUT = 10000
 const MAX_TIMEOUT = 30000
 const MIN_TIMEOUT = 100
 
-export async function executeCodePure(input: ExecuteCodePureInput): Promise<ExecuteCodePureResult> {
-  const { organizationId, environmentId, code, timeout: rawTimeout } = input
+export async function executeCodePure(execInput: ExecuteCodePureInput): Promise<ExecuteCodePureResult> {
+  const { organizationId, environmentId, code, input: inputData, timeout: rawTimeout } = execInput
   const start = Date.now()
   const timeout = Math.min(MAX_TIMEOUT, Math.max(MIN_TIMEOUT, rawTimeout ?? DEFAULT_TIMEOUT))
 
   const result = await executeCode(organizationId, {
     code,
-    params: {},
+    params: inputData !== undefined ? { input: inputData } : {},
+    paramAlias: inputData !== undefined ? "input" : undefined,
     context: { resources: [] },
     environmentId,
     timeout,
