@@ -55,6 +55,29 @@ export type CallLLMResult =
     }
   | { type: "error"; reason: "timeout" | "abort"; error: string; durationMs: number }
 
+const CODE_EXECUTE_INSTRUCTIONS = `
+### Code Execution Tool (for reliable calculations)
+
+Use \`code_execute\` for accurate calculations and data transformations. LLMs can make arithmetic errors - use code for precision.
+
+\`\`\`
+code_execute({
+  code: "return Array.from({length: 100}, (_, i) => i + 1).reduce((a, b) => a + b, 0)",
+  timeout: 10000  // optional, default 10s, max 30s
+})
+\`\`\`
+
+**When to use:**
+- Mathematical calculations (sums, averages, percentages, compound interest)
+- Data transformations (sorting, filtering, aggregating arrays)
+- String manipulation (parsing, formatting)
+- Date calculations
+
+**Constraints:**
+- No database or API access (pure computation only)
+- Use \`return\` to output results
+`
+
 const HUMAN_REQUEST_INSTRUCTIONS = `
 ### Human Request Tool (BLOCKS execution)
 
@@ -85,7 +108,9 @@ human_request({
 const PARENT_SYSTEM_INSTRUCTIONS = `
 ## System Tools
 
-You have access to system tools for output, user input, and task completion.
+You have access to system tools for output, user input, computation, and task completion.
+
+${CODE_EXECUTE_INSTRUCTIONS}
 
 ### Output Tools (display only, non-blocking)
 
@@ -124,7 +149,9 @@ ${HUMAN_REQUEST_INSTRUCTIONS}
 const SUBAGENT_SYSTEM_INSTRUCTIONS = `
 ## System Tools
 
-You have access to system tools for user input and returning results.
+You have access to system tools for user input, computation, and returning results.
+
+${CODE_EXECUTE_INSTRUCTIONS}
 
 ${HUMAN_REQUEST_INSTRUCTIONS}
 

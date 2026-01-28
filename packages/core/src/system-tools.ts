@@ -6,6 +6,30 @@ export type SystemToolDefinition = {
   params: Record<string, unknown>
 }
 
+export const COMPUTE_TOOLS: SystemToolDefinition[] = [
+  {
+    name: "code_execute",
+    description: "Execute JavaScript code for calculations and data transformations. No database or API access.",
+    params: {
+      type: "object",
+      properties: {
+        code: {
+          type: "string",
+          description: "JavaScript code to execute. Use 'return' to output results.",
+        },
+        timeout: {
+          type: "number",
+          minimum: 100,
+          maximum: 30000,
+          default: 10000,
+          description: "Execution timeout in milliseconds",
+        },
+      },
+      required: ["code"],
+    },
+  },
+]
+
 export const OUTPUT_TOOLS: SystemToolDefinition[] = [
   {
     name: "output_table",
@@ -218,6 +242,7 @@ export function getSystemTools(
 ): SystemToolDefinition[] {
   const tools: SystemToolDefinition[] = []
 
+  tools.push(...COMPUTE_TOOLS)
   tools.push(...HUMAN_TOOLS)
 
   if (depth === 0) {
@@ -262,10 +287,16 @@ export function getSystemTools(
   return tools
 }
 
+const COMPUTE_TOOL_NAMES = COMPUTE_TOOLS.map((t) => t.name)
 const OUTPUT_TOOL_NAMES = OUTPUT_TOOLS.map((t) => t.name)
 const HUMAN_TOOL_NAMES = HUMAN_TOOLS.map((t) => t.name)
 const COMPLETION_TOOL_NAMES = COMPLETION_TOOLS.map((t) => t.name)
-const ALL_SYSTEM_TOOL_NAMES = [...OUTPUT_TOOL_NAMES, ...HUMAN_TOOL_NAMES, ...COMPLETION_TOOL_NAMES]
+const ALL_SYSTEM_TOOL_NAMES = [
+  ...COMPUTE_TOOL_NAMES,
+  ...OUTPUT_TOOL_NAMES,
+  ...HUMAN_TOOL_NAMES,
+  ...COMPLETION_TOOL_NAMES,
+]
 
 export function isSystemTool(name: string): boolean {
   return ALL_SYSTEM_TOOL_NAMES.includes(name) || name.startsWith("delegate_to_")
@@ -285,4 +316,8 @@ export function isCompletionTool(name: string): boolean {
 
 export function isDelegationTool(name: string): boolean {
   return name.startsWith("delegate_to_")
+}
+
+export function isComputeTool(name: string): boolean {
+  return COMPUTE_TOOL_NAMES.includes(name)
 }
