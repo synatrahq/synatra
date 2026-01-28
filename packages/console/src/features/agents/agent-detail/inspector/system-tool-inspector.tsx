@@ -452,7 +452,7 @@ function ReturnToParentInspector() {
 
 function CodeExecuteInspector() {
   const [showParams, setShowParams] = createSignal(false)
-  const sample = TOOL_SAMPLES.code_execute as { code: string; timeout: number }
+  const sample = TOOL_SAMPLES.code_execute as { code: string; input?: object; timeout: number }
 
   return (
     <div class="space-y-0">
@@ -475,13 +475,26 @@ function CodeExecuteInspector() {
               <span class="text-[10px] font-medium text-text">Code Execution</span>
               <span class="ml-auto text-[9px] text-text-muted">{sample.timeout}ms timeout</span>
             </div>
-            <div class="p-2.5 bg-surface-muted">
-              <pre class="font-code text-[10px] text-text whitespace-pre-wrap">{sample.code}</pre>
+            <div class="p-2.5 space-y-2">
+              <Show when={sample.input}>
+                <div>
+                  <span class="text-[9px] text-text-muted">input</span>
+                  <div class="mt-1 rounded border border-border/50 bg-surface-muted p-1.5 font-code text-[9px] text-text-muted overflow-x-auto max-h-20">
+                    <pre class="whitespace-pre-wrap">{JSON.stringify(sample.input, null, 2)}</pre>
+                  </div>
+                </div>
+              </Show>
+              <div>
+                <span class="text-[9px] text-text-muted">code</span>
+                <div class="mt-1 rounded border border-border/50 bg-surface-muted p-1.5 font-code text-[10px] text-text overflow-x-auto">
+                  <pre class="whitespace-pre-wrap">{sample.code}</pre>
+                </div>
+              </div>
             </div>
             <div class="flex items-center gap-1.5 px-2.5 py-2 border-t border-border bg-success/5">
               <CheckCircle class="h-3 w-3 text-success" weight="fill" />
               <span class="text-[10px] text-success">Result:</span>
-              <code class="text-[10px] text-text">{`{ sum: 5050, average: 50.5 }`}</code>
+              <code class="text-[10px] text-text">{`["Alice"]`}</code>
             </div>
           </div>
           <button
