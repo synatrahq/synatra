@@ -691,7 +691,7 @@ async function handleSystemTools(
       signals,
       messages,
       primary: delegationCalls[0],
-      skipped: [...normalCalls, ...humanCalls, ...outputCalls, ...completionCalls],
+      skipped: [...normalCalls, ...humanCalls, ...outputCalls, ...completionCalls, ...computeCalls],
       statusAttr,
       runId,
       tokenUsage,
@@ -708,7 +708,7 @@ async function handleSystemTools(
       signals,
       messages,
       primary: humanCalls[0],
-      skipped: [...normalCalls, ...outputCalls, ...completionCalls, ...delegationCalls],
+      skipped: [...normalCalls, ...outputCalls, ...completionCalls, ...delegationCalls, ...computeCalls],
       statusAttr,
       runId,
       tokenUsage,
@@ -731,6 +731,19 @@ async function handleSystemTools(
 
   const depth = context.depth ?? 0
   const subagents = context.resolvedSubagents ?? []
+
+  if (completionCalls.length > 0 && computeCalls.length > 0) {
+    for (const call of computeCalls) {
+      await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
+      await persistence.addMessage({
+        organizationId,
+        threadId,
+        runId,
+        type: "tool_result",
+        toolResult: { toolCallId: call.id, result: null, error: "Completion tool must be the only call in a response" },
+      })
+    }
+  }
 
   const orderedSystemCalls = [...outputCalls]
   if (completionCalls[0]) orderedSystemCalls.push(completionCalls[0])
