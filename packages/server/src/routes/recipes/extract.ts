@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { z } from "zod"
 import { zValidator } from "@hono/zod-validator"
-import { generateObject, jsonSchema, type JSONSchema7 } from "ai"
+import { generateText, Output, jsonSchema, type JSONSchema7 } from "ai"
 import { createOpenAI } from "@ai-sdk/openai"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import {
@@ -136,13 +136,13 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
     ? createAnthropic({ apiKey: config.apiKey, baseURL: config.baseUrl ?? undefined })("claude-sonnet-4-20250514")
     : createOpenAI({ apiKey: config.apiKey, baseURL: config.baseUrl ?? undefined })("gpt-4o")
 
-  const result = await generateObject({
+  const result = await generateText({
     model,
-    schema: jsonSchema<ExtractedRecipe>(RecipeJsonSchema),
+    output: Output.object({ schema: jsonSchema<ExtractedRecipe>(RecipeJsonSchema) }),
     prompt,
   })
 
-  const extracted = result.object as ExtractedRecipe
+  const extracted = result.output as ExtractedRecipe
 
   const steps: RecipeStep[] = extracted.steps.map((s) => ({
     id: s.id,
