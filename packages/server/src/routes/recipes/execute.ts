@@ -18,7 +18,7 @@ import { isManagedResourceType } from "@synatra/core/types"
 import { isOutputTool, isComputeTool } from "@synatra/core/system-tools"
 import { loadConfig, createCodeExecutor } from "@synatra/service-call"
 import { principal } from "@synatra/core"
-import { toErrorMessage } from "@synatra/util/error"
+import { toErrorMessage, createError } from "@synatra/util/error"
 
 const schema = z.object({
   inputs: z.record(z.string(), z.unknown()).default({}),
@@ -32,6 +32,13 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
   const organizationId = principal.orgId()
 
   const recipe = await getRecipeById(recipeId)
+
+  for (const input of recipe.inputs) {
+    if (input.required && !(input.key in body.inputs)) {
+      throw createError("BadRequestError", { message: `Missing required input: ${input.key}` })
+    }
+  }
+
   const agent = await getAgentById(recipe.agentId)
   await getEnvironmentById(body.environmentId)
 
@@ -113,7 +120,8 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
       })
 
       if (!result.ok || !result.data.success) {
-        const error = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Compute execution failed")
+        const baseError = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Compute execution failed")
+        const error = `Step "${step.id}" (${step.toolName}): ${baseError}`
         await updateRecipeExecution({ id: execution.id, status: "failed", error })
         return c.json({ executionId: execution.id, ok: false, error })
       }
@@ -125,7 +133,7 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
     const runtimeConfig = agent.runtimeConfig as { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
     const tool = runtimeConfig?.tools?.find((t) => t.name === step.toolName)
     if (!tool) {
-      const error = `Tool not found: ${step.toolName}`
+      const error = `Step "${step.id}" (${step.toolName}): Tool not found`
       await updateRecipeExecution({ id: execution.id, status: "failed", error })
       return c.json({ executionId: execution.id, ok: false, error })
     }
@@ -142,7 +150,8 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
     })
 
     if (!result.ok || !result.data.success) {
-      const error = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Code execution failed")
+      const baseError = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Code execution failed")
+      const error = `Step "${step.id}" (${step.toolName}): ${baseError}`
       await updateRecipeExecution({ id: execution.id, status: "failed", error })
       return c.json({ executionId: execution.id, ok: false, error })
     }

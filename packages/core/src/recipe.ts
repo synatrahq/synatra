@@ -20,6 +20,20 @@ function first<T>(arr: T[]): T | undefined {
   return arr[0]
 }
 
+function parseCursor(cursor: string): { date: Date; id: string } {
+  const underscoreIndex = cursor.lastIndexOf("_")
+  if (underscoreIndex === -1) {
+    throw createError("BadRequestError", { message: "Invalid cursor format" })
+  }
+  const cursorDate = cursor.slice(0, underscoreIndex)
+  const cursorId = cursor.slice(underscoreIndex + 1)
+  const parsed = new Date(cursorDate)
+  if (isNaN(parsed.getTime())) {
+    throw createError("BadRequestError", { message: "Invalid cursor date" })
+  }
+  return { date: parsed, id: cursorId }
+}
+
 export const CreateRecipeSchema = z.object({
   agentId: z.string(),
   channelId: z.string().optional(),
@@ -139,13 +153,8 @@ export async function listRecipes(raw?: z.input<typeof ListRecipesSchema>) {
     conditions.push(eq(RecipeTable.channelId, filters.channelId))
   }
   if (filters?.cursor) {
-    const [cursorDate, cursorId] = filters.cursor.split("_")
-    conditions.push(
-      or(
-        lt(RecipeTable.createdAt, new Date(cursorDate)),
-        and(eq(RecipeTable.createdAt, new Date(cursorDate)), lt(RecipeTable.id, cursorId)),
-      )!,
-    )
+    const { date, id } = parseCursor(filters.cursor)
+    conditions.push(or(lt(RecipeTable.createdAt, date), and(eq(RecipeTable.createdAt, date), lt(RecipeTable.id, id)))!)
   }
 
   const recipes = await withDb((db) =>
@@ -302,11 +311,11 @@ export async function listRecipeExecutions(raw?: z.input<typeof ListRecipeExecut
     conditions.push(eq(RecipeExecutionTable.status, filters.status))
   }
   if (filters?.cursor) {
-    const [cursorDate, cursorId] = filters.cursor.split("_")
+    const { date, id } = parseCursor(filters.cursor)
     conditions.push(
       or(
-        lt(RecipeExecutionTable.createdAt, new Date(cursorDate)),
-        and(eq(RecipeExecutionTable.createdAt, new Date(cursorDate)), lt(RecipeExecutionTable.id, cursorId)),
+        lt(RecipeExecutionTable.createdAt, date),
+        and(eq(RecipeExecutionTable.createdAt, date), lt(RecipeExecutionTable.id, id)),
       )!,
     )
   }

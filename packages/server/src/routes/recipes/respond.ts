@@ -57,12 +57,16 @@ export const respond = new Hono().post(
     const resolvedParams = { ...(execution.resolvedParams as Record<string, Record<string, unknown>>) }
     const outputItemIds = [...execution.outputItemIds]
 
+    if (!execution.currentStepId) {
+      throw createError("BadRequestError", { message: "Execution has no current step" })
+    }
+
     const currentStepIndex = sortedSteps.findIndex((s) => s.id === execution.currentStepId)
     if (currentStepIndex === -1) {
       throw createError("BadRequestError", { message: "Current step not found" })
     }
 
-    stepResults[execution.currentStepId!] = response
+    stepResults[execution.currentStepId] = response
     await updateRecipeExecution({ id: executionId, status: "running", pendingInputConfig: null })
 
     const context = {
@@ -131,7 +135,10 @@ export const respond = new Hono().post(
         })
 
         if (!result.ok || !result.data.success) {
-          const error = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Compute execution failed")
+          const baseError = !result.ok
+            ? toErrorMessage(result.error)
+            : (result.data.error ?? "Compute execution failed")
+          const error = `Step "${step.id}" (${step.toolName}): ${baseError}`
           await updateRecipeExecution({ id: executionId, status: "failed", error })
           return c.json({ executionId, ok: false, error })
         }
@@ -143,7 +150,7 @@ export const respond = new Hono().post(
       const runtimeConfig = agent.runtimeConfig as { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
       const tool = runtimeConfig?.tools?.find((t) => t.name === step.toolName)
       if (!tool) {
-        const error = `Tool not found: ${step.toolName}`
+        const error = `Step "${step.id}" (${step.toolName}): Tool not found`
         await updateRecipeExecution({ id: executionId, status: "failed", error })
         return c.json({ executionId, ok: false, error })
       }
@@ -160,7 +167,8 @@ export const respond = new Hono().post(
       })
 
       if (!result.ok || !result.data.success) {
-        const error = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Code execution failed")
+        const baseError = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Code execution failed")
+        const error = `Step "${step.id}" (${step.toolName}): ${baseError}`
         await updateRecipeExecution({ id: executionId, status: "failed", error })
         return c.json({ executionId, ok: false, error })
       }

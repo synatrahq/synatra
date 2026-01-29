@@ -14,6 +14,35 @@ function first<T>(arr: T[]): T | undefined {
   return arr[0]
 }
 
+const SAMPLE_LIMIT = 3
+const STRING_LIMIT = 200
+const DEPTH_LIMIT = 4
+
+export function sampleValue(value: unknown, depth = 0): unknown {
+  if (value === null || value === undefined) return value
+  if (typeof value === "number" || typeof value === "boolean") return value
+  if (typeof value === "string") {
+    return value.length > STRING_LIMIT ? value.slice(0, STRING_LIMIT) + "..." : value
+  }
+  if (depth > DEPTH_LIMIT) return "[truncated]"
+  if (Array.isArray(value)) {
+    const sampled = value.slice(0, SAMPLE_LIMIT).map((v) => sampleValue(v, depth + 1))
+    if (value.length > SAMPLE_LIMIT) {
+      return [...sampled, `... and ${value.length - SAMPLE_LIMIT} more items`]
+    }
+    return sampled
+  }
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>
+    const result: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(obj)) {
+      result[k] = sampleValue(v, depth + 1)
+    }
+    return result
+  }
+  return value
+}
+
 export interface ConversationContext {
   threadId: string
   runId: string
@@ -267,7 +296,7 @@ export function formatConversationForLLM(context: ConversationContext): string {
       } else {
         lines.push(`## Tool Result`)
         lines.push("```json")
-        lines.push(JSON.stringify(msg.toolResult.result, null, 2))
+        lines.push(JSON.stringify(sampleValue(msg.toolResult.result), null, 2))
         lines.push("```")
       }
       lines.push("")
