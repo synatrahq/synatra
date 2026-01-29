@@ -14,7 +14,6 @@ type PopoverSelectProps<T = string> = {
   onChange?: (value: T) => void
   placeholder?: string
   disabled?: boolean
-  class?: string
 }
 
 export function PopoverSelect<T = string>(props: PopoverSelectProps<T>) {
@@ -60,11 +59,11 @@ export function PopoverSelect<T = string>(props: PopoverSelectProps<T>) {
   })
 
   return (
-    <div class={`relative ${props.class ?? ""}`.trim()}>
+    <div class="relative">
       <button
         ref={triggerRef}
         type="button"
-        class="flex w-full items-center gap-1.5 rounded border border-border bg-surface px-2 py-1.5 text-2xs font-medium text-text-muted transition-colors hover:bg-surface-muted hover:text-text disabled:opacity-40"
+        class="flex items-center gap-1.5 rounded px-2 py-1 text-2xs font-medium text-text-muted transition-colors hover:bg-surface-muted hover:text-text disabled:opacity-40"
         onClick={() => !props.disabled && setOpen((v) => !v)}
         disabled={props.disabled}
         data-popover-toggle

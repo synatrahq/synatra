@@ -10,6 +10,7 @@ import {
   getAgentTemplateById,
   listResources,
 } from "@synatra/core"
+import { UserConfigurableResourceType } from "@synatra/core/types"
 import { requirePermission } from "../../../../../middleware/principal"
 import { emitCopilotEvent } from "../stream"
 import type { AgentRuntimeConfig } from "@synatra/core/types"
@@ -50,12 +51,16 @@ export const create = new Hono().post(
     }
 
     const allResources = await listResources()
-    const resources: ResourceInfo[] = allResources.map((r) => ({
-      id: r.id,
-      slug: r.slug,
-      type: r.type,
-      description: r.description,
-    }))
+    const resources: ResourceInfo[] = allResources
+      .filter((r): r is typeof r & { type: UserConfigurableResourceType } =>
+        UserConfigurableResourceType.includes(r.type as UserConfigurableResourceType),
+      )
+      .map((r) => ({
+        id: r.id,
+        slug: r.slug,
+        type: r.type,
+        description: r.description,
+      }))
 
     let thread: { id: string; seq: number }
     let threadCreated = false
