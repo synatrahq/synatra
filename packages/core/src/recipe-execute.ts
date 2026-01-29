@@ -57,24 +57,28 @@ export function getValueByPath(obj: unknown, path?: string): unknown {
 }
 
 export function resolveBinding(binding: ParamBinding, context: RecipeExecutionContext): unknown {
-  if (binding.type === "static") return binding.value
-  if (binding.type === "input") return context.inputs[binding.inputKey]
-  if (binding.type === "step") return getValueByPath(context.results[binding.stepId], binding.path)
-  if (binding.type === "template") {
-    let result = binding.template
-    for (const [varName, varBinding] of Object.entries(binding.variables)) {
-      const value = resolveBinding(varBinding, context)
-      result = result.replace(new RegExp(`\\{\\{${varName}\\}\\}`, "g"), String(value ?? ""))
+  switch (binding.type) {
+    case "static":
+      return binding.value
+    case "input":
+      return context.inputs[binding.inputKey]
+    case "step":
+      return getValueByPath(context.results[binding.stepId], binding.path)
+    case "template": {
+      let result = binding.template
+      for (const [varName, varBinding] of Object.entries(binding.variables)) {
+        const value = resolveBinding(varBinding, context)
+        result = result.replace(new RegExp(`\\{\\{${varName}\\}\\}`, "g"), String(value ?? ""))
+      }
+      return result
     }
-    return result
+    case "object":
+      return Object.fromEntries(Object.entries(binding.entries).map(([key, b]) => [key, resolveBinding(b, context)]))
+    case "array":
+      return binding.items.map((item) => resolveBinding(item, context))
+    default:
+      return undefined
   }
-  if (binding.type === "object") {
-    return Object.fromEntries(Object.entries(binding.entries).map(([key, b]) => [key, resolveBinding(b, context)]))
-  }
-  if (binding.type === "array") {
-    return binding.items.map((item) => resolveBinding(item, context))
-  }
-  return undefined
 }
 
 export function resolveStepParams(step: NormalizedStep, context: RecipeExecutionContext): Record<string, unknown> {

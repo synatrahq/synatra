@@ -262,19 +262,13 @@ export function formatToolSchemas(agentTools: AgentTool[]): string {
 }
 
 function formatMessage(msg: ExtractedMessage): string[] {
-  if (msg.type === "user") {
-    return ["## User Message", msg.content ?? "", ""]
-  }
-  if (msg.type === "assistant" && msg.content) {
-    return ["## Assistant Response", msg.content, ""]
-  }
+  if (msg.type === "user") return ["## User Message", msg.content ?? "", ""]
+  if (msg.type === "assistant" && msg.content) return ["## Assistant Response", msg.content, ""]
   if (msg.type === "tool_call" && msg.toolCall) {
     return [`## Tool Call: ${msg.toolCall.name}`, "```json", JSON.stringify(msg.toolCall.params, null, 2), "```", ""]
   }
   if (msg.type === "tool_result" && msg.toolResult) {
-    if (msg.toolResult.error) {
-      return ["## Tool Result (Error)", `Error: ${msg.toolResult.error}`, ""]
-    }
+    if (msg.toolResult.error) return ["## Tool Result (Error)", `Error: ${msg.toolResult.error}`, ""]
     return ["## Tool Result", "```json", JSON.stringify(sampleValue(msg.toolResult.result), null, 2), "```", ""]
   }
   return []
@@ -587,16 +581,17 @@ export function updateParamBindingRefs(
 }
 
 export function updateBindingRef(binding: ParamBinding, idMap: Map<string, string>): ParamBinding {
-  switch (binding.type) {
-    case "step":
-      return { ...binding, stepId: idMap.get(binding.stepId) ?? binding.stepId }
-    case "template":
-      return { ...binding, variables: updateParamBindingRefs(binding.variables, idMap) }
-    case "object":
-      return { ...binding, entries: updateParamBindingRefs(binding.entries, idMap) }
-    case "array":
-      return { ...binding, items: binding.items.map((item) => updateBindingRef(item, idMap)) }
-    default:
-      return binding
+  if (binding.type === "step") {
+    return { ...binding, stepId: idMap.get(binding.stepId) ?? binding.stepId }
   }
+  if (binding.type === "template") {
+    return { ...binding, variables: updateParamBindingRefs(binding.variables, idMap) }
+  }
+  if (binding.type === "object") {
+    return { ...binding, entries: updateParamBindingRefs(binding.entries, idMap) }
+  }
+  if (binding.type === "array") {
+    return { ...binding, items: binding.items.map((item) => updateBindingRef(item, idMap)) }
+  }
+  return binding
 }

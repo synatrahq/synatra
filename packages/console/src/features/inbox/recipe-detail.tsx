@@ -59,33 +59,42 @@ type PendingInputConfig = {
 }
 
 function formatBindingRef(binding: ParamBinding): string {
-  if (binding.type === "static") return JSON.stringify(binding.value)
-  if (binding.type === "input") return `input.${binding.inputKey}`
-  if (binding.type === "step") {
-    const path = binding.path?.replace(/^\$\.?/, "") ?? ""
-    return path ? `${binding.stepId}.${path}` : binding.stepId
+  switch (binding.type) {
+    case "static":
+      return JSON.stringify(binding.value)
+    case "input":
+      return `input.${binding.inputKey}`
+    case "step": {
+      const path = binding.path?.replace(/^\$\.?/, "") ?? ""
+      return path ? `${binding.stepId}.${path}` : binding.stepId
+    }
+    default:
+      return "[complex]"
   }
-  return "[complex]"
 }
 
 function resolveBinding(binding: ParamBinding): unknown {
-  if (binding.type === "static") return binding.value
-  if (binding.type === "input") return `$input.${binding.inputKey}`
-  if (binding.type === "step") {
-    const path = binding.path?.replace(/^\$\.?/, "") ?? ""
-    return path ? `$step.${binding.stepId}.${path}` : `$step.${binding.stepId}`
-  }
-  if (binding.type === "template") {
-    let result = binding.template
-    for (const [k, v] of Object.entries(binding.variables)) {
-      result = result.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), `{{ ${formatBindingRef(v)} }}`)
+  switch (binding.type) {
+    case "static":
+      return binding.value
+    case "input":
+      return `$input.${binding.inputKey}`
+    case "step": {
+      const path = binding.path?.replace(/^\$\.?/, "") ?? ""
+      return path ? `$step.${binding.stepId}.${path}` : `$step.${binding.stepId}`
     }
-    return result
+    case "template": {
+      let result = binding.template
+      for (const [k, v] of Object.entries(binding.variables)) {
+        result = result.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), `{{ ${formatBindingRef(v)} }}`)
+      }
+      return result
+    }
+    case "object":
+      return Object.fromEntries(Object.entries(binding.entries).map(([k, v]) => [k, resolveBinding(v)]))
+    case "array":
+      return binding.items.map((item) => resolveBinding(item))
   }
-  if (binding.type === "object") {
-    return Object.fromEntries(Object.entries(binding.entries).map(([k, v]) => [k, resolveBinding(v)]))
-  }
-  return binding.items.map((item) => resolveBinding(item))
 }
 
 function resolveParams(params: Record<string, ParamBinding>): Record<string, unknown> {
@@ -590,11 +599,18 @@ function ExecutionDetail(props: { execution: RecipeExecution; recipe: Recipe; to
 }
 
 function ExecutionStatusIcon(props: { status: RecipeExecution["status"] }) {
-  if (props.status === "completed") return <CheckCircle class="h-4 w-4 text-success" weight="fill" />
-  if (props.status === "failed") return <XCircle class="h-4 w-4 text-danger" weight="fill" />
-  if (props.status === "running") return <Spinner size="xs" />
-  if (props.status === "waiting_input") return <HourglassHigh class="h-4 w-4 text-warning" weight="fill" />
-  return <Clock class="h-4 w-4 text-text-muted" />
+  switch (props.status) {
+    case "completed":
+      return <CheckCircle class="h-4 w-4 text-success" weight="fill" />
+    case "failed":
+      return <XCircle class="h-4 w-4 text-danger" weight="fill" />
+    case "running":
+      return <Spinner size="xs" />
+    case "waiting_input":
+      return <HourglassHigh class="h-4 w-4 text-warning" weight="fill" />
+    default:
+      return <Clock class="h-4 w-4 text-text-muted" />
+  }
 }
 
 function ExecutionRow(props: {
@@ -623,28 +639,23 @@ function ExecutionRow(props: {
     })
   }
 
-  const statusLabel = (): string => {
-    const labels: Record<string, string> = {
-      waiting_input: "Waiting for input",
-      completed: "Completed",
-      failed: "Failed",
-      running: "Running",
+  const statusConfig = (): { label: string; color: string } => {
+    switch (props.execution.status) {
+      case "completed":
+        return { label: "Completed", color: "border-success/30 bg-success/5" }
+      case "failed":
+        return { label: "Failed", color: "border-danger/30 bg-danger/5" }
+      case "waiting_input":
+        return { label: "Waiting for input", color: "border-warning/30 bg-warning/5" }
+      case "running":
+        return { label: "Running", color: "border-accent/30 bg-accent/5" }
+      default:
+        return { label: props.execution.status, color: "border-border bg-surface" }
     }
-    return labels[props.execution.status] ?? props.execution.status
-  }
-
-  const statusColor = (): string => {
-    const colors: Record<string, string> = {
-      completed: "border-success/30 bg-success/5",
-      failed: "border-danger/30 bg-danger/5",
-      waiting_input: "border-warning/30 bg-warning/5",
-      running: "border-accent/30 bg-accent/5",
-    }
-    return colors[props.execution.status] ?? "border-border bg-surface"
   }
 
   return (
-    <div class={`rounded-lg border transition-colors ${statusColor()}`}>
+    <div class={`rounded-lg border transition-colors ${statusConfig().color}`}>
       <button
         type="button"
         class="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-surface-muted/50 rounded-lg"
@@ -656,7 +667,7 @@ function ExecutionRow(props: {
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-medium text-text">{statusLabel()}</span>
+            <span class="text-xs font-medium text-text">{statusConfig().label}</span>
             <Show when={props.isLatest}>
               <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">latest</span>
             </Show>
