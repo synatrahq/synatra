@@ -59,58 +59,37 @@ type PendingInputConfig = {
 }
 
 function formatBindingRef(binding: ParamBinding): string {
-  switch (binding.type) {
-    case "static":
-      return JSON.stringify(binding.value)
-    case "input":
-      return `input.${binding.inputKey}`
-    case "step": {
-      const path = binding.path?.replace(/^\$\.?/, "") ?? ""
-      return path ? `${binding.stepId}.${path}` : binding.stepId
-    }
-    case "template":
-    case "object":
-    case "array":
-      return "[complex]"
+  if (binding.type === "static") return JSON.stringify(binding.value)
+  if (binding.type === "input") return `input.${binding.inputKey}`
+  if (binding.type === "step") {
+    const path = binding.path?.replace(/^\$\.?/, "") ?? ""
+    return path ? `${binding.stepId}.${path}` : binding.stepId
   }
+  return "[complex]"
 }
 
 function resolveBinding(binding: ParamBinding): unknown {
-  switch (binding.type) {
-    case "static":
-      return binding.value
-    case "input":
-      return `$input.${binding.inputKey}`
-    case "step": {
-      const path = binding.path?.replace(/^\$\.?/, "") ?? ""
-      return path ? `$step.${binding.stepId}.${path}` : `$step.${binding.stepId}`
-    }
-    case "template": {
-      let result = binding.template
-      for (const [k, v] of Object.entries(binding.variables)) {
-        result = result.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), `{{ ${formatBindingRef(v)} }}`)
-      }
-      return result
-    }
-    case "object": {
-      const result: Record<string, unknown> = {}
-      for (const [k, v] of Object.entries(binding.entries)) {
-        result[k] = resolveBinding(v)
-      }
-      return result
-    }
-    case "array": {
-      return binding.items.map((item) => resolveBinding(item))
-    }
+  if (binding.type === "static") return binding.value
+  if (binding.type === "input") return `$input.${binding.inputKey}`
+  if (binding.type === "step") {
+    const path = binding.path?.replace(/^\$\.?/, "") ?? ""
+    return path ? `$step.${binding.stepId}.${path}` : `$step.${binding.stepId}`
   }
+  if (binding.type === "template") {
+    let result = binding.template
+    for (const [k, v] of Object.entries(binding.variables)) {
+      result = result.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), `{{ ${formatBindingRef(v)} }}`)
+    }
+    return result
+  }
+  if (binding.type === "object") {
+    return Object.fromEntries(Object.entries(binding.entries).map(([k, v]) => [k, resolveBinding(v)]))
+  }
+  return binding.items.map((item) => resolveBinding(item))
 }
 
 function resolveParams(params: Record<string, ParamBinding>): Record<string, unknown> {
-  const result: Record<string, unknown> = {}
-  for (const [key, binding] of Object.entries(params)) {
-    result[key] = resolveBinding(binding)
-  }
-  return result
+  return Object.fromEntries(Object.entries(params).map(([key, binding]) => [key, resolveBinding(binding)]))
 }
 
 type ToolDef = { name: string; description?: string; code: string }
@@ -277,16 +256,15 @@ function PendingInputForm(props: {
 }) {
   const fields = () => props.config.fields
 
-  const initResponses = () => {
-    const result: Record<string, unknown> = {}
-    for (const field of fields()) {
-      if (field.kind === "form") {
-        const schema = (field as HumanRequestFormConfig).schema as JSONSchema
-        result[field.key] = extractDefaults(schema, schema?.required ?? [])
-      }
-    }
-    return result
-  }
+  const initResponses = () =>
+    Object.fromEntries(
+      fields()
+        .filter((f) => f.kind === "form")
+        .map((f) => {
+          const schema = (f as HumanRequestFormConfig).schema as JSONSchema
+          return [f.key, extractDefaults(schema, schema?.required ?? [])]
+        }),
+    )
 
   const [responses, setResponses] = createSignal<Record<string, unknown>>(initResponses())
   const [touched, setTouched] = createSignal<Record<string, Record<string, boolean>>>({})
@@ -612,18 +590,11 @@ function ExecutionDetail(props: { execution: RecipeExecution; recipe: Recipe; to
 }
 
 function ExecutionStatusIcon(props: { status: RecipeExecution["status"] }) {
-  switch (props.status) {
-    case "completed":
-      return <CheckCircle class="h-4 w-4 text-success" weight="fill" />
-    case "failed":
-      return <XCircle class="h-4 w-4 text-danger" weight="fill" />
-    case "running":
-      return <Spinner size="xs" />
-    case "waiting_input":
-      return <HourglassHigh class="h-4 w-4 text-warning" weight="fill" />
-    default:
-      return <Clock class="h-4 w-4 text-text-muted" />
-  }
+  if (props.status === "completed") return <CheckCircle class="h-4 w-4 text-success" weight="fill" />
+  if (props.status === "failed") return <XCircle class="h-4 w-4 text-danger" weight="fill" />
+  if (props.status === "running") return <Spinner size="xs" />
+  if (props.status === "waiting_input") return <HourglassHigh class="h-4 w-4 text-warning" weight="fill" />
+  return <Clock class="h-4 w-4 text-text-muted" />
 }
 
 function ExecutionRow(props: {
@@ -652,34 +623,24 @@ function ExecutionRow(props: {
     })
   }
 
-  const statusLabel = () => {
-    switch (props.execution.status) {
-      case "waiting_input":
-        return "Waiting for input"
-      case "completed":
-        return "Completed"
-      case "failed":
-        return "Failed"
-      case "running":
-        return "Running"
-      default:
-        return props.execution.status
+  const statusLabel = (): string => {
+    const labels: Record<string, string> = {
+      waiting_input: "Waiting for input",
+      completed: "Completed",
+      failed: "Failed",
+      running: "Running",
     }
+    return labels[props.execution.status] ?? props.execution.status
   }
 
-  const statusColor = () => {
-    switch (props.execution.status) {
-      case "completed":
-        return "border-success/30 bg-success/5"
-      case "failed":
-        return "border-danger/30 bg-danger/5"
-      case "waiting_input":
-        return "border-warning/30 bg-warning/5"
-      case "running":
-        return "border-accent/30 bg-accent/5"
-      default:
-        return "border-border bg-surface"
+  const statusColor = (): string => {
+    const colors: Record<string, string> = {
+      completed: "border-success/30 bg-success/5",
+      failed: "border-danger/30 bg-danger/5",
+      waiting_input: "border-warning/30 bg-warning/5",
+      running: "border-accent/30 bg-accent/5",
     }
+    return colors[props.execution.status] ?? "border-border bg-surface"
   }
 
   return (

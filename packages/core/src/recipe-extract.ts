@@ -182,6 +182,7 @@ export interface ExtractedRecipe {
 export function validateRecipeSteps(steps: RecipeStep[]): { valid: boolean; errors: string[] } {
   const errors: string[] = []
   const stepIds = new Set(steps.map((s) => s.id))
+  const stepMap = new Map(steps.map((s) => [s.id, s]))
 
   for (const step of steps) {
     for (const depId of step.dependsOn) {
@@ -205,7 +206,7 @@ export function validateRecipeSteps(steps: RecipeStep[]): { valid: boolean; erro
     if (visited.has(stepId)) return false
 
     visiting.add(stepId)
-    const step = steps.find((s) => s.id === stepId)
+    const step = stepMap.get(stepId)
     if (step) {
       for (const depId of step.dependsOn) {
         if (hasCycle(depId)) return true
@@ -226,91 +227,61 @@ export function validateRecipeSteps(steps: RecipeStep[]): { valid: boolean; erro
   return { valid: errors.length === 0, errors }
 }
 
-export function formatToolSchemas(agentTools: AgentTool[]): string {
-  const lines: string[] = []
-
-  lines.push("# Available Tools")
-  lines.push("")
-
-  lines.push("## Agent Tools")
-  lines.push("")
-  for (const tool of agentTools) {
-    lines.push(`### ${tool.name}`)
-    lines.push(`${tool.description}`)
-    lines.push("")
-    lines.push("**Parameters:**")
-    lines.push("```json")
-    lines.push(JSON.stringify(tool.params, null, 2))
-    lines.push("```")
-    lines.push("")
-    lines.push("**Returns:**")
-    lines.push("```json")
-    lines.push(JSON.stringify(tool.returns, null, 2))
-    lines.push("```")
-    lines.push("")
+function formatToolSection(name: string, description: string, params: unknown, returns?: unknown): string {
+  const lines = [
+    `### ${name}`,
+    description,
+    "",
+    "**Parameters:**",
+    "```json",
+    JSON.stringify(params, null, 2),
+    "```",
+    "",
+  ]
+  if (returns) {
+    lines.push("**Returns:**", "```json", JSON.stringify(returns, null, 2), "```", "")
   }
-
-  lines.push("## System Tools (for Recipe)")
-  lines.push("")
-
-  const systemTools = [...COMPUTE_TOOLS, ...OUTPUT_TOOLS, ...HUMAN_TOOLS]
-  for (const tool of systemTools) {
-    lines.push(`### ${tool.name}`)
-    lines.push(`${tool.description}`)
-    lines.push("")
-    lines.push("**Parameters:**")
-    lines.push("```json")
-    lines.push(JSON.stringify(tool.params, null, 2))
-    lines.push("```")
-    lines.push("")
-    if (tool.returns) {
-      lines.push("**Returns:**")
-      lines.push("```json")
-      lines.push(JSON.stringify(tool.returns, null, 2))
-      lines.push("```")
-      lines.push("")
-    }
-  }
-
   return lines.join("\n")
 }
 
-export function formatConversationForLLM(context: ConversationContext): string {
-  const lines: string[] = []
+export function formatToolSchemas(agentTools: AgentTool[]): string {
+  const agentToolLines = agentTools.map((t) => formatToolSection(t.name, t.description, t.params, t.returns))
+  const systemTools = [...COMPUTE_TOOLS, ...OUTPUT_TOOLS, ...HUMAN_TOOLS]
+  const systemToolLines = systemTools.map((t) => formatToolSection(t.name, t.description, t.params, t.returns))
 
-  lines.push("# Conversation Log")
-  lines.push("")
+  return [
+    "# Available Tools",
+    "",
+    "## Agent Tools",
+    "",
+    ...agentToolLines,
+    "## System Tools (for Recipe)",
+    "",
+    ...systemToolLines,
+  ].join("\n")
+}
 
-  for (const msg of context.messages) {
-    if (msg.type === "user") {
-      lines.push(`## User Message`)
-      lines.push(msg.content ?? "")
-      lines.push("")
-    } else if (msg.type === "assistant" && msg.content) {
-      lines.push(`## Assistant Response`)
-      lines.push(msg.content)
-      lines.push("")
-    } else if (msg.type === "tool_call" && msg.toolCall) {
-      lines.push(`## Tool Call: ${msg.toolCall.name}`)
-      lines.push("```json")
-      lines.push(JSON.stringify(msg.toolCall.params, null, 2))
-      lines.push("```")
-      lines.push("")
-    } else if (msg.type === "tool_result" && msg.toolResult) {
-      if (msg.toolResult.error) {
-        lines.push(`## Tool Result (Error)`)
-        lines.push(`Error: ${msg.toolResult.error}`)
-      } else {
-        lines.push(`## Tool Result`)
-        lines.push("```json")
-        lines.push(JSON.stringify(sampleValue(msg.toolResult.result), null, 2))
-        lines.push("```")
-      }
-      lines.push("")
-    }
+function formatMessage(msg: ExtractedMessage): string[] {
+  if (msg.type === "user") {
+    return ["## User Message", msg.content ?? "", ""]
   }
+  if (msg.type === "assistant" && msg.content) {
+    return ["## Assistant Response", msg.content, ""]
+  }
+  if (msg.type === "tool_call" && msg.toolCall) {
+    return [`## Tool Call: ${msg.toolCall.name}`, "```json", JSON.stringify(msg.toolCall.params, null, 2), "```", ""]
+  }
+  if (msg.type === "tool_result" && msg.toolResult) {
+    if (msg.toolResult.error) {
+      return ["## Tool Result (Error)", `Error: ${msg.toolResult.error}`, ""]
+    }
+    return ["## Tool Result", "```json", JSON.stringify(sampleValue(msg.toolResult.result), null, 2), "```", ""]
+  }
+  return []
+}
 
-  return lines.join("\n")
+export function formatConversationForLLM(context: ConversationContext): string {
+  return ["# Conversation Log", "", ...context.messages.flatMap(formatMessage)].join("\n")
 }
 
 export const RECIPE_EXTRACTION_PROMPT = `You are a recipe extraction assistant. Your goal is to create a **generalized, reusable workflow** from a conversation log.
@@ -604,25 +575,20 @@ export function updateParamBindingRefs(
   params: Record<string, ParamBinding>,
   idMap: Map<string, string>,
 ): Record<string, ParamBinding> {
-  const updated: Record<string, ParamBinding> = {}
-  for (const [key, binding] of Object.entries(params)) {
-    updated[key] = updateBindingRef(binding, idMap)
-  }
-  return updated
+  return Object.fromEntries(Object.entries(params).map(([key, binding]) => [key, updateBindingRef(binding, idMap)]))
 }
 
 export function updateBindingRef(binding: ParamBinding, idMap: Map<string, string>): ParamBinding {
-  if (binding.type === "step") {
-    return { ...binding, stepId: idMap.get(binding.stepId) ?? binding.stepId }
+  switch (binding.type) {
+    case "step":
+      return { ...binding, stepId: idMap.get(binding.stepId) ?? binding.stepId }
+    case "template":
+      return { ...binding, variables: updateParamBindingRefs(binding.variables, idMap) }
+    case "object":
+      return { ...binding, entries: updateParamBindingRefs(binding.entries, idMap) }
+    case "array":
+      return { ...binding, items: binding.items.map((item) => updateBindingRef(item, idMap)) }
+    default:
+      return binding
   }
-  if (binding.type === "template") {
-    return { ...binding, variables: updateParamBindingRefs(binding.variables, idMap) }
-  }
-  if (binding.type === "object") {
-    return { ...binding, entries: updateParamBindingRefs(binding.entries, idMap) }
-  }
-  if (binding.type === "array") {
-    return { ...binding, items: binding.items.map((item) => updateBindingRef(item, idMap)) }
-  }
-  return binding
 }

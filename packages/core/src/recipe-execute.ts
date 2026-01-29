@@ -46,50 +46,30 @@ export function getValueByPath(obj: unknown, path?: string): unknown {
 }
 
 export function resolveBinding(binding: ParamBinding, context: RecipeExecutionContext): unknown {
-  switch (binding.type) {
-    case "static":
-      return binding.value
-
-    case "input":
-      return context.inputs[binding.inputKey]
-
-    case "step": {
-      const stepResult = context.results[binding.stepId]
-      return getValueByPath(stepResult, binding.path)
+  if (binding.type === "static") return binding.value
+  if (binding.type === "input") return context.inputs[binding.inputKey]
+  if (binding.type === "step") return getValueByPath(context.results[binding.stepId], binding.path)
+  if (binding.type === "template") {
+    let result = binding.template
+    for (const [varName, varBinding] of Object.entries(binding.variables)) {
+      const value = resolveBinding(varBinding, context)
+      result = result.replace(new RegExp(`\\{\\{${varName}\\}\\}`, "g"), String(value ?? ""))
     }
-
-    case "template": {
-      let result = binding.template
-      for (const [varName, varBinding] of Object.entries(binding.variables)) {
-        const value = resolveBinding(varBinding, context)
-        result = result.replace(new RegExp(`\\{\\{${varName}\\}\\}`, "g"), String(value ?? ""))
-      }
-      return result
-    }
-
-    case "object": {
-      const obj: Record<string, unknown> = {}
-      for (const [key, entryBinding] of Object.entries(binding.entries)) {
-        obj[key] = resolveBinding(entryBinding, context)
-      }
-      return obj
-    }
-
-    case "array": {
-      return binding.items.map((item) => resolveBinding(item, context))
-    }
-
-    default:
-      return undefined
+    return result
   }
+  if (binding.type === "object") {
+    return Object.fromEntries(Object.entries(binding.entries).map(([key, b]) => [key, resolveBinding(b, context)]))
+  }
+  if (binding.type === "array") {
+    return binding.items.map((item) => resolveBinding(item, context))
+  }
+  return undefined
 }
 
 export function resolveStepParams(step: RecipeStep, context: RecipeExecutionContext): Record<string, unknown> {
-  const resolved: Record<string, unknown> = {}
-  for (const [paramName, binding] of Object.entries(step.params)) {
-    resolved[paramName] = resolveBinding(binding, context)
-  }
-  return resolved
+  return Object.fromEntries(
+    Object.entries(step.params).map(([name, binding]) => [name, resolveBinding(binding, context)]),
+  )
 }
 
 export function getStepExecutionOrder(steps: RecipeStep[]): RecipeStep[] {

@@ -42,9 +42,6 @@ export function RecipeExtractModal(props: RecipeExtractModalProps) {
     if (props.open) {
       setName("")
       setDescription("")
-      if (props.models.length > 0 && !selectedModel()) {
-        setSelectedModel(props.models[0].id)
-      }
     }
   })
 
