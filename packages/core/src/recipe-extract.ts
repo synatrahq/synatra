@@ -283,14 +283,14 @@ export const RECIPE_EXTRACTION_PROMPT = `You are a recipe extraction assistant. 
 
 Return a JSON object with this structure:
 {
+  "name": "Recipe name",
+  "description": "What this recipe does",
   "inputs": [
     {
       "key": "string",
       "label": "string",
-      "description": "string (optional)",
-      "schema": { JSON Schema },
-      "required": true/false,
-      "defaultValue": any (optional)
+      "type": "string" | "number" | "date" | "dateRange" | "select",
+      "required": true/false
     }
   ],
   "steps": [
@@ -306,7 +306,8 @@ Return a JSON object with this structure:
   "outputs": [
     {
       "stepId": "string",
-      "label": "string (optional)"
+      "kind": "table" | "chart" | "markdown" | "key_value",
+      "name": "string (optional)"
     }
   ]
 }
