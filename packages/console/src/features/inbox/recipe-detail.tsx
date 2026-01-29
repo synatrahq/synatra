@@ -418,15 +418,19 @@ function PendingInputForm(props: {
 function StepResultItem(props: {
   stepId: string
   result: unknown
+  resolvedParams?: Record<string, unknown>
   recipe: Recipe
   isOutput: boolean
   index: number
   isLast: boolean
   tools?: ToolDef[]
+  failed?: boolean
 }) {
   const step = () => props.recipe.steps.find((s) => s.stepKey === props.stepId)
   const outputDef = () => props.recipe.outputs.find((o) => o.stepId === props.stepId)
-  const [expanded, setExpanded] = createSignal(props.isOutput)
+  const [expanded, setExpanded] = createSignal(props.isOutput || props.failed)
+  const [paramsExpanded, setParamsExpanded] = createSignal(false)
+  const hasParams = () => props.resolvedParams && Object.keys(props.resolvedParams).length > 0
   const toolName = () => step()?.toolName ?? props.stepId
   const isCustomTool = () => !!props.tools?.find((t) => t.name === toolName())
 
@@ -464,20 +468,28 @@ function StepResultItem(props: {
         <div
           class="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 transition-colors"
           classList={{
-            "border-success bg-success/10 text-success": !expanded(),
-            "border-accent bg-accent/10 text-accent": expanded(),
+            "border-danger bg-danger/10 text-danger": props.failed,
+            "border-success bg-success/10 text-success": !props.failed && !expanded(),
+            "border-accent bg-accent/10 text-accent": !props.failed && expanded(),
           }}
         >
-          <StepToolIcon toolName={toolName()} isCustomTool={isCustomTool()} />
+          <Show when={props.failed} fallback={<StepToolIcon toolName={toolName()} isCustomTool={isCustomTool()} />}>
+            <XCircle class="h-4 w-4" weight="fill" />
+          </Show>
         </div>
 
         <div class="flex-1 min-w-0 py-1.5">
           <div class="flex items-center gap-2">
             <span class="text-2xs font-medium text-text-muted">Step {props.index + 1}</span>
-            <Show when={isOutputStep()}>
+            <Show when={props.failed}>
+              <span class="text-2xs text-danger bg-danger/10 px-1.5 py-0.5 rounded">failed</span>
+            </Show>
+            <Show when={isOutputStep() && !props.failed}>
               <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">output</span>
             </Show>
-            <CheckCircle class="h-3 w-3 text-success" weight="fill" />
+            <Show when={!props.failed}>
+              <CheckCircle class="h-3 w-3 text-success" weight="fill" />
+            </Show>
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xs text-text truncate">{step()?.label}</span>
@@ -492,6 +504,28 @@ function StepResultItem(props: {
 
       <Show when={expanded()}>
         <div class="ml-11 mt-2 mb-4 rounded-lg border border-border overflow-hidden bg-surface">
+          <Show when={hasParams()}>
+            <div class="border-b border-border">
+              <button
+                type="button"
+                class="flex items-center gap-1.5 w-full px-3 py-2 hover:bg-surface-muted/50 transition-colors"
+                onClick={() => setParamsExpanded(!paramsExpanded())}
+              >
+                <span class="transition-transform" classList={{ "rotate-90": paramsExpanded() }}>
+                  <CaretRight class="h-3 w-3 text-text-muted" />
+                </span>
+                <BracketsCurly class="h-3 w-3 text-text-muted" />
+                <span class="text-2xs font-medium text-text-muted">Parameters</span>
+              </button>
+              <Show when={paramsExpanded()}>
+                <div class="px-3 pb-2.5">
+                  <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2 max-h-32 overflow-y-auto">
+                    {JSON.stringify(props.resolvedParams, null, 2)}
+                  </pre>
+                </div>
+              </Show>
+            </div>
+          </Show>
           <Show
             when={outputItem()}
             fallback={
@@ -518,49 +552,15 @@ function StepResultItem(props: {
   )
 }
 
-function ExecutionDetail(props: { execution: RecipeExecution; recipe: Recipe; tools?: ToolDef[] }) {
-  const sortedSteps = createMemo(() => {
-    const results = (props.execution.results ?? {}) as Record<string, unknown>
-    const stepOrder = new Map(props.recipe.steps.map((s, i) => [s.stepKey, i]))
-    const entries = Object.entries(results)
-
-    return entries.sort(([a], [b]) => {
-      const aOrder = stepOrder.get(a) ?? Number.MAX_VALUE
-      const bOrder = stepOrder.get(b) ?? Number.MAX_VALUE
-      return aOrder - bOrder
-    })
-  })
-
-  const outputStepIds = createMemo(() => new Set(props.recipe.outputs.map((o) => o.stepId)))
-
-  return (
-    <div class="space-y-1">
-      <div class="pl-1">
-        <For each={sortedSteps()}>
-          {([stepId, result], index) => (
-            <StepResultItem
-              stepId={stepId}
-              result={result}
-              recipe={props.recipe}
-              isOutput={outputStepIds().has(stepId)}
-              index={index()}
-              isLast={index() === sortedSteps().length - 1}
-              tools={props.tools}
-            />
-          )}
-        </For>
-      </div>
-    </div>
-  )
-}
-
 function ResultDisplay(props: {
   stepResults: Record<string, unknown>
   resolvedParams?: Record<string, Record<string, unknown>>
   recipe: Recipe
   tools?: ToolDef[]
-  failedStepKey?: string
+  error?: RecipeExecutionError
 }) {
+  const failedStepKey = () => props.error?.stepKey
+
   const sortedSteps = createMemo(() => {
     const stepOrder = new Map(props.recipe.steps.map((s, i) => [s.stepKey, i]))
     const entries = Object.entries(props.stepResults)
@@ -569,8 +569,8 @@ function ResultDisplay(props: {
       const bOrder = stepOrder.get(b) ?? Number.MAX_VALUE
       return aOrder - bOrder
     })
-    if (props.failedStepKey && !props.stepResults[props.failedStepKey]) {
-      sorted.push([props.failedStepKey, null])
+    if (failedStepKey() && !props.stepResults[failedStepKey()!]) {
+      sorted.push([failedStepKey()!, null])
     }
     return sorted
   })
@@ -578,141 +578,41 @@ function ResultDisplay(props: {
   const outputStepIds = createMemo(() => new Set(props.recipe.outputs.map((o) => o.stepId)))
 
   return (
-    <div class="space-y-1 pl-1">
-      <For each={sortedSteps()}>
-        {([stepId, result], index) => {
-          const step = () => props.recipe.steps.find((s) => s.stepKey === stepId)
-          const outputDef = () => props.recipe.outputs.find((o) => o.stepId === stepId)
-          const [expanded, setExpanded] = createSignal(outputStepIds().has(stepId) || stepId === props.failedStepKey)
-          const [paramsExpanded, setParamsExpanded] = createSignal(false)
-          const toolName = () => step()?.toolName ?? stepId
-          const isCustomTool = () => !!props.tools?.find((t) => t.name === toolName())
-          const isOutput = () => outputStepIds().has(stepId)
-          const isFailed = () => stepId === props.failedStepKey
-          const stepParams = () => props.resolvedParams?.[stepId]
-          const hasParams = () => stepParams() && Object.keys(stepParams()!).length > 0
-
-          const asOutputItem = (): OutputItem | null => {
-            const def = outputDef()
-            if (!def) return null
-            const resultData = result as Record<string, unknown> | null
-            if (!resultData) return null
-            return {
-              id: stepId,
-              kind: def.kind,
-              name: def.name ?? null,
-              payload: resultData,
-              toolCallId: null,
-              runId: null,
-              threadId: "",
-              createdAt: new Date().toISOString(),
-            } as unknown as OutputItem
-          }
-
-          const outputItem = () => asOutputItem()
-          const isOutputStep = () => !!outputItem()
-
+    <div class="space-y-3">
+      <Show when={props.error}>
+        {(err) => {
+          const failedStep = () => props.recipe.steps.find((s) => s.stepKey === err().stepKey)
           return (
-            <div class="relative">
-              <Show when={index() < sortedSteps().length - 1}>
-                <div class="absolute left-[15px] top-[32px] bottom-[-8px] w-px bg-border" />
-              </Show>
-
-              <button
-                type="button"
-                class="flex items-center gap-3 w-full text-left group"
-                onClick={() => setExpanded(!expanded())}
-              >
-                <div
-                  class="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 transition-colors"
-                  classList={{
-                    "border-danger bg-danger/10 text-danger": isFailed(),
-                    "border-success bg-success/10 text-success": !isFailed() && !expanded(),
-                    "border-accent bg-accent/10 text-accent": !isFailed() && expanded(),
-                  }}
-                >
-                  <Show
-                    when={isFailed()}
-                    fallback={<StepToolIcon toolName={toolName()} isCustomTool={isCustomTool()} />}
-                  >
-                    <XCircle class="h-4 w-4" weight="fill" />
-                  </Show>
-                </div>
-
-                <div class="flex-1 min-w-0 py-1.5">
-                  <div class="flex items-center gap-2">
-                    <span class="text-2xs font-medium text-text-muted">Step {index() + 1}</span>
-                    <Show when={isFailed()}>
-                      <span class="text-2xs text-danger bg-danger/10 px-1.5 py-0.5 rounded">failed</span>
-                    </Show>
-                    <Show when={isOutputStep() && !isFailed()}>
-                      <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">output</span>
-                    </Show>
-                    <Show when={!isFailed()}>
-                      <CheckCircle class="h-3 w-3 text-success" weight="fill" />
-                    </Show>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span class="text-xs text-text truncate">{step()?.label}</span>
-                    <span class="font-code text-2xs text-text-muted shrink-0">({toolName()})</span>
-                  </div>
-                </div>
-
-                <span class="shrink-0 transition-transform" classList={{ "rotate-90": expanded() }}>
-                  <CaretRight class="h-4 w-4 text-text-muted" />
+            <div class="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2.5">
+              <div class="flex items-center gap-2 mb-1.5">
+                <XCircle class="h-4 w-4 text-danger" weight="fill" />
+                <span class="text-xs font-medium text-danger">
+                  Step "{failedStep()?.label ?? err().stepKey}" ({err().toolName}) failed
                 </span>
-              </button>
-
-              <Show when={expanded()}>
-                <div class="ml-11 mt-2 mb-4 rounded-lg border border-border overflow-hidden bg-surface">
-                  <Show when={hasParams()}>
-                    <div class="border-b border-border">
-                      <button
-                        type="button"
-                        class="flex items-center gap-1.5 w-full px-3 py-2 hover:bg-surface-muted/50 transition-colors"
-                        onClick={() => setParamsExpanded(!paramsExpanded())}
-                      >
-                        <span class="transition-transform" classList={{ "rotate-90": paramsExpanded() }}>
-                          <CaretRight class="h-3 w-3 text-text-muted" />
-                        </span>
-                        <BracketsCurly class="h-3 w-3 text-text-muted" />
-                        <span class="text-2xs font-medium text-text-muted">Parameters</span>
-                      </button>
-                      <Show when={paramsExpanded()}>
-                        <div class="px-3 pb-2.5">
-                          <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2 max-h-32 overflow-y-auto">
-                            {JSON.stringify(stepParams(), null, 2)}
-                          </pre>
-                        </div>
-                      </Show>
-                    </div>
-                  </Show>
-                  <Show
-                    when={outputItem()}
-                    fallback={
-                      <div class="px-3 py-2.5">
-                        <div class="flex items-center gap-1.5 mb-2">
-                          <Export class="h-3 w-3 text-text-muted" />
-                          <span class="text-2xs font-medium text-text-muted">Result</span>
-                        </div>
-                        <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2 max-h-32 overflow-y-auto">
-                          {JSON.stringify(result, null, 2)}
-                        </pre>
-                      </div>
-                    }
-                  >
-                    {(item) => (
-                      <div class="px-3 py-2.5">
-                        <OutputItemRenderer item={item()} />
-                      </div>
-                    )}
-                  </Show>
-                </div>
-              </Show>
+              </div>
+              <p class="text-xs text-text leading-relaxed">{err().message}</p>
             </div>
           )
         }}
-      </For>
+      </Show>
+
+      <div class="pl-1">
+        <For each={sortedSteps()}>
+          {([stepId, result], index) => (
+            <StepResultItem
+              stepId={stepId}
+              result={result}
+              resolvedParams={props.resolvedParams?.[stepId]}
+              recipe={props.recipe}
+              isOutput={outputStepIds().has(stepId)}
+              index={index()}
+              isLast={index() === sortedSteps().length - 1}
+              tools={props.tools}
+              failed={stepId === failedStepKey()}
+            />
+          )}
+        </For>
+      </div>
     </div>
   )
 }
@@ -789,7 +689,13 @@ function ExecutionRow(props: {
         <div class="border-t border-border/50 px-3 py-3 bg-surface/50 rounded-b-lg">
           <Show
             when={isWaitingInput() && props.execution.pendingInputConfig}
-            fallback={<ExecutionDetail execution={props.execution} recipe={props.recipe} tools={props.tools} />}
+            fallback={
+              <ResultDisplay
+                stepResults={(props.execution.results ?? {}) as Record<string, unknown>}
+                recipe={props.recipe}
+                tools={props.tools}
+              />
+            }
           >
             <PendingInputForm
               config={props.execution.pendingInputConfig as unknown as PendingInputConfig}
@@ -1253,13 +1159,6 @@ export function RecipeDetail(props: RecipeDetailProps) {
                                 <span class="text-xs font-medium text-text">{statusConfig().label}</span>
                                 <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">latest</span>
                               </div>
-                              <Show when={result().error}>
-                                {(err) => (
-                                  <p class="text-2xs text-text-muted mt-0.5">
-                                    Step "{err().stepKey}" ({err().toolName}): {err().message}
-                                  </p>
-                                )}
-                              </Show>
                             </div>
                           </div>
 
@@ -1277,14 +1176,18 @@ export function RecipeDetail(props: RecipeDetailProps) {
                             </div>
                           </Show>
 
-                          <Show when={result().stepResults && Object.keys(result().stepResults!).length > 0}>
+                          <Show
+                            when={
+                              result().error || (result().stepResults && Object.keys(result().stepResults!).length > 0)
+                            }
+                          >
                             <div class="border-t border-border/50 px-3 py-3 bg-surface/50">
                               <ResultDisplay
-                                stepResults={result().stepResults!}
+                                stepResults={result().stepResults ?? {}}
                                 resolvedParams={result().resolvedParams}
                                 recipe={recipe()}
                                 tools={agent()?.runtimeConfig?.tools}
-                                failedStepKey={result().error?.stepKey}
+                                error={result().error}
                               />
                             </div>
                           </Show>
