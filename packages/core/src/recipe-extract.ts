@@ -263,6 +263,13 @@ export function formatToolSchemas(agentTools: AgentTool[]): string {
     lines.push(JSON.stringify(tool.params, null, 2))
     lines.push("```")
     lines.push("")
+    if (tool.returns) {
+      lines.push("**Returns:**")
+      lines.push("```json")
+      lines.push(JSON.stringify(tool.returns, null, 2))
+      lines.push("```")
+      lines.push("")
+    }
   }
 
   return lines.join("\n")
@@ -490,51 +497,6 @@ Include as steps:
 
 Do NOT include:
 - task_complete: Recipe completes automatically after last step
-
----
-
-## output_chart - Dynamic Data
-
-IMPORTANT: Chart data (labels and datasets[].data) should come from previous steps, NOT be hardcoded.
-Use code_execute to format data into the chart structure, then pass the result to output_chart.
-
-Example - Chart with dynamic data from calculation step:
-{
-  "id": "prepare_chart_data",
-  "label": "Prepare chart data",
-  "toolName": "code_execute",
-  "params": {
-    "code": { "type": "static", "value": "return { labels: Object.keys(input.totals), datasets: [{ label: 'Count', data: Object.values(input.totals) }] }" },
-    "input": {
-      "type": "object",
-      "entries": {
-        "totals": { "type": "step", "stepId": "calculate_totals" }
-      }
-    }
-  },
-  "dependsOn": ["calculate_totals"]
-}
-
-{
-  "id": "display_chart",
-  "label": "Display distribution chart",
-  "toolName": "output_chart",
-  "params": {
-    "type": { "type": "static", "value": "bar" },
-    "data": { "type": "step", "stepId": "prepare_chart_data" }
-  },
-  "dependsOn": ["prepare_chart_data"]
-}
-
-BAD (hardcoded data - will not update when source data changes):
-{
-  "params": {
-    "data": {
-      "type": "static",
-      "value": { "labels": ["A", "B"], "datasets": [{ "data": [10, 20] }] }
-    }
-  }
-}
 
 ---
 
