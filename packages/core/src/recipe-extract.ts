@@ -322,6 +322,7 @@ Generalization principles:
 - **Let tools determine output structure** - If a query returns columns, display ALL returned columns, not just the ones shown in this conversation
 - **Derive display data from source** - Chart labels/values, table columns should come from actual query results
 - **Analyze tool capabilities** - Understand what each tool can return and build flexible data flows
+- **Exclude one-time analysis** - If LLM generated analysis text specific to the conversation data (e.g., "User X is top performer with 36% advantage"), EXCLUDE that output_markdown step entirely. Such analysis won't be valid when data changes. Only include markdown steps if they have a reusable structure (e.g., simple status messages, formatted data summaries using template bindings)
 
 Your task:
 1. Identify the user's INTENT (not just the specific actions)
