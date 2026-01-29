@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { z } from "zod"
 import { zValidator } from "@hono/zod-validator"
-import { generateText, tool, jsonSchema, hasToolCall, type JSONSchema7 } from "ai"
+import { generateText, tool, jsonSchema, hasToolCall, type JSONSchema7, type ModelMessage } from "ai"
 import { loadConversationContext, buildRecipeExtractionPrompt, validateRecipeSteps } from "@synatra/core"
 import { getModel } from "../agents/copilot/models"
 import type { RecipeStep, RecipeInput, RecipeOutput, ParamBinding } from "@synatra/core/types"
@@ -103,6 +103,8 @@ type ExtractedRecipe = {
   outputs: Array<{ stepId: string; kind: string; name?: string }>
 }
 
+const MAX_RETRIES = 2
+
 export const extract = new Hono().post("/extract", zValidator("json", ExtractRequestSchema), async (c) => {
   const body = c.req.valid("json")
   const context = await loadConversationContext(body)
@@ -115,49 +117,89 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
     inputSchema: jsonSchema(RecipeJsonSchema as JSONSchema7),
   })
 
-  const result = await generateText({
-    model,
-    tools: { submit_recipe: submitRecipeTool },
-    toolChoice: "required",
-    stopWhen: hasToolCall("submit_recipe"),
-    prompt,
-  })
+  const tools = { submit_recipe: submitRecipeTool }
+  const messages: ModelMessage[] = [{ role: "user", content: prompt }]
 
-  const toolCall = result.toolCalls[0]
-  if (!toolCall || toolCall.toolName !== "submit_recipe") {
-    throw createError("BadRequestError", { message: "LLM did not submit a recipe" })
+  let retryCount = 0
+  while (retryCount <= MAX_RETRIES) {
+    const result = await generateText({
+      model,
+      tools,
+      toolChoice: "required",
+      stopWhen: hasToolCall("submit_recipe"),
+      messages,
+    })
+
+    const toolCall = result.toolCalls[0]
+    if (!toolCall || toolCall.toolName !== "submit_recipe") {
+      throw createError("BadRequestError", { message: "LLM did not submit a recipe" })
+    }
+
+    const extracted = toolCall.input as ExtractedRecipe
+    const steps: RecipeStep[] = (extracted.steps ?? []).map((s) => ({
+      id: s.id,
+      toolName: s.toolName,
+      params: s.params,
+      dependsOn: s.dependsOn,
+    }))
+
+    const validation = validateRecipeSteps(steps)
+    if (steps.length === 0 || !validation.valid) {
+      const errors = steps.length === 0 ? ["Recipe must have at least one step"] : validation.errors
+      if (retryCount < MAX_RETRIES) {
+        messages.push(
+          {
+            role: "assistant",
+            content: [
+              {
+                type: "tool-call",
+                toolCallId: toolCall.toolCallId,
+                toolName: "submit_recipe",
+                input: toolCall.input as Record<string, unknown>,
+              },
+            ],
+          },
+          {
+            role: "tool",
+            content: [
+              {
+                type: "tool-result",
+                toolCallId: toolCall.toolCallId,
+                toolName: "submit_recipe",
+                output: {
+                  type: "error-text" as const,
+                  value: `Validation failed: ${errors.join(", ")}. Please fix and resubmit.`,
+                },
+              },
+            ],
+          },
+        )
+        retryCount++
+        continue
+      }
+      throw createError("BadRequestError", { message: `Invalid recipe: ${errors.join(", ")}` })
+    }
+
+    const inputs = extracted.inputs ?? []
+    const outputs = extracted.outputs ?? []
+
+    return c.json({
+      name: extracted.name,
+      description: extracted.description,
+      inputs: inputs.map((i) => ({
+        key: i.key,
+        label: i.label,
+        type: i.type as RecipeInput["type"],
+        required: i.required,
+      })),
+      steps,
+      outputs: outputs.map((o) => ({
+        stepId: o.stepId,
+        kind: o.kind as RecipeOutput["kind"],
+        name: o.name,
+      })),
+    })
   }
 
-  const extracted = toolCall.input as ExtractedRecipe
-  const inputs = extracted.inputs ?? []
-  const outputs = extracted.outputs ?? []
-
-  const steps: RecipeStep[] = extracted.steps.map((s) => ({
-    id: s.id,
-    toolName: s.toolName,
-    params: s.params,
-    dependsOn: s.dependsOn,
-  }))
-
-  const validation = validateRecipeSteps(steps)
-  if (!validation.valid) {
-    throw createError("BadRequestError", { message: `Invalid recipe: ${validation.errors.join(", ")}` })
-  }
-
-  return c.json({
-    name: extracted.name,
-    description: extracted.description,
-    inputs: inputs.map((i) => ({
-      key: i.key,
-      label: i.label,
-      type: i.type as RecipeInput["type"],
-      required: i.required,
-    })),
-    steps,
-    outputs: outputs.map((o) => ({
-      stepId: o.stepId,
-      kind: o.kind as RecipeOutput["kind"],
-      name: o.name,
-    })),
-  })
+  throw createError("BadRequestError", { message: "Failed to extract valid recipe after retries" })
 })
