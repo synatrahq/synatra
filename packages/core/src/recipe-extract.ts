@@ -295,6 +295,7 @@ export const RECIPE_EXTRACTION_PROMPT = `You are a recipe extraction assistant. 
 IMPORTANT: The conversation is just ONE example use case. Your recipe should be flexible enough for future runs with different data.
 
 Generalization principles:
+- **Parameterize magic values** - Concrete values in the conversation (IDs, names, dates) are magic numbers; define them in inputs array AND reference them in step params using { "type": "input", "inputKey": "..." } bindings. Set defaultValue unless the user must always provide their own value based on the task intent
 - **Don't hardcode data values** - Use bindings to pass data from previous steps
 - **Let tools determine output structure** - If a query returns columns, display ALL returned columns, not just the ones shown in this conversation
 - **Derive display data from source** - Chart labels/values, table columns should come from actual query results
@@ -314,7 +315,7 @@ Your task:
 {
   "name": "Recipe name",
   "description": "What this recipe does",
-  "inputs": [{ "key": "user_id", "label": "User ID", "type": "string", "required": true }],
+  "inputs": [{ "key": "user_id", "label": "User ID", "type": "string", "description": "Target user to analyze", "required": true, "defaultValue": "123" }],
   "steps": [{ "stepKey": "snake_case_key", "label": "Human readable", "toolName": "tool", "params": { ... }, "dependsOn": [] }],
   "outputs": [{ "stepId": "output_step_key", "kind": "table" }]
 }
@@ -328,6 +329,10 @@ Output kinds: "table" | "chart" | "markdown" | "key_value"
 
 Each parameter in a step uses a ParamBinding to determine its value at runtime.
 
+**Valid binding types: static | input | step | template | object | array**
+
+Note: code_execute is a STEP toolName, NOT a binding type. If you need data transformation, create a code_execute step and reference its result with a step binding.
+
 ### Choosing the Right Binding Type
 
 \`\`\`
@@ -338,7 +343,7 @@ Is the value always the same?
          └─ NO → Does it come from a previous step?
                   ├─ YES → Can you get it with a simple path?
                   │         ├─ YES → step (with optional path)
-                  │         └─ NO (needs filter/map/logic) → code_execute
+                  │         └─ NO (needs filter/map/logic) → Create a code_execute STEP, then use step binding
                   └─ NO → Are you combining multiple values?
                            ├─ Into a string → template
                            ├─ Into an object → object
@@ -355,10 +360,11 @@ Example:
 
 ### 2. input - User-provided values
 
-Use for: Values that change each time the recipe runs
+Use for: Values that change each time the recipe runs. First define the input in the "inputs" array, then reference it here.
 { "type": "input", "inputKey": "string" }
 
 Example:
+If inputs array contains { "key": "user_id", ... }, reference it as:
 { "type": "input", "inputKey": "user_id" }
 
 ### 3. step - Previous step results
