@@ -1,25 +1,34 @@
 import { z } from "zod"
-import { eq, and, desc, lt, or } from "drizzle-orm"
+import { eq, and, desc, lt, or, getTableColumns } from "drizzle-orm"
+import { createHash } from "crypto"
 import { principal } from "./principal"
-import { withDb } from "./database"
-import { RecipeTable, RecipeExecutionTable } from "./schema/recipe.sql"
+import { withDb, withTx, first } from "./database"
+import {
+  RecipeTable,
+  RecipeReleaseTable,
+  RecipeWorkingCopyTable,
+  RecipeStepTable,
+  RecipeEdgeTable,
+  RecipeExecutionTable,
+  RecipeExecutionEventTable,
+} from "./schema/recipe.sql"
+import { UserTable } from "./schema/user.sql"
 import { createError } from "@synatra/util/error"
+import { generateSlug, generateRandomId, isReservedSlug } from "@synatra/util/identifier"
+import { bumpVersion, parseVersion, stringifyVersion } from "@synatra/util/version"
+import { serializeConfig } from "@synatra/util/normalize"
 import {
   RecipeExecutionStatus,
   RecipeInputSchema,
-  RecipeStepSchema,
   RecipeOutputSchema,
   PendingInputConfigSchema,
   RecipeExecutionErrorSchema,
+  RecipeStepType,
+  RecipeExecutionEventType,
   type RecipeInput,
-  type RecipeStep,
   type RecipeOutput,
-  type PendingInputConfig,
+  type ParamBinding,
 } from "./types"
-
-function first<T>(arr: T[]): T | undefined {
-  return arr[0]
-}
 
 function parseCursor(cursor: string): { date: Date; id: string } {
   const underscoreIndex = cursor.lastIndexOf("_")
@@ -35,75 +44,199 @@ function parseCursor(cursor: string): { date: Date; id: string } {
   return { date: parsed, id: cursorId }
 }
 
+function hashConfig(config: Record<string, unknown>): string {
+  return createHash("sha256").update(serializeConfig(config)).digest("hex")
+}
+
 export const CreateRecipeSchema = z.object({
   agentId: z.string(),
   channelId: z.string().optional(),
   sourceThreadId: z.string().optional(),
   sourceRunId: z.string().optional(),
   name: z.string().min(1),
+  slug: z.string().optional(),
   description: z.string().optional(),
+  agentReleaseId: z.string().nullable().optional(),
+  agentVersionMode: z.enum(["current", "fixed"]).default("current"),
   inputs: z.array(RecipeInputSchema),
-  steps: z.array(RecipeStepSchema),
   outputs: z.array(RecipeOutputSchema),
+  steps: z.array(
+    z.object({
+      stepKey: z.string(),
+      label: z.string(),
+      stepType: z.enum(RecipeStepType).default("action"),
+      toolName: z.string().optional(),
+      params: z.record(z.string(), z.unknown()),
+      dependsOn: z.array(z.string()),
+    }),
+  ),
 })
 
 export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
   const input = CreateRecipeSchema.parse(raw)
   const organizationId = principal.orgId()
   const userId = principal.userId()
+  const slug = input.slug || generateSlug(input.name) || generateRandomId()
 
-  const [recipe] = await withDb((db) =>
-    db
-      .insert(RecipeTable)
-      .values({
-        organizationId,
-        agentId: input.agentId,
-        channelId: input.channelId,
-        sourceThreadId: input.sourceThreadId,
-        sourceRunId: input.sourceRunId,
-        name: input.name,
-        description: input.description,
+  if (isReservedSlug(slug)) {
+    throw createError("BadRequestError", { message: `Slug "${slug}" is reserved` })
+  }
+
+  const versionParsed = parseVersion("0.0.1")
+  const versionText = stringifyVersion(versionParsed)
+
+  const configData = {
+    agentReleaseId: input.agentReleaseId ?? null,
+    agentVersionMode: input.agentVersionMode,
+    inputs: input.inputs,
+    outputs: input.outputs,
+  }
+  const configHashValue = hashConfig(configData)
+
+  let recipeId: string
+  try {
+    recipeId = await withTx(async (db) => {
+      const [recipe] = await db
+        .insert(RecipeTable)
+        .values({
+          organizationId,
+          agentId: input.agentId,
+          channelId: input.channelId,
+          sourceThreadId: input.sourceThreadId,
+          sourceRunId: input.sourceRunId,
+          name: input.name,
+          slug,
+          description: input.description,
+          createdBy: userId,
+          updatedBy: userId,
+        })
+        .returning()
+
+      const [release] = await db
+        .insert(RecipeReleaseTable)
+        .values({
+          recipeId: recipe.id,
+          version: versionText,
+          versionMajor: versionParsed.major,
+          versionMinor: versionParsed.minor,
+          versionPatch: versionParsed.patch,
+          description: "Initial release",
+          agentReleaseId: input.agentReleaseId ?? null,
+          agentVersionMode: input.agentVersionMode,
+          inputs: input.inputs,
+          outputs: input.outputs,
+          configHash: configHashValue,
+          publishedAt: new Date(),
+          createdBy: userId,
+        })
+        .returning()
+
+      await db.insert(RecipeWorkingCopyTable).values({
+        recipeId: recipe.id,
+        agentReleaseId: input.agentReleaseId ?? null,
+        agentVersionMode: input.agentVersionMode,
         inputs: input.inputs,
-        steps: input.steps,
         outputs: input.outputs,
-        createdBy: userId,
+        configHash: configHashValue,
+        updatedBy: userId,
       })
-      .returning(),
-  )
 
-  return recipe
+      if (input.steps.length > 0) {
+        await db.insert(RecipeStepTable).values(
+          input.steps.map((step, idx) => ({
+            releaseId: release.id,
+            stepKey: step.stepKey,
+            label: step.label,
+            stepType: step.stepType ?? "action",
+            toolName: step.toolName ?? null,
+            params: step.params as Record<string, ParamBinding>,
+            position: idx,
+          })),
+        )
+
+        await db.insert(RecipeStepTable).values(
+          input.steps.map((step, idx) => ({
+            workingCopyRecipeId: recipe.id,
+            stepKey: step.stepKey,
+            label: step.label,
+            stepType: step.stepType ?? "action",
+            toolName: step.toolName ?? null,
+            params: step.params as Record<string, ParamBinding>,
+            position: idx,
+          })),
+        )
+
+        const edges: Array<{
+          releaseId?: string
+          workingCopyRecipeId?: string
+          fromStepKey: string
+          toStepKey: string
+        }> = []
+        for (const step of input.steps) {
+          for (const depKey of step.dependsOn) {
+            edges.push({ releaseId: release.id, fromStepKey: depKey, toStepKey: step.stepKey })
+            edges.push({ workingCopyRecipeId: recipe.id, fromStepKey: depKey, toStepKey: step.stepKey })
+          }
+        }
+        if (edges.length > 0) {
+          await db.insert(RecipeEdgeTable).values(edges)
+        }
+      }
+
+      await db
+        .update(RecipeTable)
+        .set({ currentReleaseId: release.id, updatedBy: userId, updatedAt: new Date() })
+        .where(eq(RecipeTable.id, recipe.id))
+
+      return recipe.id
+    })
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("recipe_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Recipe with slug "${slug}" already exists` })
+    }
+    throw err
+  }
+
+  return getRecipeById(recipeId)
 }
 
 export const UpdateRecipeSchema = z.object({
   id: z.string(),
   name: z.string().min(1).optional(),
+  slug: z.string().min(1).optional(),
   description: z.string().optional(),
-  inputs: z.array(RecipeInputSchema).optional(),
-  steps: z.array(RecipeStepSchema).optional(),
-  outputs: z.array(RecipeOutputSchema).optional(),
 })
 
 export async function updateRecipe(raw: z.input<typeof UpdateRecipeSchema>) {
   const input = UpdateRecipeSchema.parse(raw)
   const organizationId = principal.orgId()
 
-  const updateData: Record<string, unknown> = { updatedAt: new Date() }
+  if (input.slug !== undefined && isReservedSlug(input.slug)) {
+    throw createError("BadRequestError", { message: `Slug "${input.slug}" is reserved` })
+  }
+
+  const updateData: Record<string, unknown> = { updatedAt: new Date(), updatedBy: principal.userId() }
   if (input.name !== undefined) updateData.name = input.name
+  if (input.slug !== undefined) updateData.slug = input.slug
   if (input.description !== undefined) updateData.description = input.description
-  if (input.inputs !== undefined) updateData.inputs = input.inputs
-  if (input.steps !== undefined) updateData.steps = input.steps
-  if (input.outputs !== undefined) updateData.outputs = input.outputs
 
-  const [updated] = await withDb((db) =>
-    db
-      .update(RecipeTable)
-      .set(updateData)
-      .where(and(eq(RecipeTable.id, input.id), eq(RecipeTable.organizationId, organizationId)))
-      .returning(),
-  )
+  try {
+    const [updated] = await withDb((db) =>
+      db
+        .update(RecipeTable)
+        .set(updateData)
+        .where(and(eq(RecipeTable.id, input.id), eq(RecipeTable.organizationId, organizationId)))
+        .returning(),
+    )
 
-  if (!updated) throw createError("NotFoundError", { type: "Recipe", id: input.id })
-  return updated
+    if (!updated) throw createError("NotFoundError", { type: "Recipe", id: input.id })
+    return updated
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("recipe_org_slug_idx")) {
+      throw createError("ConflictError", { message: `Recipe with slug "${input.slug}" already exists` })
+    }
+    throw err
+  }
 }
 
 export async function getRecipeById(id: string) {
@@ -160,8 +293,14 @@ export async function listRecipes(raw?: z.input<typeof ListRecipesSchema>) {
 
   const recipes = await withDb((db) =>
     db
-      .select()
+      .select({
+        ...getTableColumns(RecipeTable),
+        version: RecipeReleaseTable.version,
+        inputs: RecipeReleaseTable.inputs,
+        outputs: RecipeReleaseTable.outputs,
+      })
       .from(RecipeTable)
+      .leftJoin(RecipeReleaseTable, eq(RecipeTable.currentReleaseId, RecipeReleaseTable.id))
       .where(and(...conditions))
       .orderBy(desc(RecipeTable.createdAt), desc(RecipeTable.id))
       .limit(limit + 1),
@@ -190,8 +329,410 @@ export async function deleteRecipe(raw: z.input<typeof DeleteRecipeSchema>) {
   return deleted ?? null
 }
 
+export const SaveRecipeWorkingCopySchema = z.object({
+  recipeId: z.string(),
+  agentReleaseId: z.string().nullable().optional(),
+  agentVersionMode: z.enum(["current", "fixed"]).optional(),
+  inputs: z.array(RecipeInputSchema).optional(),
+  outputs: z.array(RecipeOutputSchema).optional(),
+  steps: z
+    .array(
+      z.object({
+        stepKey: z.string(),
+        label: z.string(),
+        stepType: z.enum(RecipeStepType).default("action"),
+        toolName: z.string().optional(),
+        params: z.record(z.string(), z.unknown()),
+        dependsOn: z.array(z.string()),
+      }),
+    )
+    .optional(),
+})
+
+export async function saveRecipeWorkingCopy(raw: z.input<typeof SaveRecipeWorkingCopySchema>) {
+  const input = SaveRecipeWorkingCopySchema.parse(raw)
+  await getRecipeById(input.recipeId)
+
+  const existing = await withDb((db) =>
+    db.select().from(RecipeWorkingCopyTable).where(eq(RecipeWorkingCopyTable.recipeId, input.recipeId)).then(first),
+  )
+
+  const agentReleaseId = input.agentReleaseId ?? existing?.agentReleaseId ?? null
+  const agentVersionMode = input.agentVersionMode ?? existing?.agentVersionMode ?? "current"
+  const inputs = input.inputs ?? existing?.inputs ?? []
+  const outputs = input.outputs ?? existing?.outputs ?? []
+
+  const configData = { agentReleaseId, agentVersionMode, inputs, outputs }
+  const configHashValue = hashConfig(configData)
+  const userId = principal.userId()
+
+  await withTx(async (db) => {
+    await db
+      .insert(RecipeWorkingCopyTable)
+      .values({
+        recipeId: input.recipeId,
+        agentReleaseId,
+        agentVersionMode,
+        inputs,
+        outputs,
+        configHash: configHashValue,
+        updatedBy: userId,
+      })
+      .onConflictDoUpdate({
+        target: RecipeWorkingCopyTable.recipeId,
+        set: {
+          agentReleaseId,
+          agentVersionMode,
+          inputs,
+          outputs,
+          configHash: configHashValue,
+          updatedBy: userId,
+          updatedAt: new Date(),
+        },
+      })
+
+    if (input.steps !== undefined) {
+      await db.delete(RecipeStepTable).where(eq(RecipeStepTable.workingCopyRecipeId, input.recipeId))
+      await db.delete(RecipeEdgeTable).where(eq(RecipeEdgeTable.workingCopyRecipeId, input.recipeId))
+
+      if (input.steps.length > 0) {
+        await db.insert(RecipeStepTable).values(
+          input.steps.map((step, idx) => ({
+            workingCopyRecipeId: input.recipeId,
+            stepKey: step.stepKey,
+            label: step.label,
+            stepType: step.stepType ?? "action",
+            toolName: step.toolName ?? null,
+            params: step.params as Record<string, ParamBinding>,
+            position: idx,
+          })),
+        )
+
+        const edges: Array<{ workingCopyRecipeId: string; fromStepKey: string; toStepKey: string }> = []
+        for (const step of input.steps) {
+          for (const depKey of step.dependsOn) {
+            edges.push({ workingCopyRecipeId: input.recipeId, fromStepKey: depKey, toStepKey: step.stepKey })
+          }
+        }
+        if (edges.length > 0) {
+          await db.insert(RecipeEdgeTable).values(edges)
+        }
+      }
+    }
+
+    await db
+      .update(RecipeTable)
+      .set({ updatedAt: new Date(), updatedBy: userId })
+      .where(eq(RecipeTable.id, input.recipeId))
+  })
+
+  return { recipeId: input.recipeId, configHash: configHashValue }
+}
+
+export async function getRecipeWorkingCopy(recipeId: string) {
+  await getRecipeById(recipeId)
+
+  const workingCopy = await withDb((db) =>
+    db.select().from(RecipeWorkingCopyTable).where(eq(RecipeWorkingCopyTable.recipeId, recipeId)).then(first),
+  )
+
+  if (!workingCopy) throw createError("NotFoundError", { type: "RecipeWorkingCopy", id: recipeId })
+
+  const steps = await withDb((db) =>
+    db
+      .select()
+      .from(RecipeStepTable)
+      .where(eq(RecipeStepTable.workingCopyRecipeId, recipeId))
+      .orderBy(RecipeStepTable.position),
+  )
+
+  const edges = await withDb((db) =>
+    db.select().from(RecipeEdgeTable).where(eq(RecipeEdgeTable.workingCopyRecipeId, recipeId)),
+  )
+
+  return { ...workingCopy, steps, edges }
+}
+
+export const DeployRecipeSchema = z.object({
+  recipeId: z.string(),
+  version: z.string().optional(),
+  bump: z.enum(["major", "minor", "patch"]).optional(),
+  description: z.string().default(""),
+})
+
+export async function deployRecipe(raw: z.input<typeof DeployRecipeSchema>) {
+  const input = DeployRecipeSchema.parse(raw)
+  await getRecipeById(input.recipeId)
+
+  const working = await withDb((db) =>
+    db.select().from(RecipeWorkingCopyTable).where(eq(RecipeWorkingCopyTable.recipeId, input.recipeId)).then(first),
+  )
+  if (!working) throw createError("NotFoundError", { type: "RecipeWorkingCopy", id: input.recipeId })
+
+  if (input.version && input.bump)
+    throw createError("BadRequestError", { message: "Specify either version or bump, not both" })
+
+  const userId = principal.userId()
+
+  const [release] = await withTx(async (db) => {
+    const latest = await db
+      .select({
+        major: RecipeReleaseTable.versionMajor,
+        minor: RecipeReleaseTable.versionMinor,
+        patch: RecipeReleaseTable.versionPatch,
+      })
+      .from(RecipeReleaseTable)
+      .where(eq(RecipeReleaseTable.recipeId, input.recipeId))
+      .orderBy(
+        desc(RecipeReleaseTable.versionMajor),
+        desc(RecipeReleaseTable.versionMinor),
+        desc(RecipeReleaseTable.versionPatch),
+      )
+      .limit(1)
+      .then(first)
+
+    const target = input.version ? parseVersion(input.version) : bumpVersion(latest ?? null, input.bump ?? "patch")
+
+    const [created] = await db
+      .insert(RecipeReleaseTable)
+      .values({
+        recipeId: input.recipeId,
+        version: stringifyVersion(target),
+        versionMajor: target.major,
+        versionMinor: target.minor,
+        versionPatch: target.patch,
+        description: input.description,
+        agentReleaseId: working.agentReleaseId,
+        agentVersionMode: working.agentVersionMode,
+        inputs: working.inputs,
+        outputs: working.outputs,
+        configHash: working.configHash,
+        publishedAt: new Date(),
+        createdBy: userId,
+      })
+      .returning()
+
+    const workingSteps = await db
+      .select()
+      .from(RecipeStepTable)
+      .where(eq(RecipeStepTable.workingCopyRecipeId, input.recipeId))
+      .orderBy(RecipeStepTable.position)
+
+    if (workingSteps.length > 0) {
+      await db.insert(RecipeStepTable).values(
+        workingSteps.map((step) => ({
+          releaseId: created.id,
+          stepKey: step.stepKey,
+          label: step.label,
+          stepType: step.stepType,
+          toolName: step.toolName,
+          params: step.params,
+          position: step.position,
+        })),
+      )
+    }
+
+    const workingEdges = await db
+      .select()
+      .from(RecipeEdgeTable)
+      .where(eq(RecipeEdgeTable.workingCopyRecipeId, input.recipeId))
+
+    if (workingEdges.length > 0) {
+      await db.insert(RecipeEdgeTable).values(
+        workingEdges.map((edge) => ({
+          releaseId: created.id,
+          fromStepKey: edge.fromStepKey,
+          toStepKey: edge.toStepKey,
+        })),
+      )
+    }
+
+    await db
+      .update(RecipeTable)
+      .set({ currentReleaseId: created.id, updatedAt: new Date(), updatedBy: userId })
+      .where(eq(RecipeTable.id, input.recipeId))
+
+    await db
+      .update(RecipeWorkingCopyTable)
+      .set({ updatedAt: new Date(), updatedBy: userId })
+      .where(eq(RecipeWorkingCopyTable.recipeId, input.recipeId))
+
+    return [created]
+  })
+
+  return release
+}
+
+export const AdoptRecipeSchema = z.object({ recipeId: z.string(), releaseId: z.string() })
+
+export async function adoptRecipe(raw: z.input<typeof AdoptRecipeSchema>) {
+  const input = AdoptRecipeSchema.parse(raw)
+  await getRecipeById(input.recipeId)
+
+  const release = await withDb((db) =>
+    db
+      .select()
+      .from(RecipeReleaseTable)
+      .where(and(eq(RecipeReleaseTable.id, input.releaseId), eq(RecipeReleaseTable.recipeId, input.recipeId)))
+      .then(first),
+  )
+
+  if (!release) throw createError("NotFoundError", { type: "RecipeRelease", id: input.releaseId })
+
+  const userId = principal.userId()
+  await withDb((db) =>
+    db
+      .update(RecipeTable)
+      .set({ currentReleaseId: release.id, updatedAt: new Date(), updatedBy: userId })
+      .where(eq(RecipeTable.id, input.recipeId)),
+  )
+
+  return release
+}
+
+export const CheckoutRecipeSchema = z.object({ recipeId: z.string(), releaseId: z.string() })
+
+export async function checkoutRecipe(raw: z.input<typeof CheckoutRecipeSchema>) {
+  const input = CheckoutRecipeSchema.parse(raw)
+  await getRecipeById(input.recipeId)
+
+  const release = await withDb((db) =>
+    db
+      .select()
+      .from(RecipeReleaseTable)
+      .where(and(eq(RecipeReleaseTable.id, input.releaseId), eq(RecipeReleaseTable.recipeId, input.recipeId)))
+      .then(first),
+  )
+
+  if (!release) throw createError("NotFoundError", { type: "RecipeRelease", id: input.releaseId })
+
+  const userId = principal.userId()
+
+  await withTx(async (db) => {
+    await db
+      .insert(RecipeWorkingCopyTable)
+      .values({
+        recipeId: input.recipeId,
+        agentReleaseId: release.agentReleaseId,
+        agentVersionMode: release.agentVersionMode,
+        inputs: release.inputs,
+        outputs: release.outputs,
+        configHash: release.configHash,
+        updatedBy: userId,
+      })
+      .onConflictDoUpdate({
+        target: RecipeWorkingCopyTable.recipeId,
+        set: {
+          agentReleaseId: release.agentReleaseId,
+          agentVersionMode: release.agentVersionMode,
+          inputs: release.inputs,
+          outputs: release.outputs,
+          configHash: release.configHash,
+          updatedBy: userId,
+          updatedAt: new Date(),
+        },
+      })
+
+    await db.delete(RecipeStepTable).where(eq(RecipeStepTable.workingCopyRecipeId, input.recipeId))
+    await db.delete(RecipeEdgeTable).where(eq(RecipeEdgeTable.workingCopyRecipeId, input.recipeId))
+
+    const releaseSteps = await db
+      .select()
+      .from(RecipeStepTable)
+      .where(eq(RecipeStepTable.releaseId, input.releaseId))
+      .orderBy(RecipeStepTable.position)
+
+    if (releaseSteps.length > 0) {
+      await db.insert(RecipeStepTable).values(
+        releaseSteps.map((step) => ({
+          workingCopyRecipeId: input.recipeId,
+          stepKey: step.stepKey,
+          label: step.label,
+          stepType: step.stepType,
+          toolName: step.toolName,
+          params: step.params,
+          position: step.position,
+        })),
+      )
+    }
+
+    const releaseEdges = await db.select().from(RecipeEdgeTable).where(eq(RecipeEdgeTable.releaseId, input.releaseId))
+
+    if (releaseEdges.length > 0) {
+      await db.insert(RecipeEdgeTable).values(
+        releaseEdges.map((edge) => ({
+          workingCopyRecipeId: input.recipeId,
+          fromStepKey: edge.fromStepKey,
+          toStepKey: edge.toStepKey,
+        })),
+      )
+    }
+  })
+
+  return { recipeId: input.recipeId, releaseId: input.releaseId }
+}
+
+export async function listRecipeReleases(recipeId: string) {
+  const organizationId = principal.orgId()
+
+  return withDb((db) =>
+    db
+      .select({
+        id: RecipeReleaseTable.id,
+        recipeId: RecipeReleaseTable.recipeId,
+        version: RecipeReleaseTable.version,
+        versionMajor: RecipeReleaseTable.versionMajor,
+        versionMinor: RecipeReleaseTable.versionMinor,
+        versionPatch: RecipeReleaseTable.versionPatch,
+        description: RecipeReleaseTable.description,
+        configHash: RecipeReleaseTable.configHash,
+        publishedAt: RecipeReleaseTable.publishedAt,
+        createdAt: RecipeReleaseTable.createdAt,
+        createdBy: {
+          id: UserTable.id,
+          name: UserTable.name,
+          email: UserTable.email,
+          image: UserTable.image,
+        },
+      })
+      .from(RecipeReleaseTable)
+      .innerJoin(RecipeTable, eq(RecipeReleaseTable.recipeId, RecipeTable.id))
+      .leftJoin(UserTable, eq(RecipeReleaseTable.createdBy, UserTable.id))
+      .where(and(eq(RecipeReleaseTable.recipeId, recipeId), eq(RecipeTable.organizationId, organizationId)))
+      .orderBy(
+        desc(RecipeReleaseTable.versionMajor),
+        desc(RecipeReleaseTable.versionMinor),
+        desc(RecipeReleaseTable.versionPatch),
+        desc(RecipeReleaseTable.createdAt),
+      ),
+  )
+}
+
+export async function getRecipeRelease(recipeId: string, releaseId: string) {
+  await getRecipeById(recipeId)
+
+  const release = await withDb((db) =>
+    db
+      .select()
+      .from(RecipeReleaseTable)
+      .where(and(eq(RecipeReleaseTable.id, releaseId), eq(RecipeReleaseTable.recipeId, recipeId)))
+      .then(first),
+  )
+
+  if (!release) throw createError("NotFoundError", { type: "RecipeRelease", id: releaseId })
+
+  const steps = await withDb((db) =>
+    db.select().from(RecipeStepTable).where(eq(RecipeStepTable.releaseId, releaseId)).orderBy(RecipeStepTable.position),
+  )
+
+  const edges = await withDb((db) => db.select().from(RecipeEdgeTable).where(eq(RecipeEdgeTable.releaseId, releaseId)))
+
+  return { ...release, steps, edges }
+}
+
 export const CreateRecipeExecutionSchema = z.object({
   recipeId: z.string(),
+  releaseId: z.string().optional(),
   environmentId: z.string(),
   inputs: z.record(z.string(), z.unknown()),
 })
@@ -202,12 +743,17 @@ export async function createRecipeExecution(raw: z.input<typeof CreateRecipeExec
   const userId = principal.userId()
 
   const recipe = await getRecipeById(input.recipeId)
+  const releaseId = input.releaseId ?? recipe.currentReleaseId
+  if (!releaseId) {
+    throw createError("BadRequestError", { message: "Recipe has no current release" })
+  }
 
   const [execution] = await withDb((db) =>
     db
       .insert(RecipeExecutionTable)
       .values({
         recipeId: recipe.id,
+        releaseId,
         organizationId,
         environmentId: input.environmentId,
         inputs: input.inputs,
@@ -226,7 +772,7 @@ export async function createRecipeExecution(raw: z.input<typeof CreateRecipeExec
 export const UpdateRecipeExecutionSchema = z.object({
   id: z.string(),
   status: z.enum(RecipeExecutionStatus).optional(),
-  currentStepId: z.string().optional(),
+  currentStepKey: z.string().optional(),
   pendingInputConfig: PendingInputConfigSchema.optional().nullable(),
   results: z.record(z.string(), z.unknown()).optional(),
   resolvedParams: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
@@ -245,7 +791,7 @@ export async function updateRecipeExecution(raw: z.input<typeof UpdateRecipeExec
       updateData.completedAt = new Date()
     }
   }
-  if (input.currentStepId !== undefined) updateData.currentStepId = input.currentStepId
+  if (input.currentStepKey !== undefined) updateData.currentStepKey = input.currentStepKey
   if (input.pendingInputConfig !== undefined) updateData.pendingInputConfig = input.pendingInputConfig
   if (input.results !== undefined) updateData.results = input.results
   if (input.resolvedParams !== undefined) updateData.resolvedParams = input.resolvedParams
@@ -351,4 +897,39 @@ export async function respondToRecipeExecution(raw: z.input<typeof RespondToReci
   }
 
   return { execution, response: input.response }
+}
+
+export const CreateRecipeExecutionEventSchema = z.object({
+  executionId: z.string(),
+  eventType: z.enum(RecipeExecutionEventType),
+  stepKey: z.string().optional(),
+  payload: z.record(z.string(), z.unknown()).optional(),
+})
+
+export async function createRecipeExecutionEvent(raw: z.input<typeof CreateRecipeExecutionEventSchema>) {
+  const input = CreateRecipeExecutionEventSchema.parse(raw)
+
+  const [event] = await withDb((db) =>
+    db
+      .insert(RecipeExecutionEventTable)
+      .values({
+        executionId: input.executionId,
+        eventType: input.eventType,
+        stepKey: input.stepKey,
+        payload: input.payload,
+      })
+      .returning(),
+  )
+
+  return event
+}
+
+export async function listRecipeExecutionEvents(executionId: string) {
+  return withDb((db) =>
+    db
+      .select()
+      .from(RecipeExecutionEventTable)
+      .where(eq(RecipeExecutionEventTable.executionId, executionId))
+      .orderBy(RecipeExecutionEventTable.createdAt),
+  )
 }

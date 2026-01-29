@@ -3,6 +3,21 @@ import { z } from "zod"
 export const RecipeExecutionStatus = ["pending", "running", "waiting_input", "completed", "failed"] as const
 export type RecipeExecutionStatus = (typeof RecipeExecutionStatus)[number]
 
+export const RecipeStepType = ["action", "branch", "loop"] as const
+export type RecipeStepType = (typeof RecipeStepType)[number]
+
+export const RecipeExecutionEventType = [
+  "started",
+  "step_started",
+  "step_completed",
+  "step_failed",
+  "waiting_input",
+  "input_received",
+  "completed",
+  "failed",
+] as const
+export type RecipeExecutionEventType = (typeof RecipeExecutionEventType)[number]
+
 export const RecipeExecutionErrorSchema = z.object({
   stepId: z.string(),
   toolName: z.string(),
@@ -103,48 +118,10 @@ export const RecipeOutputSchema = z.object({
 })
 export type RecipeOutput = z.infer<typeof RecipeOutputSchema>
 
-export const RecipeSchema = z.object({
-  id: z.string(),
-  organizationId: z.string(),
-  agentId: z.string(),
-  channelId: z.string().optional(),
-  sourceThreadId: z.string().optional(),
-  sourceRunId: z.string().optional(),
-  name: z.string(),
-  description: z.string().optional(),
-  inputs: z.array(RecipeInputSchema),
-  steps: z.array(RecipeStepSchema),
-  outputs: z.array(RecipeOutputSchema),
-  createdBy: z.string().optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-})
-export type Recipe = z.infer<typeof RecipeSchema>
-
 export const PendingInputConfigSchema = z.object({
-  stepId: z.string(),
+  stepKey: z.string(),
   title: z.string(),
   description: z.string().optional(),
   fields: z.array(z.record(z.string(), z.unknown())),
 })
 export type PendingInputConfig = z.infer<typeof PendingInputConfigSchema>
-
-export const RecipeExecutionSchema = z.object({
-  id: z.string(),
-  recipeId: z.string(),
-  organizationId: z.string(),
-  environmentId: z.string(),
-  inputs: z.record(z.string(), z.unknown()),
-  status: z.enum(RecipeExecutionStatus),
-  currentStepId: z.string().optional(),
-  pendingInputConfig: PendingInputConfigSchema.optional(),
-  results: z.record(z.string(), z.unknown()),
-  resolvedParams: z.record(z.string(), z.record(z.string(), z.unknown())),
-  outputItemIds: z.array(z.string()),
-  error: RecipeExecutionErrorSchema.optional(),
-  createdBy: z.string().optional(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
-  completedAt: z.date().optional(),
-})
-export type RecipeExecution = z.infer<typeof RecipeExecutionSchema>

@@ -3,11 +3,14 @@ import { zValidator } from "@hono/zod-validator"
 import { z } from "zod"
 import {
   getRecipeById,
+  getRecipeRelease,
   getAgentById,
+  getAgentRelease,
   listResources,
   respondToRecipeExecution,
   updateRecipeExecution,
   createOutputItemAndIncrementSeq,
+  buildNormalizedSteps,
   getStepExecutionOrder,
   executeStepLoop,
 } from "@synatra/core"
@@ -41,7 +44,16 @@ export const respond = new Hono().post(
     }
 
     const recipe = await getRecipeById(recipeId)
+    const release = await getRecipeRelease(recipeId, execution.releaseId)
     const agent = await getAgentById(recipe.agentId)
+
+    let agentRuntimeConfig: { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
+    if (release.agentVersionMode === "fixed" && release.agentReleaseId) {
+      const agentRelease = await getAgentRelease(release.agentReleaseId)
+      agentRuntimeConfig = agentRelease.runtimeConfig
+    } else {
+      agentRuntimeConfig = agent.runtimeConfig as { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
+    }
 
     const allResources = await listResources()
     const resources = allResources.filter((r) => !isManagedResourceType(r.type))
@@ -49,23 +61,22 @@ export const respond = new Hono().post(
     const config = loadConfig("server")
     const executor = createCodeExecutor(config)
 
-    const sortedSteps = getStepExecutionOrder(recipe.steps)
+    const normalizedSteps = buildNormalizedSteps(release.steps, release.edges)
+    const sortedSteps = getStepExecutionOrder(normalizedSteps)
 
-    if (!execution.currentStepId) {
+    if (!execution.currentStepKey) {
       throw createError("BadRequestError", { message: "Execution has no current step" })
     }
 
-    const currentStepIndex = sortedSteps.findIndex((s) => s.id === execution.currentStepId)
+    const currentStepIndex = sortedSteps.findIndex((s) => s.stepKey === execution.currentStepKey)
     if (currentStepIndex === -1) {
       throw createError("BadRequestError", { message: "Current step not found" })
     }
 
     const stepResults = { ...(execution.results as Record<string, unknown>) }
-    stepResults[execution.currentStepId] = response
+    stepResults[execution.currentStepKey] = response
 
     await updateRecipeExecution({ id: executionId, status: "running", pendingInputConfig: null })
-
-    const runtimeConfig = agent.runtimeConfig as { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
 
     const result = await executeStepLoop(
       sortedSteps,
@@ -79,9 +90,9 @@ export const respond = new Hono().post(
       {
         organizationId,
         environmentId: execution.environmentId,
-        agentTools: runtimeConfig?.tools ?? [],
+        agentTools: agentRuntimeConfig?.tools ?? [],
         resources: resources.map((r) => ({ slug: r.slug, id: r.id, type: r.type })),
-        recipeOutputs: recipe.outputs,
+        recipeOutputs: release.outputs,
         threadId: body.threadId,
         executeCode: (orgId, input) => executor.execute(orgId, input),
         createOutputItem: body.threadId ? (params) => createOutputItemAndIncrementSeq(params) : undefined,
@@ -92,7 +103,7 @@ export const respond = new Hono().post(
       await updateRecipeExecution({
         id: executionId,
         status: "waiting_input",
-        currentStepId: result.currentStepId,
+        currentStepKey: result.currentStepKey,
         pendingInputConfig: result.pendingInputConfig,
         results: result.stepResults,
         resolvedParams: result.resolvedParams,
@@ -102,7 +113,7 @@ export const respond = new Hono().post(
         executionId,
         ok: true,
         status: "waiting_input",
-        currentStepId: result.currentStepId,
+        currentStepKey: result.currentStepKey,
         pendingInputConfig: result.pendingInputConfig,
       })
     }
@@ -111,8 +122,8 @@ export const respond = new Hono().post(
       await updateRecipeExecution({
         id: executionId,
         status: "failed",
-        currentStepId: result.currentStepId,
-        error: result.error,
+        currentStepKey: result.currentStepKey,
+        error: { stepId: result.error.stepKey, toolName: result.error.toolName, message: result.error.message },
         results: result.stepResults,
         resolvedParams: result.resolvedParams,
       })

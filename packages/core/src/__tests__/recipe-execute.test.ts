@@ -12,8 +12,9 @@ import {
   pauseRunnerForInput,
   resumeRunnerWithInput,
   type RecipeExecutionContext,
+  type NormalizedStep,
 } from "../recipe-execute"
-import type { RecipeStep, ParamBinding } from "../types"
+import type { ParamBinding } from "../types"
 
 describe("getValueByPath", () => {
   test("returns whole object for $ or undefined path", () => {
@@ -110,15 +111,17 @@ describe("resolveBinding", () => {
 
 describe("resolveStepParams", () => {
   test("resolves all params for a step", () => {
-    const step: RecipeStep = {
-      id: "step_1",
+    const step: NormalizedStep = {
+      stepKey: "step_1",
       label: "Send email",
+      stepType: "action",
       toolName: "send_email",
       params: {
         to: { type: "step", stepId: "step_0", path: "$.email" },
         subject: { type: "static", value: "Hello" },
         name: { type: "input", inputKey: "userName" },
       },
+      position: 1,
       dependsOn: ["step_0"],
     }
 
@@ -139,78 +142,110 @@ describe("resolveStepParams", () => {
 
 describe("getStepExecutionOrder", () => {
   test("returns steps in dependency order", () => {
-    const steps: RecipeStep[] = [
-      { id: "step_2", label: "Step C", toolName: "c", params: {}, dependsOn: ["step_1"] },
-      { id: "step_0", label: "Step A", toolName: "a", params: {}, dependsOn: [] },
-      { id: "step_1", label: "Step B", toolName: "b", params: {}, dependsOn: ["step_0"] },
+    const steps: NormalizedStep[] = [
+      {
+        stepKey: "step_2",
+        label: "Step C",
+        stepType: "action",
+        toolName: "c",
+        params: {},
+        position: 2,
+        dependsOn: ["step_1"],
+      },
+      { stepKey: "step_0", label: "Step A", stepType: "action", toolName: "a", params: {}, position: 0, dependsOn: [] },
+      {
+        stepKey: "step_1",
+        label: "Step B",
+        stepType: "action",
+        toolName: "b",
+        params: {},
+        position: 1,
+        dependsOn: ["step_0"],
+      },
     ]
 
     const ordered = getStepExecutionOrder(steps)
-    expect(ordered.map((s) => s.id)).toEqual(["step_0", "step_1", "step_2"])
+    expect(ordered.map((s) => s.stepKey)).toEqual(["step_0", "step_1", "step_2"])
   })
 
   test("handles parallel steps", () => {
-    const steps: RecipeStep[] = [
-      { id: "step_0", label: "Step A", toolName: "a", params: {}, dependsOn: [] },
-      { id: "step_1", label: "Step B", toolName: "b", params: {}, dependsOn: [] },
-      { id: "step_2", label: "Step C", toolName: "c", params: {}, dependsOn: ["step_0", "step_1"] },
+    const steps: NormalizedStep[] = [
+      { stepKey: "step_0", label: "Step A", stepType: "action", toolName: "a", params: {}, position: 0, dependsOn: [] },
+      { stepKey: "step_1", label: "Step B", stepType: "action", toolName: "b", params: {}, position: 1, dependsOn: [] },
+      {
+        stepKey: "step_2",
+        label: "Step C",
+        stepType: "action",
+        toolName: "c",
+        params: {},
+        position: 2,
+        dependsOn: ["step_0", "step_1"],
+      },
     ]
 
     const ordered = getStepExecutionOrder(steps)
-    const step2Index = ordered.findIndex((s) => s.id === "step_2")
+    const step2Index = ordered.findIndex((s) => s.stepKey === "step_2")
     expect(step2Index).toBe(2)
   })
 })
 
 describe("isHumanInputStep", () => {
   test("returns true for form human_request", () => {
-    const step: RecipeStep = {
-      id: "step_0",
+    const step: NormalizedStep = {
+      stepKey: "step_0",
       label: "Input form",
+      stepType: "action",
       toolName: "human_request",
       params: {
         title: { type: "static", value: "Input" },
         fields: { type: "static", value: [{ kind: "form", key: "data", schema: {} }] },
       },
+      position: 0,
       dependsOn: [],
     }
     expect(isHumanInputStep(step)).toBe(true)
   })
 
   test("returns true for question human_request", () => {
-    const step: RecipeStep = {
-      id: "step_0",
+    const step: NormalizedStep = {
+      stepKey: "step_0",
       label: "Question form",
+      stepType: "action",
       toolName: "human_request",
       params: {
         title: { type: "static", value: "Question" },
         fields: { type: "static", value: [{ kind: "question", key: "answer" }] },
       },
+      position: 0,
       dependsOn: [],
     }
     expect(isHumanInputStep(step)).toBe(true)
   })
 
   test("returns false for confirm human_request", () => {
-    const step: RecipeStep = {
-      id: "step_0",
+    const step: NormalizedStep = {
+      stepKey: "step_0",
       label: "Confirm action",
+      stepType: "action",
       toolName: "human_request",
       params: {
         title: { type: "static", value: "Confirm" },
         fields: { type: "static", value: [{ kind: "confirm", key: "confirmed" }] },
       },
+      position: 0,
       dependsOn: [],
     }
     expect(isHumanInputStep(step)).toBe(false)
   })
 
   test("returns false for non-human_request tool", () => {
-    const step: RecipeStep = {
-      id: "step_0",
+    const step: NormalizedStep = {
+      stepKey: "step_0",
       label: "Fetch data",
+      stepType: "action",
       toolName: "fetch_data",
       params: {},
+      position: 0,
       dependsOn: [],
     }
     expect(isHumanInputStep(step)).toBe(false)
@@ -218,10 +253,34 @@ describe("isHumanInputStep", () => {
 })
 
 describe("RecipeRunner", () => {
-  const steps: RecipeStep[] = [
-    { id: "step_0", label: "Fetch data", toolName: "fetch", params: {}, dependsOn: [] },
-    { id: "step_1", label: "Transform data", toolName: "transform", params: {}, dependsOn: ["step_0"] },
-    { id: "step_2", label: "Output result", toolName: "output", params: {}, dependsOn: ["step_1"] },
+  const steps: NormalizedStep[] = [
+    {
+      stepKey: "step_0",
+      label: "Fetch data",
+      stepType: "action",
+      toolName: "fetch",
+      params: {},
+      position: 0,
+      dependsOn: [],
+    },
+    {
+      stepKey: "step_1",
+      label: "Transform data",
+      stepType: "action",
+      toolName: "transform",
+      params: {},
+      position: 1,
+      dependsOn: ["step_0"],
+    },
+    {
+      stepKey: "step_2",
+      label: "Output result",
+      stepType: "action",
+      toolName: "output",
+      params: {},
+      position: 2,
+      dependsOn: ["step_1"],
+    },
   ]
 
   test("createRecipeRunner initializes correctly", () => {
@@ -231,14 +290,14 @@ describe("RecipeRunner", () => {
     expect(runner.currentStepIndex).toBe(0)
     expect(runner.context.inputs).toEqual({ input: "test" })
     expect(runner.context.results).toEqual({})
-    expect(runner.steps.map((s) => s.id)).toEqual(["step_0", "step_1", "step_2"])
+    expect(runner.steps.map((s) => s.stepKey)).toEqual(["step_0", "step_1", "step_2"])
   })
 
   test("getNextStep returns current step", () => {
     const runner = createRecipeRunner(steps, {})
     const step = getNextStep(runner)
 
-    expect(step?.id).toBe("step_0")
+    expect(step?.stepKey).toBe("step_0")
   })
 
   test("advanceRunner moves to next step", () => {

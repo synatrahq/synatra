@@ -437,6 +437,18 @@ export async function listAgentReleases(agentId: string) {
   )
 }
 
+export async function getAgentRelease(releaseId: string) {
+  const release = await withDb((db) =>
+    db
+      .select(getTableColumns(AgentReleaseTable))
+      .from(AgentReleaseTable)
+      .where(eq(AgentReleaseTable.id, releaseId))
+      .then(first),
+  )
+  if (!release) throw createError("NotFoundError", { type: "AgentRelease", id: releaseId })
+  return release
+}
+
 export async function removeAgent(id: string) {
   await getAgentById(id)
   const [deleted] = await withDb((db) =>

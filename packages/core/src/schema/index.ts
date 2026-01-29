@@ -30,7 +30,15 @@ import { HumanRequestTable, HumanResponseTable } from "./human-request.sql"
 import { UsageMonthTable } from "./usage.sql"
 import { SubscriptionTable } from "./subscription.sql"
 import { StripeEventTable } from "./stripe-event.sql"
-import { RecipeTable, RecipeExecutionTable } from "./recipe.sql"
+import {
+  RecipeTable,
+  RecipeReleaseTable,
+  RecipeWorkingCopyTable,
+  RecipeStepTable,
+  RecipeEdgeTable,
+  RecipeExecutionTable,
+  RecipeExecutionEventTable,
+} from "./recipe.sql"
 
 import { MemberRole } from "../types"
 import { InvitationStatus } from "../types"
@@ -44,7 +52,7 @@ import { AppId } from "../types"
 import { OutputKind } from "../types"
 import { HumanRequestKind, HumanRequestStatus, HumanResponseStatus } from "../types"
 import { LlmProvider } from "../types"
-import { RecipeExecutionStatus } from "../types"
+import { RecipeExecutionStatus, RecipeStepType, RecipeExecutionEventType } from "../types"
 
 export * from "./user.sql"
 export * from "./session.sql"
@@ -130,6 +138,13 @@ export const schema = {
   subscription: SubscriptionTable,
   stripeEvent: StripeEventTable,
   recipe: RecipeTable,
+  recipeRelease: RecipeReleaseTable,
+  recipeWorkingCopy: RecipeWorkingCopyTable,
+  recipeStep: RecipeStepTable,
+  recipeEdge: RecipeEdgeTable,
   recipeExecution: RecipeExecutionTable,
+  recipeExecutionEvent: RecipeExecutionEventTable,
   RecipeExecutionStatus,
+  RecipeStepType,
+  RecipeExecutionEventType,
 }

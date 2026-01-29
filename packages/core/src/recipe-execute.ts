@@ -1,6 +1,17 @@
-import type { RecipeStep, ParamBinding, PendingInputConfig, RecipeOutput } from "./types"
+import type { ParamBinding, PendingInputConfig, RecipeOutput } from "./types"
+import type { RecipeStep as RecipeStepDb, RecipeEdge } from "./schema/recipe.sql"
 import { isOutputTool, isHumanTool, isComputeTool } from "./system-tools"
 import type { ProblemDetails } from "@synatra/util/error"
+
+export interface NormalizedStep {
+  stepKey: string
+  label: string
+  stepType: "action" | "branch" | "loop"
+  toolName: string | null
+  params: Record<string, ParamBinding>
+  position: number
+  dependsOn: string[]
+}
 
 export interface RecipeExecutionContext {
   inputs: Record<string, unknown>
@@ -66,38 +77,57 @@ export function resolveBinding(binding: ParamBinding, context: RecipeExecutionCo
   return undefined
 }
 
-export function resolveStepParams(step: RecipeStep, context: RecipeExecutionContext): Record<string, unknown> {
+export function resolveStepParams(step: NormalizedStep, context: RecipeExecutionContext): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(step.params).map(([name, binding]) => [name, resolveBinding(binding, context)]),
   )
 }
 
-export function getStepExecutionOrder(steps: RecipeStep[]): RecipeStep[] {
-  const stepMap = new Map(steps.map((s) => [s.id, s]))
+export function buildNormalizedSteps(steps: RecipeStepDb[], edges: RecipeEdge[]): NormalizedStep[] {
+  const edgeMap = new Map<string, string[]>()
+  for (const edge of edges) {
+    const deps = edgeMap.get(edge.toStepKey) ?? []
+    deps.push(edge.fromStepKey)
+    edgeMap.set(edge.toStepKey, deps)
+  }
+
+  return steps.map((step) => ({
+    stepKey: step.stepKey,
+    label: step.label,
+    stepType: step.stepType,
+    toolName: step.toolName,
+    params: step.params,
+    position: step.position,
+    dependsOn: edgeMap.get(step.stepKey) ?? [],
+  }))
+}
+
+export function getStepExecutionOrder(steps: NormalizedStep[]): NormalizedStep[] {
+  const stepMap = new Map(steps.map((s) => [s.stepKey, s]))
   const visited = new Set<string>()
-  const order: RecipeStep[] = []
+  const order: NormalizedStep[] = []
 
-  function visit(stepId: string) {
-    if (visited.has(stepId)) return
-    visited.add(stepId)
+  function visit(stepKey: string) {
+    if (visited.has(stepKey)) return
+    visited.add(stepKey)
 
-    const step = stepMap.get(stepId)
+    const step = stepMap.get(stepKey)
     if (!step) return
 
-    for (const depId of step.dependsOn) {
-      visit(depId)
+    for (const depKey of step.dependsOn) {
+      visit(depKey)
     }
     order.push(step)
   }
 
   for (const step of steps) {
-    visit(step.id)
+    visit(step.stepKey)
   }
 
   return order
 }
 
-export function isHumanInputStep(step: RecipeStep): boolean {
+export function isHumanInputStep(step: NormalizedStep): boolean {
   if (step.toolName !== "human_request") return false
 
   const fieldsBinding = step.params.fields
@@ -109,9 +139,9 @@ export function isHumanInputStep(step: RecipeStep): boolean {
   return fields.some((f) => f.kind === "form" || f.kind === "question" || f.kind === "select_rows")
 }
 
-export function buildPendingInputConfig(step: RecipeStep, params: Record<string, unknown>): PendingInputConfig {
+export function buildPendingInputConfig(step: NormalizedStep, params: Record<string, unknown>): PendingInputConfig {
   return {
-    stepId: step.id,
+    stepKey: step.stepKey,
     title: (params.title as string) ?? "Input Required",
     description: params.description as string | undefined,
     fields: (params.fields as Array<Record<string, unknown>>) ?? [],
@@ -125,7 +155,7 @@ export type StepExecutionResult =
   | { type: "error"; error: string }
 
 export interface ExecuteStepOptions {
-  step: RecipeStep
+  step: NormalizedStep
   params: Record<string, unknown>
   executeFunction: (
     toolName: string,
@@ -149,7 +179,7 @@ export async function executeRecipeStep(options: ExecuteStepOptions): Promise<St
     return { type: "success", result: result.result }
   }
 
-  if (isHumanTool(step.toolName)) {
+  if (step.toolName && isHumanTool(step.toolName)) {
     if (isHumanInputStep(step)) {
       const config = buildPendingInputConfig(step, params)
       return { type: "waiting_input", config }
@@ -157,7 +187,7 @@ export async function executeRecipeStep(options: ExecuteStepOptions): Promise<St
     return { type: "success", result: { skipped: true, reason: "approval_not_supported" } }
   }
 
-  if (isOutputTool(step.toolName)) {
+  if (step.toolName && isOutputTool(step.toolName)) {
     const kindMap: Record<string, string> = {
       output_table: "table",
       output_chart: "chart",
@@ -172,8 +202,12 @@ export async function executeRecipeStep(options: ExecuteStepOptions): Promise<St
     return { type: "output", outputItemId }
   }
 
-  if (isComputeTool(step.toolName)) {
+  if (step.toolName && isComputeTool(step.toolName)) {
     return { type: "error", error: `Unknown compute tool: ${step.toolName}` }
+  }
+
+  if (!step.toolName) {
+    return { type: "error", error: "Step has no tool name" }
   }
 
   const result = await executeFunction(step.toolName, params)
@@ -186,7 +220,7 @@ export async function executeRecipeStep(options: ExecuteStepOptions): Promise<St
 }
 
 export interface RecipeRunner {
-  steps: RecipeStep[]
+  steps: NormalizedStep[]
   context: RecipeExecutionContext
   currentStepIndex: number
   status: "pending" | "running" | "waiting_input" | "completed" | "failed"
@@ -194,7 +228,7 @@ export interface RecipeRunner {
   outputItemIds: string[]
 }
 
-export function createRecipeRunner(steps: RecipeStep[], inputs: Record<string, unknown>): RecipeRunner {
+export function createRecipeRunner(steps: NormalizedStep[], inputs: Record<string, unknown>): RecipeRunner {
   const orderedSteps = getStepExecutionOrder(steps)
 
   return {
@@ -211,21 +245,21 @@ export function createRecipeRunner(steps: RecipeStep[], inputs: Record<string, u
   }
 }
 
-export function getNextStep(runner: RecipeRunner): RecipeStep | null {
+export function getNextStep(runner: RecipeRunner): NormalizedStep | null {
   if (runner.currentStepIndex >= runner.steps.length) {
     return null
   }
   return runner.steps[runner.currentStepIndex]
 }
 
-export function advanceRunner(runner: RecipeRunner, stepId: string, result: unknown): RecipeRunner {
+export function advanceRunner(runner: RecipeRunner, stepKey: string, result: unknown): RecipeRunner {
   return {
     ...runner,
     context: {
       ...runner.context,
       results: {
         ...runner.context.results,
-        [stepId]: result,
+        [stepKey]: result,
       },
     },
     currentStepIndex: runner.currentStepIndex + 1,
@@ -248,14 +282,14 @@ export function pauseRunnerForInput(runner: RecipeRunner): RecipeRunner {
   }
 }
 
-export function resumeRunnerWithInput(runner: RecipeRunner, stepId: string, response: unknown): RecipeRunner {
+export function resumeRunnerWithInput(runner: RecipeRunner, stepKey: string, response: unknown): RecipeRunner {
   return {
     ...runner,
     context: {
       ...runner.context,
       results: {
         ...runner.context.results,
-        [stepId]: response,
+        [stepKey]: response,
       },
     },
     currentStepIndex: runner.currentStepIndex + 1,
@@ -309,7 +343,7 @@ export type StepLoopResult =
     }
   | {
       status: "waiting_input"
-      currentStepId: string
+      currentStepKey: string
       pendingInputConfig: PendingInputConfig
       stepResults: Record<string, unknown>
       resolvedParams: Record<string, Record<string, unknown>>
@@ -317,8 +351,8 @@ export type StepLoopResult =
     }
   | {
       status: "failed"
-      error: { stepId: string; toolName: string; message: string }
-      currentStepId: string
+      error: { stepKey: string; toolName: string; message: string }
+      currentStepKey: string
       stepResults: Record<string, unknown>
       resolvedParams: Record<string, Record<string, unknown>>
     }
@@ -328,7 +362,7 @@ function toErrorMessage(error: ProblemDetails): string {
 }
 
 export async function executeStepLoop(
-  steps: RecipeStep[],
+  steps: NormalizedStep[],
   startIndex: number,
   initialContext: RecipeExecutionContext,
   initialOutputItemIds: string[],
@@ -342,13 +376,13 @@ export async function executeStepLoop(
   for (let i = startIndex; i < steps.length; i++) {
     const step = steps[i]
     const params = resolveStepParams(step, context)
-    resolvedParams[step.id] = params
+    resolvedParams[step.stepKey] = params
 
     if (isHumanInputStep(step)) {
       const pendingInputConfig = buildPendingInputConfig(step, params)
       return {
         status: "waiting_input",
-        currentStepId: step.id,
+        currentStepKey: step.stepKey,
         pendingInputConfig,
         stepResults,
         resolvedParams,
@@ -356,10 +390,10 @@ export async function executeStepLoop(
       }
     }
 
-    if (isOutputTool(step.toolName)) {
-      stepResults[step.id] = params
+    if (step.toolName && isOutputTool(step.toolName)) {
+      stepResults[step.stepKey] = params
       if (deps.threadId && deps.createOutputItem) {
-        const output = deps.recipeOutputs.find((o) => o.stepId === step.id)
+        const output = deps.recipeOutputs.find((o) => o.stepId === step.stepKey)
         if (output) {
           const { item } = await deps.createOutputItem({
             threadId: deps.threadId,
@@ -373,7 +407,7 @@ export async function executeStepLoop(
       continue
     }
 
-    if (isComputeTool(step.toolName)) {
+    if (step.toolName && isComputeTool(step.toolName)) {
       const code = params.code as string
       const input = params.input as Record<string, unknown> | undefined
       const timeout =
@@ -392,23 +426,33 @@ export async function executeStepLoop(
         const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Compute execution failed")
         return {
           status: "failed",
-          error: { stepId: step.id, toolName: step.toolName, message },
-          currentStepId: step.id,
+          error: { stepKey: step.stepKey, toolName: step.toolName, message },
+          currentStepKey: step.stepKey,
           stepResults,
           resolvedParams,
         }
       }
 
-      stepResults[step.id] = result.data.result
+      stepResults[step.stepKey] = result.data.result
       continue
+    }
+
+    if (!step.toolName) {
+      return {
+        status: "failed",
+        error: { stepKey: step.stepKey, toolName: "", message: "Step has no tool name" },
+        currentStepKey: step.stepKey,
+        stepResults,
+        resolvedParams,
+      }
     }
 
     const tool = deps.agentTools.find((t) => t.name === step.toolName)
     if (!tool) {
       return {
         status: "failed",
-        error: { stepId: step.id, toolName: step.toolName, message: "Tool not found" },
-        currentStepId: step.id,
+        error: { stepKey: step.stepKey, toolName: step.toolName, message: "Tool not found" },
+        currentStepKey: step.stepKey,
         stepResults,
         resolvedParams,
       }
@@ -429,14 +473,14 @@ export async function executeStepLoop(
       const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Code execution failed")
       return {
         status: "failed",
-        error: { stepId: step.id, toolName: step.toolName, message },
-        currentStepId: step.id,
+        error: { stepKey: step.stepKey, toolName: step.toolName, message },
+        currentStepKey: step.stepKey,
         stepResults,
         resolvedParams,
       }
     }
 
-    stepResults[step.id] = result.data.result
+    stepResults[step.stepKey] = result.data.result
   }
 
   return {

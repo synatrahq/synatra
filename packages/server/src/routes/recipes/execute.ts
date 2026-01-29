@@ -5,10 +5,13 @@ import {
   createRecipeExecution,
   updateRecipeExecution,
   getRecipeById,
+  getRecipeRelease,
   getAgentById,
+  getAgentRelease,
   getEnvironmentById,
   listResources,
   createOutputItemAndIncrementSeq,
+  buildNormalizedSteps,
   getStepExecutionOrder,
   executeStepLoop,
 } from "@synatra/core"
@@ -20,6 +23,7 @@ import { createError } from "@synatra/util/error"
 const schema = z.object({
   inputs: z.record(z.string(), z.unknown()).default({}),
   environmentId: z.string(),
+  releaseId: z.string().optional(),
   threadId: z.string().optional(),
 })
 
@@ -29,8 +33,15 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
   const organizationId = principal.orgId()
 
   const recipe = await getRecipeById(recipeId)
+  const releaseId = body.releaseId ?? recipe.currentReleaseId
 
-  for (const input of recipe.inputs) {
+  if (!releaseId) {
+    throw createError("BadRequestError", { message: "Recipe has no current release" })
+  }
+
+  const release = await getRecipeRelease(recipeId, releaseId)
+
+  for (const input of release.inputs) {
     if (input.required && !(input.key in body.inputs)) {
       throw createError("BadRequestError", { message: `Missing required input: ${input.key}` })
     }
@@ -39,8 +50,17 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
   const agent = await getAgentById(recipe.agentId)
   await getEnvironmentById(body.environmentId)
 
+  let agentRuntimeConfig: { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
+  if (release.agentVersionMode === "fixed" && release.agentReleaseId) {
+    const agentRelease = await getAgentRelease(release.agentReleaseId)
+    agentRuntimeConfig = agentRelease.runtimeConfig
+  } else {
+    agentRuntimeConfig = agent.runtimeConfig as { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
+  }
+
   const execution = await createRecipeExecution({
     recipeId,
+    releaseId,
     environmentId: body.environmentId,
     inputs: body.inputs,
   })
@@ -53,15 +73,15 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
   const config = loadConfig("server")
   const executor = createCodeExecutor(config)
 
-  const sortedSteps = getStepExecutionOrder(recipe.steps)
-  const runtimeConfig = agent.runtimeConfig as { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
+  const normalizedSteps = buildNormalizedSteps(release.steps, release.edges)
+  const sortedSteps = getStepExecutionOrder(normalizedSteps)
 
   const result = await executeStepLoop(sortedSteps, 0, { inputs: body.inputs, results: {}, resolvedParams: {} }, [], {
     organizationId,
     environmentId: body.environmentId,
-    agentTools: runtimeConfig?.tools ?? [],
+    agentTools: agentRuntimeConfig?.tools ?? [],
     resources: resources.map((r) => ({ slug: r.slug, id: r.id, type: r.type })),
-    recipeOutputs: recipe.outputs,
+    recipeOutputs: release.outputs,
     threadId: body.threadId,
     executeCode: (orgId, input) => executor.execute(orgId, input),
     createOutputItem: body.threadId ? (params) => createOutputItemAndIncrementSeq(params) : undefined,
@@ -71,7 +91,7 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
     await updateRecipeExecution({
       id: execution.id,
       status: "waiting_input",
-      currentStepId: result.currentStepId,
+      currentStepKey: result.currentStepKey,
       pendingInputConfig: result.pendingInputConfig,
       results: result.stepResults,
       resolvedParams: result.resolvedParams,
@@ -81,7 +101,7 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
       executionId: execution.id,
       ok: true,
       status: "waiting_input",
-      currentStepId: result.currentStepId,
+      currentStepKey: result.currentStepKey,
       pendingInputConfig: result.pendingInputConfig,
     })
   }
@@ -90,8 +110,8 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
     await updateRecipeExecution({
       id: execution.id,
       status: "failed",
-      currentStepId: result.currentStepId,
-      error: result.error,
+      currentStepKey: result.currentStepKey,
+      error: { stepId: result.error.stepKey, toolName: result.error.toolName, message: result.error.message },
       results: result.stepResults,
       resolvedParams: result.resolvedParams,
     })
