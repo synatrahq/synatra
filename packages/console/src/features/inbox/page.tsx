@@ -1248,7 +1248,7 @@ export default function InboxPage() {
 
     setRecipeSaving(true)
     try {
-      const created = await api.api.recipes.$post({
+      const res = await api.api.recipes.$post({
         json: {
           agentId: context.agentId,
           channelId: context.channelId,
@@ -1261,7 +1261,11 @@ export default function InboxPage() {
           sourceRunId: context.runId,
         },
       })
-      const recipe = await created.json()
+      if (!res.ok) {
+        const err = (await res.json()) as { message?: string }
+        throw new Error(err.message ?? "Failed to create recipe")
+      }
+      const recipe = await res.json()
       setRecipeExtractOpen(false)
       setRecipeExtractResult(null)
       const channel = channels().find((c) => c.id === context.channelId)
@@ -1272,8 +1276,6 @@ export default function InboxPage() {
       } else {
         setSearchParams({ view: "recipes", thread: undefined, recipe: recipe.id })
       }
-    } catch (e) {
-      console.error("Failed to save recipe", e)
     } finally {
       setRecipeSaving(false)
     }

@@ -31,6 +31,7 @@ import {
   Select,
   Modal,
   ModalContainer,
+  ModalHeader,
   ModalBody,
   ModalFooter,
   CodeEditor,
@@ -814,7 +815,19 @@ export function RecipeDetail(props: RecipeDetailProps) {
     }
   }
 
+  const isInputValid = () => {
+    if (!props.recipe) return false
+    for (const input of props.recipe.inputs) {
+      if (input.required) {
+        const val = inputValues()[input.key]
+        if (val === undefined || val === null || val === "") return false
+      }
+    }
+    return true
+  }
+
   const handleInputSubmit = () => {
+    if (!isInputValid()) return
     props.onExecute?.(inputValues())
     setInputModalOpen(false)
   }
@@ -1147,10 +1160,7 @@ export function RecipeDetail(props: RecipeDetailProps) {
               onEscape={() => setInputModalOpen(false)}
             >
               <ModalContainer size="sm">
-                <div class="border-b border-border px-4 py-3">
-                  <h3 class="text-xs font-medium text-text">Run recipe</h3>
-                  <p class="text-2xs text-text-muted mt-0.5">Enter input values</p>
-                </div>
+                <ModalHeader title="Run recipe" onClose={() => setInputModalOpen(false)} />
                 <ModalBody>
                   <div class="flex flex-col gap-3">
                     <For each={recipe().inputs}>
@@ -1202,7 +1212,12 @@ export function RecipeDetail(props: RecipeDetailProps) {
                   <Button variant="ghost" size="sm" onClick={() => setInputModalOpen(false)}>
                     Cancel
                   </Button>
-                  <Button variant="default" size="sm" onClick={handleInputSubmit} disabled={props.executing}>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={handleInputSubmit}
+                    disabled={props.executing || !isInputValid()}
+                  >
                     <Show when={props.executing} fallback={<Play class="h-3.5 w-3.5" weight="fill" />}>
                       <Spinner size="xs" class="border-white border-t-transparent" />
                     </Show>

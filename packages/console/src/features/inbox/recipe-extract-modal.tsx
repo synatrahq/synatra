@@ -11,6 +11,7 @@ import {
   Badge,
   Spinner,
   Select,
+  FormError,
 } from "../../ui"
 import type { RecipeExtractResult } from "../../app/api"
 
@@ -29,7 +30,7 @@ type RecipeExtractModalProps = {
   agentName: string
   onClose: () => void
   onExtract: (modelId: string | null) => void
-  onSave: (data: { name: string; description: string }) => void
+  onSave: (data: { name: string; description: string }) => Promise<void>
   saving?: boolean
 }
 
@@ -37,11 +38,13 @@ export function RecipeExtractModal(props: RecipeExtractModalProps) {
   const [name, setName] = createSignal("")
   const [description, setDescription] = createSignal("")
   const [selectedModel, setSelectedModel] = createSignal<string | null>(null)
+  const [error, setError] = createSignal<string | null>(null)
 
   createEffect(() => {
     if (props.open) {
       setName("")
       setDescription("")
+      setError(null)
     }
   })
 
@@ -51,9 +54,14 @@ export function RecipeExtractModal(props: RecipeExtractModalProps) {
     }
   })
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name().trim()) return
-    props.onSave({ name: name().trim(), description: description().trim() })
+    setError(null)
+    try {
+      await props.onSave({ name: name().trim(), description: description().trim() })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create recipe")
+    }
   }
 
   const handleExtract = () => {
@@ -150,6 +158,30 @@ export function RecipeExtractModal(props: RecipeExtractModalProps) {
                   />
                 </div>
 
+                <Show when={result().inputs.length > 0}>
+                  <div>
+                    <label class="mb-1.5 block text-xs font-medium text-text">Inputs ({result().inputs.length})</label>
+                    <div class="space-y-1.5 rounded-lg border border-border bg-surface p-2">
+                      <For each={result().inputs}>
+                        {(input) => (
+                          <div class="flex items-center gap-2 rounded bg-surface-muted px-2 py-1.5">
+                            <span class="font-code text-xs text-text">{input.key}</span>
+                            <Badge variant="secondary">{input.type}</Badge>
+                            <Show when={input.required}>
+                              <Badge variant="warning">required</Badge>
+                            </Show>
+                            <Show when={"description" in input && input.description}>
+                              <span class="text-2xs text-text-muted truncate">
+                                {(input as { description?: string }).description}
+                              </span>
+                            </Show>
+                          </div>
+                        )}
+                      </For>
+                    </div>
+                  </div>
+                </Show>
+
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-text">
                     Extracted steps ({result().steps.length})
@@ -182,6 +214,8 @@ export function RecipeExtractModal(props: RecipeExtractModalProps) {
                     </div>
                   </div>
                 </Show>
+
+                <FormError message={error()} />
               </div>
             )}
           </Show>
