@@ -55,21 +55,18 @@ export function RecipeExtractModal(props: RecipeExtractModalProps) {
   })
 
   const handleSave = async () => {
-    if (!name().trim()) return
+    const trimmedName = name().trim()
+    if (!trimmedName) return
     setError(null)
     try {
-      await props.onSave({ name: name().trim(), description: description().trim() })
+      await props.onSave({ name: trimmedName, description: description().trim() })
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to create recipe")
     }
   }
 
-  const handleExtract = () => {
-    props.onExtract(selectedModel())
-  }
-
   const isInitialState = () => !props.extracting && !props.extractResult
-
+  const hasExtractResult = () => !props.extracting && props.extractResult && "steps" in props.extractResult
   const canClose = () => !props.extracting
 
   return (
@@ -128,11 +125,7 @@ export function RecipeExtractModal(props: RecipeExtractModalProps) {
             </div>
           </Show>
 
-          <Show
-            when={
-              !props.extracting && props.extractResult && "steps" in props.extractResult ? props.extractResult : null
-            }
-          >
+          <Show when={hasExtractResult() ? props.extractResult : null}>
             {(result) => (
               <div class="space-y-4">
                 <p class="text-xs text-text-muted">Extract a reusable recipe from {props.agentName}'s run</p>
@@ -226,13 +219,17 @@ export function RecipeExtractModal(props: RecipeExtractModalProps) {
             <Button variant="ghost" size="sm" onClick={props.onClose}>
               Cancel
             </Button>
-            <Button size="sm" onClick={handleExtract} disabled={props.modelsLoading || props.models.length === 0}>
+            <Button
+              size="sm"
+              onClick={() => props.onExtract(selectedModel())}
+              disabled={props.modelsLoading || props.models.length === 0}
+            >
               Extract recipe
             </Button>
           </ModalFooter>
         </Show>
 
-        <Show when={!props.extracting && props.extractResult && "steps" in props.extractResult}>
+        <Show when={hasExtractResult()}>
           <ModalFooter>
             <Button variant="ghost" size="sm" onClick={props.onClose}>
               Cancel

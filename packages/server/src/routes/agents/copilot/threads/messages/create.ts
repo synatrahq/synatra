@@ -10,10 +10,9 @@ import {
   getAgentTemplateById,
   listResources,
 } from "@synatra/core"
-import { UserConfigurableResourceType } from "@synatra/core/types"
+import { UserConfigurableResourceType, type AgentRuntimeConfig } from "@synatra/core/types"
 import { requirePermission } from "../../../../../middleware/principal"
 import { emitCopilotEvent } from "../stream"
-import type { AgentRuntimeConfig } from "@synatra/core/types"
 import type { TemplateInfo } from "../../copilot-prompt"
 import { runCopilotLLM, type ResourceInfo } from "./run-llm"
 import { createError } from "@synatra/util/error"

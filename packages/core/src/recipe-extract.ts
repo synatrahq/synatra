@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { eq, and } from "drizzle-orm"
-import { withDb } from "./database"
+import { withDb, first } from "./database"
 import { MessageTable } from "./schema/message.sql"
 import { RunTable } from "./schema/run.sql"
 import { ThreadTable } from "./schema/thread.sql"
@@ -9,10 +9,6 @@ import { createError } from "@synatra/util/error"
 import { principal } from "./principal"
 import { COMPUTE_TOOLS, OUTPUT_TOOLS, HUMAN_TOOLS } from "./system-tools"
 import type { RecipeInput, RecipeOutput, ParamBinding, AgentTool } from "./types"
-
-function first<T>(arr: T[]): T | undefined {
-  return arr[0]
-}
 
 const SAMPLE_LIMIT = 3
 const STRING_LIMIT = 200
