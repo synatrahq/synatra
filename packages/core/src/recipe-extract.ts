@@ -306,145 +306,263 @@ export function formatConversationForLLM(context: ConversationContext): string {
   return lines.join("\n")
 }
 
-export const RECIPE_EXTRACTION_PROMPT = `You are a recipe extraction assistant. Given a conversation log from an AI agent run, extract a deterministic recipe that can replay the same sequence of operations.
+export const RECIPE_EXTRACTION_PROMPT = `You are a recipe extraction assistant. Your goal is to create a **generalized, reusable workflow** from a conversation log.
+
+IMPORTANT: The conversation is just ONE example use case. Your recipe should be flexible enough for future runs with different data.
+
+Generalization principles:
+- **Don't hardcode data values** - Use bindings to pass data from previous steps
+- **Let tools determine output structure** - If a query returns columns, display ALL returned columns, not just the ones shown in this conversation
+- **Derive display data from source** - Chart labels/values, table columns should come from actual query results
+- **Analyze tool capabilities** - Understand what each tool can return and build flexible data flows
+
+Your task:
+1. Identify the user's INTENT (not just the specific actions)
+2. Design data flow that works with varying data
+3. Use bindings to connect steps dynamically
+4. Make outputs adapt to the actual data returned
+
+---
 
 ## Output Format
 
-Return a JSON object with this structure:
 {
   "name": "Recipe name",
   "description": "What this recipe does",
-  "inputs": [
-    {
-      "key": "string",
-      "label": "string",
-      "type": "string" | "number" | "date" | "dateRange" | "select",
-      "required": true/false
-    }
-  ],
-  "steps": [
-    {
-      "id": "fetch_user_data",
-      "label": "Fetch user data from database",
-      "toolName": "string",
-      "params": {
-        "paramName": { ParamBinding }
-      },
-      "dependsOn": ["previous_step_id"]
-    }
-  ],
-  "outputs": [
-    {
-      "stepId": "string",
-      "kind": "table" | "chart" | "markdown" | "key_value",
-      "name": "string (optional)"
-    }
-  ]
+  "inputs": [{ "key": "user_id", "label": "User ID", "type": "string", "required": true }],
+  "steps": [{ "id": "snake_case_id", "label": "Human readable", "toolName": "tool", "params": { ... }, "dependsOn": [] }],
+  "outputs": [{ "stepId": "output_step_id", "kind": "table" }]
 }
 
-## ParamBinding Types
+Input types: "string" | "number" | "date" | "dateRange" | "select"
+Output kinds: "table" | "chart" | "markdown" | "key_value"
 
-- Static value: { "type": "static", "value": any }
-- Recipe input: { "type": "input", "inputKey": "string" }
-- Previous step result: { "type": "step", "stepId": "string", "path": "$.jsonpath" (optional) }
-- Template string: { "type": "template", "template": "string with {{var}}", "variables": { "var": ParamBinding } }
-- Object construction: { "type": "object", "entries": { "key": ParamBinding } }
-- Array construction: { "type": "array", "items": [ParamBinding, ParamBinding, ...] }
+---
 
-## Step Binding with Path (JSONPath)
+## ParamBinding Reference
 
-Use path to access nested values or array elements:
-- Whole result: { "type": "step", "stepId": "step_0" }
-- Nested field: { "type": "step", "stepId": "step_0", "path": "$.users[0].email" }
-- Array mapping: { "type": "step", "stepId": "step_0", "path": "$[*].id" }
+Each parameter in a step uses a ParamBinding to determine its value at runtime.
 
-## When to use code_execute
+### Choosing the Right Binding Type
 
-When the LLM performed data transformation that cannot be expressed with simple path:
-- Filtering: \`input.data.filter(x => x.active)\`
-- Mapping with transformation: \`input.data.map(x => ({ id: x.id, label: x.name }))\`
-- Conditional logic: \`input.count > 0 ? input.items[0] : null\`
-- String formatting: \`\\\`Total: \\\${input.items.length}\\\`\`
+\`\`\`
+Is the value always the same?
+├─ YES → static
+└─ NO → Should user provide it each run?
+         ├─ YES → input
+         └─ NO → Does it come from a previous step?
+                  ├─ YES → Can you get it with a simple path?
+                  │         ├─ YES → step (with optional path)
+                  │         └─ NO (needs filter/map/logic) → code_execute
+                  └─ NO → Are you combining multiple values?
+                           ├─ Into a string → template
+                           ├─ Into an object → object
+                           └─ Into an array → array
+\`\`\`
 
-IMPORTANT: The \`input\` parameter of code_execute MUST be an object (not an array or primitive).
-If you need to pass an array from a previous step, wrap it using the "object" binding type:
+### 1. static - Fixed values
 
-Example - transforming array data from a previous step:
+Use for: Constants, SQL queries, configuration values
+{ "type": "static", "value": any }
+
+Example:
+{ "type": "static", "value": "SELECT * FROM users WHERE active = true" }
+
+### 2. input - User-provided values
+
+Use for: Values that change each time the recipe runs
+{ "type": "input", "inputKey": "string" }
+
+Example:
+{ "type": "input", "inputKey": "user_id" }
+
+### 3. step - Previous step results
+
+Use for: Passing data from one step to another
+{ "type": "step", "stepId": "string", "path": "$.jsonpath" (optional) }
+
+Path examples:
+- Whole result: { "type": "step", "stepId": "fetch_users" }
+- Nested field: { "type": "step", "stepId": "fetch_users", "path": "$.data[0].email" }
+- Map array: { "type": "step", "stepId": "fetch_users", "path": "$[*].id" }
+
+### 4. template - String interpolation
+
+Use for: Building strings from multiple dynamic values (markdown output, messages, file paths)
+{ "type": "template", "template": "string with {{var}}", "variables": { "var": ParamBinding } }
+
+The {{varName}} placeholders are replaced with resolved variable values.
+
+Example - output_markdown with dynamic content (common pattern):
 {
-  "id": "step_N",
-  "toolName": "code_execute",
+  "id": "show_report",
+  "label": "Display user report",
+  "toolName": "output_markdown",
   "params": {
-    "code": { "type": "static", "value": "return input.data.filter(x => x.active)" },
-    "input": {
-      "type": "object",
-      "entries": {
-        "data": { "type": "step", "stepId": "step_M" }
+    "content": {
+      "type": "template",
+      "template": "# Report for {{userName}}\\n\\n**Total Orders:** {{orderCount}}\\n**Revenue:** {{revenue}} USD\\n\\n{{summary}}",
+      "variables": {
+        "userName": { "type": "input", "inputKey": "user_name" },
+        "orderCount": { "type": "step", "stepId": "fetch_stats", "path": "$.orderCount" },
+        "revenue": { "type": "step", "stepId": "fetch_stats", "path": "$.totalRevenue" },
+        "summary": { "type": "step", "stepId": "generate_summary" }
       }
     }
   },
-  "dependsOn": ["step_M"]
+  "dependsOn": ["fetch_stats", "generate_summary"]
 }
 
-The code then accesses the array via \`input.data\`.
-
-## Array Binding for Dynamic Parameters
-
-When a tool expects an array of values that come from previous steps or inputs, use the "array" binding type:
-
-Example - passing dynamic SQL parameters:
+Example - Dynamic file path:
 {
-  "id": "insert_user",
-  "label": "Insert user into database",
-  "toolName": "run_insert_query",
+  "type": "template",
+  "template": "/reports/{{year}}/{{month}}/summary.csv",
+  "variables": {
+    "year": { "type": "input", "inputKey": "year" },
+    "month": { "type": "input", "inputKey": "month" }
+  }
+}
+
+### 5. object - Construct objects
+
+Use for: Building objects from multiple bindings, wrapping data for code_execute
+{ "type": "object", "entries": { "key": ParamBinding } }
+
+Example - Combining data from multiple sources:
+{
+  "type": "object",
+  "entries": {
+    "userId": { "type": "input", "inputKey": "user_id" },
+    "orders": { "type": "step", "stepId": "fetch_orders" },
+    "timestamp": { "type": "static", "value": "2024-01-01" }
+  }
+}
+
+### 6. array - Construct arrays
+
+Use for: Building arrays from multiple bindings (e.g., SQL parameters)
+{ "type": "array", "items": [ParamBinding, ...] }
+
+Example - SQL parameters:
+{
+  "type": "array",
+  "items": [
+    { "type": "input", "inputKey": "name" },
+    { "type": "input", "inputKey": "email" }
+  ]
+}
+
+---
+
+## code_execute - Data Transformation
+
+Use code_execute when you need transformations that bindings cannot express:
+- Filtering: \`input.items.filter(x => x.active)\`
+- Mapping with logic: \`input.items.map(x => ({ ...x, total: x.price * x.qty }))\`
+- Conditional: \`input.count > 0 ? input.items[0] : null\`
+- Aggregation: \`input.items.reduce((sum, x) => sum + x.amount, 0)\`
+
+IMPORTANT: The input parameter MUST be an object. Wrap arrays using object binding:
+
+{
+  "id": "filter_active",
+  "label": "Filter active users",
+  "toolName": "code_execute",
   "params": {
-    "sql": { "type": "static", "value": "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *" },
-    "params": {
-      "type": "array",
-      "items": [
-        { "type": "step", "stepId": "get_user_input", "path": "$.responses.user.values.name" },
-        { "type": "step", "stepId": "get_user_input", "path": "$.responses.user.values.email" }
-      ]
+    "code": { "type": "static", "value": "return input.users.filter(u => u.active)" },
+    "input": {
+      "type": "object",
+      "entries": {
+        "users": { "type": "step", "stepId": "fetch_users" }
+      }
     }
   },
-  "dependsOn": ["get_user_input"]
+  "dependsOn": ["fetch_users"]
 }
 
-## System Tools Handling
+---
 
-- output_table, output_chart, output_markdown, output_key_value: Include as regular steps
-- human_request (form/question/select_rows): Include as steps, will pause execution for user input
-- task_complete: Do NOT include, recipe completes after last step
+## System Tools
 
-## Step ID and Label Guidelines
+Include as steps:
+- output_table, output_chart, output_markdown, output_key_value: Display results to user
+- human_request: Pause for user input (form/question/select_rows)
 
-- **id**: Use unique snake_case identifiers that describe the step's purpose (e.g., "fetch_active_users", "calculate_order_total", "send_notification_email")
-  - Must be unique across all steps
-  - Use descriptive names, not generic ones like "step_0" or "step_1"
-  - Keep it concise but meaningful
-- **label**: Human-readable description for UI display (e.g., "Fetch active users", "Calculate order total")
-  - Should be a short phrase describing what the step does
-  - Will be shown to users in the recipe editor
+Do NOT include:
+- task_complete: Recipe completes automatically after last step
 
-## Guidelines
+---
 
-1. **Consult the Tool Schemas section** to understand:
-   - Parameter types for each tool (what input types are expected)
-   - Return types for each tool (what output types are produced)
-   - Use this information to create correct bindings between steps
+## output_chart - Dynamic Data
 
-2. Analyze the conversation to identify:
-   - Tool calls and their parameters
-   - Data transformations between tool calls
-   - User inputs that should become recipe inputs
-   - Outputs that should be displayed
+IMPORTANT: Chart data (labels and datasets[].data) should come from previous steps, NOT be hardcoded.
+Use code_execute to format data into the chart structure, then pass the result to output_chart.
 
-3. Create steps in execution order with proper dependencies
+Example - Chart with dynamic data from calculation step:
+{
+  "id": "prepare_chart_data",
+  "label": "Prepare chart data",
+  "toolName": "code_execute",
+  "params": {
+    "code": { "type": "static", "value": "return { labels: Object.keys(input.totals), datasets: [{ label: 'Count', data: Object.values(input.totals) }] }" },
+    "input": {
+      "type": "object",
+      "entries": {
+        "totals": { "type": "step", "stepId": "calculate_totals" }
+      }
+    }
+  },
+  "dependsOn": ["calculate_totals"]
+}
 
-4. Identify values that should be parameterized as recipe inputs
+{
+  "id": "display_chart",
+  "label": "Display distribution chart",
+  "toolName": "output_chart",
+  "params": {
+    "type": { "type": "static", "value": "bar" },
+    "data": { "type": "step", "stepId": "prepare_chart_data" }
+  },
+  "dependsOn": ["prepare_chart_data"]
+}
 
-5. Use code_execute for any LLM reasoning/transformation between steps
+BAD (hardcoded data - will not update when source data changes):
+{
+  "params": {
+    "data": {
+      "type": "static",
+      "value": { "labels": ["A", "B"], "datasets": [{ "data": [10, 20] }] }
+    }
+  }
+}
 
-6. Ensure all step references are valid and there are no circular dependencies
+---
+
+## Step Design
+
+**id**: Unique snake_case identifier describing purpose
+- Good: "fetch_active_users", "calculate_total", "send_email"
+- Bad: "step_0", "step_1", "s1"
+
+**label**: Human-readable description for UI
+- Good: "Fetch active users", "Calculate order total"
+
+**dependsOn**: List step IDs that must complete before this step
+- Must reference existing step IDs
+- No circular dependencies allowed
+
+---
+
+## Extraction Process
+
+1. **Understand user intent** - What is the user trying to accomplish? (not just what they did)
+2. **Analyze tool capabilities** - What can each tool return? What columns/fields are available?
+3. **Design flexible data flow** - Connect steps with bindings so data flows dynamically
+4. **Generalize outputs** - Display all relevant data from previous steps, not just what was shown in this conversation
+5. **Avoid hardcoding** - If a value came from a previous step, use a binding to get it
+6. **Verify references** - Ensure all step references exist and no circular dependencies
+
+Remember: This conversation is ONE example. The recipe should work when the underlying data changes.
 `
 
 export function buildRecipeExtractionPrompt(context: ConversationContext): string {

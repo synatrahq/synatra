@@ -68,15 +68,18 @@ export const OUTPUT_TOOLS: SystemToolDefinition[] = [
         type: { type: "string", enum: ["line", "bar", "pie"], description: "Chart type" },
         data: {
           type: "object",
+          description:
+            "Chart data structure. Must be dynamically built from previous step results using code_execute, not hardcoded.",
           properties: {
-            labels: { type: "array", items: { type: "string" } },
+            labels: { type: "array", items: { type: "string" }, description: "X-axis labels" },
             datasets: {
               type: "array",
+              description: "Data series array",
               items: {
                 type: "object",
                 properties: {
-                  label: { type: "string" },
-                  data: { type: "array", items: { type: "number" } },
+                  label: { type: "string", description: "Series label for legend" },
+                  data: { type: "array", items: { type: "number" }, description: "Numeric values" },
                 },
                 required: ["data"],
               },
