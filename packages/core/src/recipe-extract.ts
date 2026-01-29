@@ -349,6 +349,7 @@ Return a JSON object with this structure:
 - Previous step result: { "type": "step", "stepId": "string", "path": "$.jsonpath" (optional) }
 - Template string: { "type": "template", "template": "string with {{var}}", "variables": { "var": ParamBinding } }
 - Object construction: { "type": "object", "entries": { "key": ParamBinding } }
+- Array construction: { "type": "array", "items": [ParamBinding, ParamBinding, ...] }
 
 ## Step Binding with Path (JSONPath)
 
@@ -385,6 +386,28 @@ Example - transforming array data from a previous step:
 }
 
 The code then accesses the array via \`input.data\`.
+
+## Array Binding for Dynamic Parameters
+
+When a tool expects an array of values that come from previous steps or inputs, use the "array" binding type:
+
+Example - passing dynamic SQL parameters:
+{
+  "id": "insert_user",
+  "label": "Insert user into database",
+  "toolName": "run_insert_query",
+  "params": {
+    "sql": { "type": "static", "value": "INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *" },
+    "params": {
+      "type": "array",
+      "items": [
+        { "type": "step", "stepId": "get_user_input", "path": "$.responses.user.values.name" },
+        { "type": "step", "stepId": "get_user_input", "path": "$.responses.user.values.email" }
+      ]
+    }
+  },
+  "dependsOn": ["get_user_input"]
+}
 
 ## System Tools Handling
 

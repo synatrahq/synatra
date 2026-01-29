@@ -72,6 +72,7 @@ function formatBindingRef(binding: ParamBinding): string {
     }
     case "template":
     case "object":
+    case "array":
       return "[complex]"
   }
 }
@@ -99,6 +100,9 @@ function resolveBinding(binding: ParamBinding): unknown {
         result[k] = resolveBinding(v)
       }
       return result
+    }
+    case "array": {
+      return binding.items.map((item) => resolveBinding(item))
     }
   }
 }

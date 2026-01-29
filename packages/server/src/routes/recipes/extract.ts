@@ -98,6 +98,14 @@ const RecipeJsonSchema: JSONSchema7 = {
           },
           required: ["type", "entries"],
         },
+        {
+          type: "object",
+          properties: {
+            type: { const: "array" },
+            items: { type: "array", items: { $ref: "#/$defs/binding" } },
+          },
+          required: ["type", "items"],
+        },
       ],
     },
   },
@@ -181,6 +189,9 @@ function updateBindingRef(binding: ParamBinding, idMap: Map<string, string>): Pa
   }
   if (binding.type === "object") {
     return { ...binding, entries: updateParamBindingRefs(binding.entries, idMap) }
+  }
+  if (binding.type === "array") {
+    return { ...binding, items: binding.items.map((item) => updateBindingRef(item, idMap)) }
   }
   return binding
 }

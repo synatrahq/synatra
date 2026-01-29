@@ -74,6 +74,10 @@ export function resolveBinding(binding: ParamBinding, context: RecipeExecutionCo
       return obj
     }
 
+    case "array": {
+      return binding.items.map((item) => resolveBinding(item, context))
+    }
+
     default:
       return undefined
   }

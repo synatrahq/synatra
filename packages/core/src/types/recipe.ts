@@ -42,12 +42,20 @@ const ObjectBindingSchema: z.ZodType<ObjectBinding> = z.lazy(() =>
   }),
 )
 
+const ArrayBindingSchema: z.ZodType<ArrayBinding> = z.lazy(() =>
+  z.object({
+    type: z.literal("array"),
+    items: z.array(ParamBindingSchema),
+  }),
+)
+
 export const ParamBindingSchema: z.ZodType<ParamBinding> = z.union([
   StaticBindingSchema,
   InputBindingSchema,
   StepBindingSchema,
   TemplateBindingSchema,
   ObjectBindingSchema,
+  ArrayBindingSchema,
 ])
 
 export type StaticBinding = z.infer<typeof StaticBindingSchema>
@@ -62,8 +70,12 @@ export type ObjectBinding = {
   type: "object"
   entries: Record<string, ParamBinding>
 }
+export type ArrayBinding = {
+  type: "array"
+  items: ParamBinding[]
+}
 
-export type ParamBinding = StaticBinding | InputBinding | StepBinding | TemplateBinding | ObjectBinding
+export type ParamBinding = StaticBinding | InputBinding | StepBinding | TemplateBinding | ObjectBinding | ArrayBinding
 
 export const RecipeStepSchema = z.object({
   id: z.string(),
