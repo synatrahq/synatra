@@ -4,6 +4,7 @@ import { z } from "zod"
 import {
   getRecipeById,
   getRecipeRelease,
+  getRecipeExecutionById,
   getAgentById,
   getAgentRelease,
   listResources,
@@ -34,14 +35,15 @@ export const respond = new Hono().post(
     const body = c.req.valid("json")
     const organizationId = principal.orgId()
 
+    const existingExecution = await getRecipeExecutionById(executionId)
+    if (existingExecution.recipeId !== recipeId) {
+      throw createError("BadRequestError", { message: "Execution does not belong to this recipe" })
+    }
+
     const { execution, response } = await respondToRecipeExecution({
       id: executionId,
       response: body.response,
     })
-
-    if (execution.recipeId !== recipeId) {
-      throw createError("BadRequestError", { message: "Execution does not belong to this recipe" })
-    }
 
     const recipe = await getRecipeById(recipeId)
     const release = await getRecipeRelease(recipeId, execution.releaseId)

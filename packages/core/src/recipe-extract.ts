@@ -175,10 +175,44 @@ export interface ExtractedRecipe {
   outputs: RecipeOutput[]
 }
 
-export function validateRecipeSteps(steps: ExtractedStep[]): { valid: boolean; errors: string[] } {
+export function validateRecipeSteps(
+  steps: ExtractedStep[],
+  inputs: RecipeInput[] = [],
+): { valid: boolean; errors: string[] } {
   const errors: string[] = []
   const stepKeys = new Set(steps.map((s) => s.stepKey))
   const stepMap = new Map(steps.map((s) => [s.stepKey, s]))
+  const inputKeys = new Set(inputs.map((i) => i.key))
+
+  function validateBinding(binding: ParamBinding, stepKey: string, paramPath: string): void {
+    switch (binding.type) {
+      case "step":
+        if (!stepKeys.has(binding.stepId)) {
+          errors.push(`Step "${stepKey}" param "${paramPath}" references non-existent step "${binding.stepId}"`)
+        }
+        break
+      case "input":
+        if (!inputKeys.has(binding.inputKey)) {
+          errors.push(`Step "${stepKey}" param "${paramPath}" references non-existent input "${binding.inputKey}"`)
+        }
+        break
+      case "template":
+        for (const [varName, varBinding] of Object.entries(binding.variables)) {
+          validateBinding(varBinding, stepKey, `${paramPath}.variables.${varName}`)
+        }
+        break
+      case "object":
+        for (const [key, entryBinding] of Object.entries(binding.entries)) {
+          validateBinding(entryBinding, stepKey, `${paramPath}.entries.${key}`)
+        }
+        break
+      case "array":
+        binding.items.forEach((item, idx) => {
+          validateBinding(item, stepKey, `${paramPath}.items[${idx}]`)
+        })
+        break
+    }
+  }
 
   for (const step of steps) {
     for (const depKey of step.dependsOn) {
@@ -188,9 +222,7 @@ export function validateRecipeSteps(steps: ExtractedStep[]): { valid: boolean; e
     }
 
     for (const [paramName, binding] of Object.entries(step.params)) {
-      if (binding.type === "step" && !stepKeys.has(binding.stepId)) {
-        errors.push(`Step "${step.stepKey}" param "${paramName}" references non-existent step "${binding.stepId}"`)
-      }
+      validateBinding(binding, step.stepKey, paramName)
     }
 
     if (step.toolName === "human_request") {

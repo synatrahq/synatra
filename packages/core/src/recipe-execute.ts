@@ -68,7 +68,8 @@ export function resolveBinding(binding: ParamBinding, context: RecipeExecutionCo
       let result = binding.template
       for (const [varName, varBinding] of Object.entries(binding.variables)) {
         const value = resolveBinding(varBinding, context)
-        result = result.replace(new RegExp(`\\{\\{${varName}\\}\\}`, "g"), String(value ?? ""))
+        const strValue = value === null || value === undefined ? "" : String(value)
+        result = result.replaceAll(`{{${varName}}}`, strValue)
       }
       return result
     }
@@ -421,7 +422,7 @@ export async function executeStepLoop(
         code,
         params: input ?? {},
         paramAlias: input !== undefined ? "input" : undefined,
-        context: { resources: [] },
+        context: { resources: deps.resources.map((r) => ({ name: r.slug, resourceId: r.id, type: r.type })) },
         environmentId: deps.environmentId,
         timeout,
       })

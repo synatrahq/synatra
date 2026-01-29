@@ -165,7 +165,7 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
     const extracted = toolCall.input as ExtractedRecipe
     const { steps: normalizedSteps, keyMap, errors: normalizationErrors } = normalizeStepKeys(extracted.steps ?? [])
 
-    const validation = validateRecipeSteps(normalizedSteps)
+    const validation = validateRecipeSteps(normalizedSteps, (extracted.inputs ?? []) as RecipeInput[])
     const allErrors = [...normalizationErrors, ...validation.errors]
     if (normalizedSteps.length === 0 || allErrors.length > 0) {
       const errors = normalizedSteps.length === 0 ? ["Recipe must have at least one step"] : allErrors

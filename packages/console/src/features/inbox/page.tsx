@@ -402,10 +402,11 @@ export default function InboxPage() {
     const recipe = selectedRecipe()
     return {
       queryKey: ["recipe-executions", recipe?.id ?? "", activeOrg()?.id],
-      queryFn: async (): Promise<RecipeExecutions> => {
+      queryFn: async (): Promise<RecipeExecutions["items"]> => {
         if (!recipe) return []
         const res = await api.api.recipes[":id"].executions.$get({ param: { id: recipe.id } })
-        return res.json()
+        const data = await res.json()
+        return data.items
       },
       enabled: !!recipe,
     }

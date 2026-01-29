@@ -719,7 +719,7 @@ function EmptyState() {
 
 type RecipeDetailProps = {
   recipe: Recipe | null
-  executions: RecipeExecutions
+  executions: RecipeExecutions["items"]
   agents: Agents
   environments: Environments
   selectedEnvironmentId: string | null

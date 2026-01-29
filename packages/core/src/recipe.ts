@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { eq, and, desc, lt, or, getTableColumns, sql, inArray } from "drizzle-orm"
+import { eq, and, desc, lt, or, getTableColumns, sql, inArray, isNull } from "drizzle-orm"
 import { createHash } from "crypto"
 import { principal } from "./principal"
 import { withDb, withTx, first } from "./database"
@@ -12,6 +12,8 @@ import {
   RecipeExecutionTable,
 } from "./schema/recipe.sql"
 import { UserTable } from "./schema/user.sql"
+import { MemberTable } from "./schema/member.sql"
+import { ChannelMemberTable } from "./schema/channel-member.sql"
 import { createError } from "@synatra/util/error"
 import { generateSlug, generateRandomId, isReservedSlug } from "@synatra/util/identifier"
 import { bumpVersion, parseVersion, stringifyVersion } from "@synatra/util/version"
@@ -44,6 +46,38 @@ function parseCursor(cursor: string): { date: Date; id: string } {
 
 function hashConfig(config: Record<string, unknown>): string {
   return createHash("sha256").update(serializeConfig(config)).digest("hex")
+}
+
+async function getAccessibleChannelIds(): Promise<string[] | null> {
+  const organizationId = principal.orgId()
+  const userId = principal.userId()
+
+  const member = await withDb((db) =>
+    db
+      .select()
+      .from(MemberTable)
+      .where(and(eq(MemberTable.userId, userId), eq(MemberTable.organizationId, organizationId)))
+      .then(first),
+  )
+
+  if (!member) return []
+  if (member.role === "owner" || member.role === "admin") return null
+
+  const channelMembers = await withDb((db) =>
+    db
+      .select({ channelId: ChannelMemberTable.channelId })
+      .from(ChannelMemberTable)
+      .where(eq(ChannelMemberTable.memberId, member.id)),
+  )
+
+  return channelMembers.map((cm) => cm.channelId)
+}
+
+async function canAccessRecipeChannel(channelId: string | null): Promise<boolean> {
+  if (!channelId) return true
+  const accessibleChannels = await getAccessibleChannelIds()
+  if (accessibleChannels === null) return true
+  return accessibleChannels.includes(channelId)
 }
 
 export const CreateRecipeSchema = z.object({
@@ -248,18 +282,31 @@ export async function getRecipeById(id: string) {
   )
 
   if (!recipe) throw createError("NotFoundError", { type: "Recipe", id })
+
+  if (!(await canAccessRecipeChannel(recipe.channelId))) {
+    throw createError("ForbiddenError", { message: "Access denied to this recipe" })
+  }
+
   return recipe
 }
 
 export async function findRecipeById(id: string) {
   const organizationId = principal.orgId()
-  return withDb((db) =>
+  const recipe = await withDb((db) =>
     db
       .select()
       .from(RecipeTable)
       .where(and(eq(RecipeTable.id, id), eq(RecipeTable.organizationId, organizationId)))
       .then(first),
   )
+
+  if (!recipe) return null
+
+  if (!(await canAccessRecipeChannel(recipe.channelId))) {
+    return null
+  }
+
+  return recipe
 }
 
 export const ListRecipesSchema = z
@@ -276,12 +323,24 @@ export async function listRecipes(raw?: z.input<typeof ListRecipesSchema>) {
   const organizationId = principal.orgId()
   const limit = filters?.limit ?? 20
 
+  const accessibleChannels = await getAccessibleChannelIds()
+
   const conditions = [eq(RecipeTable.organizationId, organizationId)]
 
+  if (accessibleChannels !== null) {
+    if (accessibleChannels.length === 0) {
+      conditions.push(isNull(RecipeTable.channelId))
+    } else {
+      conditions.push(or(isNull(RecipeTable.channelId), inArray(RecipeTable.channelId, accessibleChannels))!)
+    }
+  }
   if (filters?.agentId) {
     conditions.push(eq(RecipeTable.agentId, filters.agentId))
   }
   if (filters?.channelId) {
+    if (accessibleChannels !== null && !accessibleChannels.includes(filters.channelId)) {
+      return { items: [], nextCursor: null }
+    }
     conditions.push(eq(RecipeTable.channelId, filters.channelId))
   }
   if (filters?.cursor) {
