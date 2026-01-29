@@ -1167,7 +1167,10 @@ export function RecipeDetail(props: RecipeDetailProps) {
                               <Input
                                 type="number"
                                 value={String(inputValues()[input.key] ?? "")}
-                                onInput={(e) => handleInputChange(input.key, Number(e.currentTarget.value))}
+                                onInput={(e) => {
+                                  const v = e.currentTarget.value
+                                  handleInputChange(input.key, v === "" ? undefined : Number(v))
+                                }}
                                 class="h-8 text-xs"
                                 placeholder={input.description}
                               />

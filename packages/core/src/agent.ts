@@ -438,11 +438,13 @@ export async function listAgentReleases(agentId: string) {
 }
 
 export async function getAgentRelease(releaseId: string) {
+  const organizationId = principal.orgId()
   const release = await withDb((db) =>
     db
       .select(getTableColumns(AgentReleaseTable))
       .from(AgentReleaseTable)
-      .where(eq(AgentReleaseTable.id, releaseId))
+      .innerJoin(AgentTable, eq(AgentReleaseTable.agentId, AgentTable.id))
+      .where(and(eq(AgentReleaseTable.id, releaseId), eq(AgentTable.organizationId, organizationId)))
       .then(first),
   )
   if (!release) throw createError("NotFoundError", { type: "AgentRelease", id: releaseId })
