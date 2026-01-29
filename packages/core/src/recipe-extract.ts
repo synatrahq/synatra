@@ -8,7 +8,7 @@ import { AgentReleaseTable, AgentWorkingCopyTable } from "./schema/agent.sql"
 import { createError } from "@synatra/util/error"
 import { principal } from "./principal"
 import { COMPUTE_TOOLS, OUTPUT_TOOLS, HUMAN_TOOLS } from "./system-tools"
-import type { RecipeStep, RecipeInput, RecipeOutput, ParamBinding, AgentRuntimeConfig, AgentTool } from "./types"
+import type { RecipeStep, RecipeInput, RecipeOutput, ParamBinding, AgentTool } from "./types"
 
 function first<T>(arr: T[]): T | undefined {
   return arr[0]
@@ -544,4 +544,85 @@ ${conversationLog}
 ---
 
 Extract the recipe from the above conversation log. Return only the JSON object.`
+}
+
+export function toSnakeCase(str: string): string {
+  return str
+    .replace(/([a-z])([A-Z])/g, "$1_$2")
+    .replace(/[\s-]+/g, "_")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "")
+}
+
+export interface RawStep {
+  id: string
+  label: string
+  toolName: string
+  params: Record<string, ParamBinding>
+  dependsOn: string[]
+}
+
+export interface NormalizedStepsResult {
+  steps: RecipeStep[]
+  idMap: Map<string, string>
+  errors: string[]
+}
+
+export function normalizeStepIds(steps: RawStep[]): NormalizedStepsResult {
+  const idMap = new Map<string, string>()
+  const usedIds = new Set<string>()
+  const errors: string[] = []
+
+  const normalizedSteps = steps.map((step, index) => {
+    const originalId = step.id
+    const normalizedId = toSnakeCase(step.id) || `step_${index}`
+
+    if (usedIds.has(normalizedId)) {
+      errors.push(`Duplicate step ID "${normalizedId}" (from "${originalId}")`)
+    }
+
+    usedIds.add(normalizedId)
+    idMap.set(originalId, normalizedId)
+
+    return { ...step, id: normalizedId }
+  })
+
+  return {
+    steps: normalizedSteps.map((step) => ({
+      ...step,
+      dependsOn: step.dependsOn.map((dep) => idMap.get(dep) ?? dep),
+      params: updateParamBindingRefs(step.params, idMap),
+    })),
+    idMap,
+    errors,
+  }
+}
+
+export function updateParamBindingRefs(
+  params: Record<string, ParamBinding>,
+  idMap: Map<string, string>,
+): Record<string, ParamBinding> {
+  const updated: Record<string, ParamBinding> = {}
+  for (const [key, binding] of Object.entries(params)) {
+    updated[key] = updateBindingRef(binding, idMap)
+  }
+  return updated
+}
+
+export function updateBindingRef(binding: ParamBinding, idMap: Map<string, string>): ParamBinding {
+  if (binding.type === "step") {
+    return { ...binding, stepId: idMap.get(binding.stepId) ?? binding.stepId }
+  }
+  if (binding.type === "template") {
+    return { ...binding, variables: updateParamBindingRefs(binding.variables, idMap) }
+  }
+  if (binding.type === "object") {
+    return { ...binding, entries: updateParamBindingRefs(binding.entries, idMap) }
+  }
+  if (binding.type === "array") {
+    return { ...binding, items: binding.items.map((item) => updateBindingRef(item, idMap)) }
+  }
+  return binding
 }

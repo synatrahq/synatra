@@ -1,5 +1,6 @@
-import type { RecipeStep, ParamBinding, PendingInputConfig } from "./types"
+import type { RecipeStep, ParamBinding, PendingInputConfig, RecipeOutput } from "./types"
 import { isOutputTool, isHumanTool, isComputeTool } from "./system-tools"
+import type { ProblemDetails } from "@synatra/util/error"
 
 export interface RecipeExecutionContext {
   inputs: Record<string, unknown>
@@ -286,5 +287,182 @@ export function addOutputItemId(runner: RecipeRunner, outputItemId: string): Rec
   return {
     ...runner,
     outputItemIds: [...runner.outputItemIds, outputItemId],
+  }
+}
+
+export type ExecuteCodeResult =
+  | { ok: true; data: { success: boolean; result?: unknown; error?: string } }
+  | { ok: false; error: ProblemDetails }
+
+export interface StepExecutorDependencies {
+  organizationId: string
+  environmentId: string
+  agentTools: Array<{ name: string; code: string; timeoutMs?: number }>
+  resources: Array<{ slug: string; id: string; type: string }>
+  recipeOutputs: RecipeOutput[]
+  threadId?: string
+  executeCode: (
+    organizationId: string,
+    input: {
+      code: string
+      params: Record<string, unknown>
+      paramAlias?: "payload" | "input"
+      context: { resources: Array<{ name: string; resourceId: string; type: string }> }
+      environmentId: string
+      timeout: number
+    },
+  ) => Promise<ExecuteCodeResult>
+  createOutputItem?: (params: {
+    threadId: string
+    kind: "table" | "chart" | "markdown" | "key_value"
+    name?: string
+    payload: Record<string, unknown>
+  }) => Promise<{ item: { id: string } }>
+}
+
+export type StepLoopResult =
+  | {
+      status: "completed"
+      stepResults: Record<string, unknown>
+      resolvedParams: Record<string, Record<string, unknown>>
+      outputItemIds: string[]
+    }
+  | {
+      status: "waiting_input"
+      currentStepId: string
+      pendingInputConfig: PendingInputConfig
+      stepResults: Record<string, unknown>
+      resolvedParams: Record<string, Record<string, unknown>>
+      outputItemIds: string[]
+    }
+  | {
+      status: "failed"
+      error: { stepId: string; toolName: string; message: string }
+      currentStepId: string
+      stepResults: Record<string, unknown>
+      resolvedParams: Record<string, Record<string, unknown>>
+    }
+
+function toErrorMessage(error: ProblemDetails): string {
+  return error.detail ?? error.title ?? "Unknown error"
+}
+
+export async function executeStepLoop(
+  steps: RecipeStep[],
+  startIndex: number,
+  initialContext: RecipeExecutionContext,
+  initialOutputItemIds: string[],
+  deps: StepExecutorDependencies,
+): Promise<StepLoopResult> {
+  const stepResults = { ...initialContext.results }
+  const resolvedParams = { ...initialContext.resolvedParams }
+  const outputItemIds = [...initialOutputItemIds]
+  const context = { inputs: initialContext.inputs, results: stepResults, resolvedParams }
+
+  for (let i = startIndex; i < steps.length; i++) {
+    const step = steps[i]
+    const params = resolveStepParams(step, context)
+    resolvedParams[step.id] = params
+
+    if (isHumanInputStep(step)) {
+      const pendingInputConfig = buildPendingInputConfig(step, params)
+      return {
+        status: "waiting_input",
+        currentStepId: step.id,
+        pendingInputConfig,
+        stepResults,
+        resolvedParams,
+        outputItemIds,
+      }
+    }
+
+    if (isOutputTool(step.toolName)) {
+      stepResults[step.id] = params
+      if (deps.threadId && deps.createOutputItem) {
+        const output = deps.recipeOutputs.find((o) => o.stepId === step.id)
+        if (output) {
+          const { item } = await deps.createOutputItem({
+            threadId: deps.threadId,
+            kind: output.kind,
+            name: output.name,
+            payload: params as Record<string, unknown>,
+          })
+          outputItemIds.push(item.id)
+        }
+      }
+      continue
+    }
+
+    if (isComputeTool(step.toolName)) {
+      const code = params.code as string
+      const input = params.input as Record<string, unknown> | undefined
+      const timeout =
+        typeof params.timeout === "number" && params.timeout >= 100 && params.timeout <= 30000 ? params.timeout : 10000
+
+      const result = await deps.executeCode(deps.organizationId, {
+        code,
+        params: input ?? {},
+        paramAlias: input !== undefined ? "input" : undefined,
+        context: { resources: [] },
+        environmentId: deps.environmentId,
+        timeout,
+      })
+
+      if (!result.ok || !result.data.success) {
+        const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Compute execution failed")
+        return {
+          status: "failed",
+          error: { stepId: step.id, toolName: step.toolName, message },
+          currentStepId: step.id,
+          stepResults,
+          resolvedParams,
+        }
+      }
+
+      stepResults[step.id] = result.data.result
+      continue
+    }
+
+    const tool = deps.agentTools.find((t) => t.name === step.toolName)
+    if (!tool) {
+      return {
+        status: "failed",
+        error: { stepId: step.id, toolName: step.toolName, message: "Tool not found" },
+        currentStepId: step.id,
+        stepResults,
+        resolvedParams,
+      }
+    }
+
+    const timeout =
+      typeof tool.timeoutMs === "number" && tool.timeoutMs >= 100 && tool.timeoutMs <= 60000 ? tool.timeoutMs : 30000
+
+    const result = await deps.executeCode(deps.organizationId, {
+      code: tool.code,
+      params,
+      context: { resources: deps.resources.map((r) => ({ name: r.slug, resourceId: r.id, type: r.type })) },
+      environmentId: deps.environmentId,
+      timeout,
+    })
+
+    if (!result.ok || !result.data.success) {
+      const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Code execution failed")
+      return {
+        status: "failed",
+        error: { stepId: step.id, toolName: step.toolName, message },
+        currentStepId: step.id,
+        stepResults,
+        resolvedParams,
+      }
+    }
+
+    stepResults[step.id] = result.data.result
+  }
+
+  return {
+    status: "completed",
+    stepResults,
+    resolvedParams,
+    outputItemIds,
   }
 }

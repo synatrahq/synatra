@@ -9,16 +9,13 @@ import {
   getEnvironmentById,
   listResources,
   createOutputItemAndIncrementSeq,
-  resolveStepParams,
   getStepExecutionOrder,
-  isHumanInputStep,
-  buildPendingInputConfig,
+  executeStepLoop,
 } from "@synatra/core"
 import { isManagedResourceType } from "@synatra/core/types"
-import { isOutputTool, isComputeTool } from "@synatra/core/system-tools"
 import { loadConfig, createCodeExecutor } from "@synatra/service-call"
 import { principal } from "@synatra/core"
-import { toErrorMessage, createError } from "@synatra/util/error"
+import { createError } from "@synatra/util/error"
 
 const schema = z.object({
   inputs: z.record(z.string(), z.unknown()).default({}),
@@ -57,136 +54,62 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
   const executor = createCodeExecutor(config)
 
   const sortedSteps = getStepExecutionOrder(recipe.steps)
-  const stepResults: Record<string, unknown> = {}
-  const resolvedParams: Record<string, Record<string, unknown>> = {}
-  const outputItemIds: string[] = []
+  const runtimeConfig = agent.runtimeConfig as { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
 
-  const context = { inputs: body.inputs, results: stepResults, resolvedParams }
+  const result = await executeStepLoop(sortedSteps, 0, { inputs: body.inputs, results: {}, resolvedParams: {} }, [], {
+    organizationId,
+    environmentId: body.environmentId,
+    agentTools: runtimeConfig?.tools ?? [],
+    resources: resources.map((r) => ({ slug: r.slug, id: r.id, type: r.type })),
+    recipeOutputs: recipe.outputs,
+    threadId: body.threadId,
+    executeCode: (orgId, input) => executor.execute(orgId, input),
+    createOutputItem: body.threadId ? (params) => createOutputItemAndIncrementSeq(params) : undefined,
+  })
 
-  for (const step of sortedSteps) {
-    const params = resolveStepParams(step, context)
-    resolvedParams[step.id] = params
-
-    if (isHumanInputStep(step)) {
-      const pendingInputConfig = buildPendingInputConfig(step, params)
-      await updateRecipeExecution({
-        id: execution.id,
-        status: "waiting_input",
-        currentStepId: step.id,
-        pendingInputConfig,
-        results: stepResults,
-        resolvedParams,
-        outputItemIds,
-      })
-      return c.json({
-        executionId: execution.id,
-        ok: true,
-        status: "waiting_input",
-        currentStepId: step.id,
-        pendingInputConfig,
-      })
-    }
-
-    if (isOutputTool(step.toolName)) {
-      stepResults[step.id] = params
-      if (body.threadId) {
-        const output = recipe.outputs.find((o) => o.stepId === step.id)
-        if (output) {
-          const { item } = await createOutputItemAndIncrementSeq({
-            threadId: body.threadId,
-            kind: output.kind,
-            name: output.name,
-            payload: params as Record<string, unknown>,
-          })
-          outputItemIds.push(item.id)
-        }
-      }
-      continue
-    }
-
-    if (isComputeTool(step.toolName)) {
-      const code = params.code as string
-      const input = params.input as Record<string, unknown> | undefined
-      const timeout =
-        typeof params.timeout === "number" && params.timeout >= 100 && params.timeout <= 30000 ? params.timeout : 10000
-
-      const result = await executor.execute(organizationId, {
-        code,
-        params: input ?? {},
-        paramAlias: input !== undefined ? "input" : undefined,
-        context: { resources: [] },
-        environmentId: body.environmentId,
-        timeout,
-      })
-
-      if (!result.ok || !result.data.success) {
-        const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Compute execution failed")
-        const error = { stepId: step.id, toolName: step.toolName, message }
-        await updateRecipeExecution({
-          id: execution.id,
-          status: "failed",
-          currentStepId: step.id,
-          error,
-          results: stepResults,
-          resolvedParams,
-        })
-        return c.json({ executionId: execution.id, ok: false, error })
-      }
-
-      stepResults[step.id] = result.data.result
-      continue
-    }
-
-    const runtimeConfig = agent.runtimeConfig as { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
-    const tool = runtimeConfig?.tools?.find((t) => t.name === step.toolName)
-    if (!tool) {
-      const error = { stepId: step.id, toolName: step.toolName, message: "Tool not found" }
-      await updateRecipeExecution({
-        id: execution.id,
-        status: "failed",
-        currentStepId: step.id,
-        error,
-        results: stepResults,
-        resolvedParams,
-      })
-      return c.json({ executionId: execution.id, ok: false, error })
-    }
-
-    const timeout =
-      typeof tool.timeoutMs === "number" && tool.timeoutMs >= 100 && tool.timeoutMs <= 60000 ? tool.timeoutMs : 30000
-
-    const result = await executor.execute(organizationId, {
-      code: tool.code,
-      params,
-      context: { resources: resources.map((r) => ({ name: r.slug, resourceId: r.id, type: r.type })) },
-      environmentId: body.environmentId,
-      timeout,
+  if (result.status === "waiting_input") {
+    await updateRecipeExecution({
+      id: execution.id,
+      status: "waiting_input",
+      currentStepId: result.currentStepId,
+      pendingInputConfig: result.pendingInputConfig,
+      results: result.stepResults,
+      resolvedParams: result.resolvedParams,
+      outputItemIds: result.outputItemIds,
     })
+    return c.json({
+      executionId: execution.id,
+      ok: true,
+      status: "waiting_input",
+      currentStepId: result.currentStepId,
+      pendingInputConfig: result.pendingInputConfig,
+    })
+  }
 
-    if (!result.ok || !result.data.success) {
-      const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Code execution failed")
-      const error = { stepId: step.id, toolName: step.toolName, message }
-      await updateRecipeExecution({
-        id: execution.id,
-        status: "failed",
-        currentStepId: step.id,
-        error,
-        results: stepResults,
-        resolvedParams,
-      })
-      return c.json({ executionId: execution.id, ok: false, error })
-    }
-
-    stepResults[step.id] = result.data.result
+  if (result.status === "failed") {
+    await updateRecipeExecution({
+      id: execution.id,
+      status: "failed",
+      currentStepId: result.currentStepId,
+      error: result.error,
+      results: result.stepResults,
+      resolvedParams: result.resolvedParams,
+    })
+    return c.json({ executionId: execution.id, ok: false, error: result.error })
   }
 
   await updateRecipeExecution({
     id: execution.id,
     status: "completed",
-    outputItemIds,
-    results: stepResults,
-    resolvedParams,
+    outputItemIds: result.outputItemIds,
+    results: result.stepResults,
+    resolvedParams: result.resolvedParams,
   })
 
-  return c.json({ executionId: execution.id, ok: true, outputItemIds, stepResults })
+  return c.json({
+    executionId: execution.id,
+    ok: true,
+    outputItemIds: result.outputItemIds,
+    stepResults: result.stepResults,
+  })
 })

@@ -2,7 +2,12 @@ import { Hono } from "hono"
 import { z } from "zod"
 import { zValidator } from "@hono/zod-validator"
 import { generateText, tool, jsonSchema, hasToolCall, type JSONSchema7, type ModelMessage } from "ai"
-import { loadConversationContext, buildRecipeExtractionPrompt, validateRecipeSteps } from "@synatra/core"
+import {
+  loadConversationContext,
+  buildRecipeExtractionPrompt,
+  validateRecipeSteps,
+  normalizeStepIds,
+} from "@synatra/core"
 import { getModel } from "../agents/copilot/models"
 import type { RecipeStep, RecipeInput, RecipeOutput, ParamBinding } from "@synatra/core/types"
 import { createError } from "@synatra/util/error"
@@ -123,77 +128,6 @@ type ExtractedRecipe = {
     dependsOn: string[]
   }>
   outputs: Array<{ stepId: string; kind: string; name?: string }>
-}
-
-function toSnakeCase(str: string): string {
-  return str
-    .replace(/([a-z])([A-Z])/g, "$1_$2")
-    .replace(/[\s-]+/g, "_")
-    .toLowerCase()
-    .replace(/[^a-z0-9_]/g, "")
-    .replace(/_+/g, "_")
-    .replace(/^_|_$/g, "")
-}
-
-function normalizeStepIds(steps: ExtractedRecipe["steps"]): {
-  steps: { id: string; label: string; toolName: string; params: Record<string, ParamBinding>; dependsOn: string[] }[]
-  idMap: Map<string, string>
-  errors: string[]
-} {
-  const idMap = new Map<string, string>()
-  const usedIds = new Set<string>()
-  const errors: string[] = []
-
-  const normalizedSteps = steps.map((step, index) => {
-    const originalId = step.id
-    const normalizedId = toSnakeCase(step.id) || `step_${index}`
-
-    if (usedIds.has(normalizedId)) {
-      errors.push(`Duplicate step ID "${normalizedId}" (from "${originalId}")`)
-    }
-
-    usedIds.add(normalizedId)
-    idMap.set(originalId, normalizedId)
-
-    return { ...step, id: normalizedId }
-  })
-
-  return {
-    steps: normalizedSteps.map((step) => ({
-      ...step,
-      dependsOn: step.dependsOn.map((dep) => idMap.get(dep) ?? dep),
-      params: updateParamBindingRefs(step.params, idMap),
-    })),
-    idMap,
-    errors,
-  }
-}
-
-function updateParamBindingRefs(
-  params: Record<string, ParamBinding>,
-  idMap: Map<string, string>,
-): Record<string, ParamBinding> {
-  const updated: Record<string, ParamBinding> = {}
-  for (const [key, binding] of Object.entries(params)) {
-    updated[key] = updateBindingRef(binding, idMap)
-  }
-  return updated
-}
-
-function updateBindingRef(binding: ParamBinding, idMap: Map<string, string>): ParamBinding {
-  if (binding.type === "step") {
-    return { ...binding, stepId: idMap.get(binding.stepId) ?? binding.stepId }
-  }
-  if (binding.type === "template") {
-    return { ...binding, variables: updateParamBindingRefs(binding.variables, idMap) }
-  }
-  if (binding.type === "object") {
-    return { ...binding, entries: updateParamBindingRefs(binding.entries, idMap) }
-  }
-  if (binding.type === "array") {
-    return { ...binding, items: binding.items.map((item) => updateBindingRef(item, idMap)) }
-  }
-  return binding
 }
 
 const MAX_RETRIES = 2
