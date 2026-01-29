@@ -4,6 +4,7 @@ import { z } from "zod"
 import {
   createRecipeExecution,
   updateRecipeExecution,
+  deleteRecipeExecution,
   getRecipeById,
   getRecipeRelease,
   getAgentById,
@@ -103,8 +104,6 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
     inputs: body.inputs,
   })
 
-  await updateRecipeExecution({ id: execution.id, status: "running" })
-
   const allResources = await listResources()
   const resources = allResources.filter((r) => !isManagedResourceType(r.type))
 
@@ -128,46 +127,37 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
   if (result.status === "waiting_input") {
     await updateRecipeExecution({
       id: execution.id,
-      status: "waiting_input",
       currentStepKey: result.currentStepKey,
       pendingInputConfig: result.pendingInputConfig,
       results: result.stepResults,
-      resolvedParams: result.resolvedParams,
       outputItemIds: result.outputItemIds,
     })
     return c.json({
       executionId: execution.id,
       ok: true,
-      status: "waiting_input",
+      status: "waiting_input" as const,
       currentStepKey: result.currentStepKey,
       pendingInputConfig: result.pendingInputConfig,
     })
   }
 
+  await deleteRecipeExecution(execution.id)
+
   if (result.status === "failed") {
-    await updateRecipeExecution({
-      id: execution.id,
-      status: "failed",
-      currentStepKey: result.currentStepKey,
-      error: { stepId: result.error.stepKey, toolName: result.error.toolName, message: result.error.message },
-      results: result.stepResults,
+    return c.json({
+      ok: false,
+      status: "failed" as const,
+      error: result.error,
+      stepResults: result.stepResults,
       resolvedParams: result.resolvedParams,
     })
-    return c.json({ executionId: execution.id, ok: false, error: result.error })
   }
 
-  await updateRecipeExecution({
-    id: execution.id,
-    status: "completed",
-    outputItemIds: result.outputItemIds,
-    results: result.stepResults,
-    resolvedParams: result.resolvedParams,
-  })
-
   return c.json({
-    executionId: execution.id,
     ok: true,
+    status: "completed" as const,
     outputItemIds: result.outputItemIds,
     stepResults: result.stepResults,
+    resolvedParams: result.resolvedParams,
   })
 })

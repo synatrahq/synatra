@@ -7,7 +7,17 @@ export const executions = new Hono().get("/:id/executions", async (c) => {
   const result = await listRecipeExecutions({ recipeId })
   return c.json({
     items: result.items.map((e) => ({
-      ...e,
+      id: e.id,
+      recipeId: e.recipeId,
+      releaseId: e.releaseId,
+      environmentId: e.environmentId,
+      inputs: e.inputs,
+      currentStepKey: e.currentStepKey,
+      pendingInputConfig: e.pendingInputConfig,
+      results: e.results,
+      outputItemIds: e.outputItemIds,
+      createdBy: e.createdBy,
+      createdAt: e.createdAt,
       startedAt: e.createdAt,
     })),
     nextCursor: result.nextCursor,

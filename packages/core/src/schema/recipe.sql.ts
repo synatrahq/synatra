@@ -7,11 +7,9 @@ import { AgentTable, AgentReleaseTable } from "./agent.sql"
 import { ThreadTable } from "./thread.sql"
 import { RunTable } from "./run.sql"
 import { UserTable } from "./user.sql"
-import { RecipeExecutionStatus, RecipeStepType } from "../types"
-import type { RecipeInput, RecipeOutput, PendingInputConfig, RecipeExecutionError, ParamBinding } from "../types"
+import { RecipeStepType } from "../types"
+import type { RecipeInput, RecipeOutput, PendingInputConfig, ParamBinding } from "../types"
 import { versionModeEnum } from "./trigger.sql"
-
-export const recipeExecutionStatusEnum = pgEnum("recipe_execution_status", RecipeExecutionStatus)
 export const recipeStepTypeEnum = pgEnum("recipe_step_type", RecipeStepType)
 
 export const RecipeTable = pgTable(
@@ -186,23 +184,17 @@ export const RecipeExecutionTable = pgTable(
       .notNull()
       .references(() => EnvironmentTable.id, { onDelete: "cascade" }),
     inputs: jsonb("inputs").$type<Record<string, unknown>>().notNull().default({}),
-    status: recipeExecutionStatusEnum("status").notNull().default("pending"),
     currentStepKey: text("current_step_key"),
     pendingInputConfig: jsonb("pending_input_config").$type<PendingInputConfig>(),
     results: jsonb("results").$type<Record<string, unknown>>().notNull().default({}),
-    resolvedParams: jsonb("resolved_params").$type<Record<string, Record<string, unknown>>>().notNull().default({}),
     outputItemIds: jsonb("output_item_ids").$type<string[]>().notNull().default([]),
-    error: jsonb("error").$type<RecipeExecutionError>(),
     createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-    completedAt: timestamp("completed_at", { withTimezone: true }),
   },
   (table) => [
-    index("recipe_execution_recipe_idx").on(table.recipeId, table.createdAt),
-    index("recipe_execution_release_idx").on(table.releaseId, table.createdAt),
-    index("recipe_execution_org_idx").on(table.organizationId, table.createdAt),
-    index("recipe_execution_status_idx").on(table.organizationId, table.status, table.createdAt),
+    index("recipe_execution_recipe_idx").on(table.recipeId),
+    index("recipe_execution_org_idx").on(table.organizationId),
   ],
 )
 

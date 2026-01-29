@@ -10,6 +10,7 @@ import {
   listResources,
   respondToRecipeExecution,
   updateRecipeExecution,
+  deleteRecipeExecution,
   createOutputItemAndIncrementSeq,
   buildNormalizedSteps,
   getStepExecutionOrder,
@@ -78,7 +79,7 @@ export const respond = new Hono().post(
     const stepResults = { ...(execution.results as Record<string, unknown>) }
     stepResults[execution.currentStepKey] = response
 
-    await updateRecipeExecution({ id: executionId, status: "running", pendingInputConfig: null })
+    await updateRecipeExecution({ id: executionId, pendingInputConfig: null })
 
     const result = await executeStepLoop(
       sortedSteps,
@@ -86,7 +87,7 @@ export const respond = new Hono().post(
       {
         inputs: execution.inputs,
         results: stepResults,
-        resolvedParams: { ...(execution.resolvedParams as Record<string, Record<string, unknown>>) },
+        resolvedParams: {},
       },
       [...execution.outputItemIds],
       {
@@ -104,42 +105,38 @@ export const respond = new Hono().post(
     if (result.status === "waiting_input") {
       await updateRecipeExecution({
         id: executionId,
-        status: "waiting_input",
         currentStepKey: result.currentStepKey,
         pendingInputConfig: result.pendingInputConfig,
         results: result.stepResults,
-        resolvedParams: result.resolvedParams,
         outputItemIds: result.outputItemIds,
       })
       return c.json({
         executionId,
         ok: true,
-        status: "waiting_input",
+        status: "waiting_input" as const,
         currentStepKey: result.currentStepKey,
         pendingInputConfig: result.pendingInputConfig,
       })
     }
 
+    await deleteRecipeExecution(executionId)
+
     if (result.status === "failed") {
-      await updateRecipeExecution({
-        id: executionId,
-        status: "failed",
-        currentStepKey: result.currentStepKey,
-        error: { stepId: result.error.stepKey, toolName: result.error.toolName, message: result.error.message },
-        results: result.stepResults,
+      return c.json({
+        ok: false,
+        status: "failed" as const,
+        error: result.error,
+        stepResults: result.stepResults,
         resolvedParams: result.resolvedParams,
       })
-      return c.json({ executionId, ok: false, error: result.error })
     }
 
-    await updateRecipeExecution({
-      id: executionId,
-      status: "completed",
+    return c.json({
+      ok: true,
+      status: "completed" as const,
       outputItemIds: result.outputItemIds,
-      results: result.stepResults,
+      stepResults: result.stepResults,
       resolvedParams: result.resolvedParams,
     })
-
-    return c.json({ executionId, ok: true, outputItemIds: result.outputItemIds, stepResults: result.stepResults })
   },
 )

@@ -19,11 +19,9 @@ import { generateSlug, generateRandomId, isReservedSlug } from "@synatra/util/id
 import { bumpVersion, parseVersion, stringifyVersion } from "@synatra/util/version"
 import { serializeConfig } from "@synatra/util/normalize"
 import {
-  RecipeExecutionStatus,
   RecipeInputSchema,
   RecipeOutputSchema,
   PendingInputConfigSchema,
-  RecipeExecutionErrorSchema,
   RecipeStepType,
   type RecipeInput,
   type RecipeOutput,
@@ -835,9 +833,7 @@ export async function createRecipeExecution(raw: z.input<typeof CreateRecipeExec
         organizationId,
         environmentId: input.environmentId,
         inputs: input.inputs,
-        status: "pending",
         results: {},
-        resolvedParams: {},
         outputItemIds: [],
         createdBy: userId,
       })
@@ -849,13 +845,10 @@ export async function createRecipeExecution(raw: z.input<typeof CreateRecipeExec
 
 export const UpdateRecipeExecutionSchema = z.object({
   id: z.string(),
-  status: z.enum(RecipeExecutionStatus).optional(),
   currentStepKey: z.string().optional(),
   pendingInputConfig: PendingInputConfigSchema.optional().nullable(),
   results: z.record(z.string(), z.unknown()).optional(),
-  resolvedParams: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
   outputItemIds: z.array(z.string()).optional(),
-  error: RecipeExecutionErrorSchema.optional(),
 })
 
 export async function updateRecipeExecution(raw: z.input<typeof UpdateRecipeExecutionSchema>) {
@@ -863,18 +856,10 @@ export async function updateRecipeExecution(raw: z.input<typeof UpdateRecipeExec
   const organizationId = principal.orgId()
 
   const updateData: Record<string, unknown> = { updatedAt: new Date() }
-  if (input.status !== undefined) {
-    updateData.status = input.status
-    if (input.status === "completed" || input.status === "failed") {
-      updateData.completedAt = new Date()
-    }
-  }
   if (input.currentStepKey !== undefined) updateData.currentStepKey = input.currentStepKey
   if (input.pendingInputConfig !== undefined) updateData.pendingInputConfig = input.pendingInputConfig
   if (input.results !== undefined) updateData.results = input.results
-  if (input.resolvedParams !== undefined) updateData.resolvedParams = input.resolvedParams
   if (input.outputItemIds !== undefined) updateData.outputItemIds = input.outputItemIds
-  if (input.error !== undefined) updateData.error = input.error
 
   const [updated] = await withDb((db) =>
     db
@@ -886,6 +871,15 @@ export async function updateRecipeExecution(raw: z.input<typeof UpdateRecipeExec
 
   if (!updated) throw createError("NotFoundError", { type: "RecipeExecution", id: input.id })
   return updated
+}
+
+export async function deleteRecipeExecution(id: string) {
+  const organizationId = principal.orgId()
+  await withDb((db) =>
+    db
+      .delete(RecipeExecutionTable)
+      .where(and(eq(RecipeExecutionTable.id, id), eq(RecipeExecutionTable.organizationId, organizationId))),
+  )
 }
 
 export async function getRecipeExecutionById(id: string) {
@@ -916,7 +910,6 @@ export async function findRecipeExecutionById(id: string) {
 export const ListRecipeExecutionsSchema = z
   .object({
     recipeId: z.string().optional(),
-    status: z.enum(RecipeExecutionStatus).optional(),
     cursor: z.string().optional(),
     limit: z.number().min(1).max(100).optional(),
   })
@@ -931,9 +924,6 @@ export async function listRecipeExecutions(raw?: z.input<typeof ListRecipeExecut
 
   if (filters?.recipeId) {
     conditions.push(eq(RecipeExecutionTable.recipeId, filters.recipeId))
-  }
-  if (filters?.status) {
-    conditions.push(eq(RecipeExecutionTable.status, filters.status))
   }
   if (filters?.cursor) {
     const { date, id } = parseCursor(filters.cursor)
@@ -970,7 +960,7 @@ export async function respondToRecipeExecution(raw: z.input<typeof RespondToReci
   const input = RespondToRecipeExecutionSchema.parse(raw)
   const execution = await getRecipeExecutionById(input.id)
 
-  if (execution.status !== "waiting_input") {
+  if (!execution.pendingInputConfig) {
     throw createError("BadRequestError", { message: "Execution is not waiting for input" })
   }
 

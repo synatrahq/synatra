@@ -50,10 +50,25 @@ import type {
   HumanRequestSelectRowsConfig,
   ParamBinding,
   RecipeStep,
-  RecipeExecutionError,
 } from "@synatra/core/types"
 
-type Tab = "configuration" | "executions"
+type Tab = "configuration" | "result"
+
+type RecipeExecutionError = {
+  stepKey: string
+  toolName: string
+  message: string
+}
+
+type LastResult = {
+  status: "completed" | "failed" | "waiting_input"
+  stepResults?: Record<string, unknown>
+  resolvedParams?: Record<string, Record<string, unknown>>
+  outputItemIds?: string[]
+  error?: RecipeExecutionError
+  executionId?: string
+  pendingInputConfig?: unknown
+}
 
 type PendingInputConfig = {
   fields: HumanRequestFieldConfig[]
@@ -403,19 +418,15 @@ function PendingInputForm(props: {
 function StepResultItem(props: {
   stepId: string
   result: unknown
-  resolvedParams?: Record<string, unknown>
   recipe: Recipe
   isOutput: boolean
   index: number
   isLast: boolean
   tools?: ToolDef[]
-  failed?: boolean
 }) {
   const step = () => props.recipe.steps.find((s) => s.stepKey === props.stepId)
   const outputDef = () => props.recipe.outputs.find((o) => o.stepId === props.stepId)
-  const [expanded, setExpanded] = createSignal(props.isOutput || props.failed)
-  const [paramsExpanded, setParamsExpanded] = createSignal(false)
-  const hasParams = () => props.resolvedParams && Object.keys(props.resolvedParams).length > 0
+  const [expanded, setExpanded] = createSignal(props.isOutput)
   const toolName = () => step()?.toolName ?? props.stepId
   const isCustomTool = () => !!props.tools?.find((t) => t.name === toolName())
 
@@ -453,28 +464,20 @@ function StepResultItem(props: {
         <div
           class="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 transition-colors"
           classList={{
-            "border-danger bg-danger/10 text-danger": props.failed,
-            "border-success bg-success/10 text-success": !props.failed && !expanded(),
-            "border-accent bg-accent/10 text-accent": !props.failed && expanded(),
+            "border-success bg-success/10 text-success": !expanded(),
+            "border-accent bg-accent/10 text-accent": expanded(),
           }}
         >
-          <Show when={props.failed} fallback={<StepToolIcon toolName={toolName()} isCustomTool={isCustomTool()} />}>
-            <XCircle class="h-4 w-4" weight="fill" />
-          </Show>
+          <StepToolIcon toolName={toolName()} isCustomTool={isCustomTool()} />
         </div>
 
         <div class="flex-1 min-w-0 py-1.5">
           <div class="flex items-center gap-2">
             <span class="text-2xs font-medium text-text-muted">Step {props.index + 1}</span>
-            <Show when={props.failed}>
-              <span class="text-2xs text-danger bg-danger/10 px-1.5 py-0.5 rounded">failed</span>
-            </Show>
-            <Show when={isOutputStep() && !props.failed}>
+            <Show when={isOutputStep()}>
               <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">output</span>
             </Show>
-            <Show when={!props.failed}>
-              <CheckCircle class="h-3 w-3 text-success" weight="fill" />
-            </Show>
+            <CheckCircle class="h-3 w-3 text-success" weight="fill" />
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xs text-text truncate">{step()?.label}</span>
@@ -489,28 +492,6 @@ function StepResultItem(props: {
 
       <Show when={expanded()}>
         <div class="ml-11 mt-2 mb-4 rounded-lg border border-border overflow-hidden bg-surface">
-          <Show when={hasParams()}>
-            <div class="border-b border-border">
-              <button
-                type="button"
-                class="flex items-center gap-1.5 w-full px-3 py-2 hover:bg-surface-muted/50 transition-colors"
-                onClick={() => setParamsExpanded(!paramsExpanded())}
-              >
-                <span class="transition-transform" classList={{ "rotate-90": paramsExpanded() }}>
-                  <CaretRight class="h-3 w-3 text-text-muted" />
-                </span>
-                <BracketsCurly class="h-3 w-3 text-text-muted" />
-                <span class="text-2xs font-medium text-text-muted">Parameters</span>
-              </button>
-              <Show when={paramsExpanded()}>
-                <div class="px-3 pb-2.5">
-                  <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2 max-h-32 overflow-y-auto">
-                    {JSON.stringify(props.resolvedParams, null, 2)}
-                  </pre>
-                </div>
-              </Show>
-            </div>
-          </Show>
           <Show
             when={outputItem()}
             fallback={
@@ -538,59 +519,33 @@ function StepResultItem(props: {
 }
 
 function ExecutionDetail(props: { execution: RecipeExecution; recipe: Recipe; tools?: ToolDef[] }) {
-  const error = () => props.execution.error as RecipeExecutionError | null | undefined
-  const failedStepKey = () => error()?.stepId ?? props.execution.currentStepKey
-
   const sortedSteps = createMemo(() => {
-    const results = props.execution.results ?? {}
+    const results = (props.execution.results ?? {}) as Record<string, unknown>
     const stepOrder = new Map(props.recipe.steps.map((s, i) => [s.stepKey, i]))
     const entries = Object.entries(results)
 
-    const sorted = entries.sort(([a], [b]) => {
+    return entries.sort(([a], [b]) => {
       const aOrder = stepOrder.get(a) ?? Number.MAX_VALUE
       const bOrder = stepOrder.get(b) ?? Number.MAX_VALUE
       return aOrder - bOrder
     })
-
-    if (props.execution.status === "failed" && failedStepKey() && !results[failedStepKey()!]) {
-      sorted.push([failedStepKey()!, null])
-    }
-
-    return sorted
   })
 
   const outputStepIds = createMemo(() => new Set(props.recipe.outputs.map((o) => o.stepId)))
-  const resolvedParams = () => (props.execution.resolvedParams as Record<string, Record<string, unknown>> | null) ?? {}
 
   return (
     <div class="space-y-1">
-      <Show when={props.execution.status === "failed" && error()}>
-        {(err) => (
-          <div class="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2.5 mb-3">
-            <div class="flex items-center gap-2 mb-1.5">
-              <XCircle class="h-4 w-4 text-danger" weight="fill" />
-              <span class="text-xs font-medium text-danger">
-                Step "{err().stepId}" ({err().toolName}) failed
-              </span>
-            </div>
-            <p class="text-xs text-text leading-relaxed">{err().message}</p>
-          </div>
-        )}
-      </Show>
-
       <div class="pl-1">
         <For each={sortedSteps()}>
           {([stepId, result], index) => (
             <StepResultItem
               stepId={stepId}
               result={result}
-              resolvedParams={resolvedParams()[stepId]}
               recipe={props.recipe}
               isOutput={outputStepIds().has(stepId)}
               index={index()}
               isLast={index() === sortedSteps().length - 1}
               tools={props.tools}
-              failed={props.execution.status === "failed" && stepId === failedStepKey()}
             />
           )}
         </For>
@@ -599,7 +554,170 @@ function ExecutionDetail(props: { execution: RecipeExecution; recipe: Recipe; to
   )
 }
 
-function ExecutionStatusIcon(props: { status: RecipeExecution["status"] }) {
+function ResultDisplay(props: {
+  stepResults: Record<string, unknown>
+  resolvedParams?: Record<string, Record<string, unknown>>
+  recipe: Recipe
+  tools?: ToolDef[]
+  failedStepKey?: string
+}) {
+  const sortedSteps = createMemo(() => {
+    const stepOrder = new Map(props.recipe.steps.map((s, i) => [s.stepKey, i]))
+    const entries = Object.entries(props.stepResults)
+    const sorted = entries.sort(([a], [b]) => {
+      const aOrder = stepOrder.get(a) ?? Number.MAX_VALUE
+      const bOrder = stepOrder.get(b) ?? Number.MAX_VALUE
+      return aOrder - bOrder
+    })
+    if (props.failedStepKey && !props.stepResults[props.failedStepKey]) {
+      sorted.push([props.failedStepKey, null])
+    }
+    return sorted
+  })
+
+  const outputStepIds = createMemo(() => new Set(props.recipe.outputs.map((o) => o.stepId)))
+
+  return (
+    <div class="space-y-1 pl-1">
+      <For each={sortedSteps()}>
+        {([stepId, result], index) => {
+          const step = () => props.recipe.steps.find((s) => s.stepKey === stepId)
+          const outputDef = () => props.recipe.outputs.find((o) => o.stepId === stepId)
+          const [expanded, setExpanded] = createSignal(outputStepIds().has(stepId) || stepId === props.failedStepKey)
+          const [paramsExpanded, setParamsExpanded] = createSignal(false)
+          const toolName = () => step()?.toolName ?? stepId
+          const isCustomTool = () => !!props.tools?.find((t) => t.name === toolName())
+          const isOutput = () => outputStepIds().has(stepId)
+          const isFailed = () => stepId === props.failedStepKey
+          const stepParams = () => props.resolvedParams?.[stepId]
+          const hasParams = () => stepParams() && Object.keys(stepParams()!).length > 0
+
+          const asOutputItem = (): OutputItem | null => {
+            const def = outputDef()
+            if (!def) return null
+            const resultData = result as Record<string, unknown> | null
+            if (!resultData) return null
+            return {
+              id: stepId,
+              kind: def.kind,
+              name: def.name ?? null,
+              payload: resultData,
+              toolCallId: null,
+              runId: null,
+              threadId: "",
+              createdAt: new Date().toISOString(),
+            } as unknown as OutputItem
+          }
+
+          const outputItem = () => asOutputItem()
+          const isOutputStep = () => !!outputItem()
+
+          return (
+            <div class="relative">
+              <Show when={index() < sortedSteps().length - 1}>
+                <div class="absolute left-[15px] top-[32px] bottom-[-8px] w-px bg-border" />
+              </Show>
+
+              <button
+                type="button"
+                class="flex items-center gap-3 w-full text-left group"
+                onClick={() => setExpanded(!expanded())}
+              >
+                <div
+                  class="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 transition-colors"
+                  classList={{
+                    "border-danger bg-danger/10 text-danger": isFailed(),
+                    "border-success bg-success/10 text-success": !isFailed() && !expanded(),
+                    "border-accent bg-accent/10 text-accent": !isFailed() && expanded(),
+                  }}
+                >
+                  <Show
+                    when={isFailed()}
+                    fallback={<StepToolIcon toolName={toolName()} isCustomTool={isCustomTool()} />}
+                  >
+                    <XCircle class="h-4 w-4" weight="fill" />
+                  </Show>
+                </div>
+
+                <div class="flex-1 min-w-0 py-1.5">
+                  <div class="flex items-center gap-2">
+                    <span class="text-2xs font-medium text-text-muted">Step {index() + 1}</span>
+                    <Show when={isFailed()}>
+                      <span class="text-2xs text-danger bg-danger/10 px-1.5 py-0.5 rounded">failed</span>
+                    </Show>
+                    <Show when={isOutputStep() && !isFailed()}>
+                      <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">output</span>
+                    </Show>
+                    <Show when={!isFailed()}>
+                      <CheckCircle class="h-3 w-3 text-success" weight="fill" />
+                    </Show>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-text truncate">{step()?.label}</span>
+                    <span class="font-code text-2xs text-text-muted shrink-0">({toolName()})</span>
+                  </div>
+                </div>
+
+                <span class="shrink-0 transition-transform" classList={{ "rotate-90": expanded() }}>
+                  <CaretRight class="h-4 w-4 text-text-muted" />
+                </span>
+              </button>
+
+              <Show when={expanded()}>
+                <div class="ml-11 mt-2 mb-4 rounded-lg border border-border overflow-hidden bg-surface">
+                  <Show when={hasParams()}>
+                    <div class="border-b border-border">
+                      <button
+                        type="button"
+                        class="flex items-center gap-1.5 w-full px-3 py-2 hover:bg-surface-muted/50 transition-colors"
+                        onClick={() => setParamsExpanded(!paramsExpanded())}
+                      >
+                        <span class="transition-transform" classList={{ "rotate-90": paramsExpanded() }}>
+                          <CaretRight class="h-3 w-3 text-text-muted" />
+                        </span>
+                        <BracketsCurly class="h-3 w-3 text-text-muted" />
+                        <span class="text-2xs font-medium text-text-muted">Parameters</span>
+                      </button>
+                      <Show when={paramsExpanded()}>
+                        <div class="px-3 pb-2.5">
+                          <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2 max-h-32 overflow-y-auto">
+                            {JSON.stringify(stepParams(), null, 2)}
+                          </pre>
+                        </div>
+                      </Show>
+                    </div>
+                  </Show>
+                  <Show
+                    when={outputItem()}
+                    fallback={
+                      <div class="px-3 py-2.5">
+                        <div class="flex items-center gap-1.5 mb-2">
+                          <Export class="h-3 w-3 text-text-muted" />
+                          <span class="text-2xs font-medium text-text-muted">Result</span>
+                        </div>
+                        <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2 max-h-32 overflow-y-auto">
+                          {JSON.stringify(result, null, 2)}
+                        </pre>
+                      </div>
+                    }
+                  >
+                    {(item) => (
+                      <div class="px-3 py-2.5">
+                        <OutputItemRenderer item={item()} />
+                      </div>
+                    )}
+                  </Show>
+                </div>
+              </Show>
+            </div>
+          )
+        }}
+      </For>
+    </div>
+  )
+}
+
+function ExecutionStatusIcon(props: { status: string }) {
   switch (props.status) {
     case "completed":
       return <CheckCircle class="h-4 w-4 text-success" weight="fill" />
@@ -622,10 +740,12 @@ function ExecutionRow(props: {
   responding?: boolean
   tools?: ToolDef[]
 }) {
-  const [expanded, setExpanded] = createSignal(props.isLatest ?? false)
-  const hasResults = () => props.execution.results && Object.keys(props.execution.results).length > 0
-  const isWaitingInput = () => props.execution.status === "waiting_input"
-  const canExpand = () => hasResults() || isWaitingInput()
+  const [expanded, setExpanded] = createSignal(true)
+  const hasResults = () => {
+    const results = props.execution.results as Record<string, unknown> | null
+    return results && Object.keys(results).length > 0
+  }
+  const isWaitingInput = () => !!props.execution.pendingInputConfig
 
   const handleRespond = (response: Record<string, unknown>) => {
     props.onRespond?.(props.execution.id, response)
@@ -640,50 +760,30 @@ function ExecutionRow(props: {
     })
   }
 
-  const statusConfig = (): { label: string; color: string } => {
-    switch (props.execution.status) {
-      case "completed":
-        return { label: "Completed", color: "border-success/30 bg-success/5" }
-      case "failed":
-        return { label: "Failed", color: "border-danger/30 bg-danger/5" }
-      case "waiting_input":
-        return { label: "Waiting for input", color: "border-warning/30 bg-warning/5" }
-      case "running":
-        return { label: "Running", color: "border-accent/30 bg-accent/5" }
-      default:
-        return { label: props.execution.status, color: "border-border bg-surface" }
-    }
-  }
-
   return (
-    <div class={`rounded-lg border transition-colors ${statusConfig().color}`}>
+    <div class="rounded-lg border transition-colors border-warning/30 bg-warning/5">
       <button
         type="button"
         class="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-surface-muted/50 rounded-lg"
         classList={{ "rounded-b-none": expanded() }}
-        onClick={() => canExpand() && setExpanded(!expanded())}
+        onClick={() => setExpanded(!expanded())}
       >
         <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-surface border border-border">
-          <ExecutionStatusIcon status={props.execution.status} />
+          <HourglassHigh class="h-4 w-4 text-warning" weight="fill" />
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-medium text-text">{statusConfig().label}</span>
-            <Show when={props.isLatest}>
-              <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">latest</span>
-            </Show>
+            <span class="text-xs font-medium text-text">Waiting for input</span>
           </div>
           <div class="flex items-center gap-2 mt-0.5">
-            <span class="text-2xs text-text-muted">{formatDate(props.execution.startedAt)}</span>
+            <span class="text-2xs text-text-muted">{formatDate(props.execution.createdAt)}</span>
             <span class="text-2xs text-text-muted">·</span>
             <span class="font-code text-2xs text-text-muted">{props.execution.id.slice(0, 8)}</span>
           </div>
         </div>
-        <Show when={canExpand()}>
-          <span class="transition-transform" classList={{ "rotate-90": expanded() }}>
-            <CaretRight class="h-4 w-4 text-text-muted" />
-          </span>
-        </Show>
+        <span class="transition-transform" classList={{ "rotate-90": expanded() }}>
+          <CaretRight class="h-4 w-4 text-text-muted" />
+        </span>
       </button>
       <Show when={expanded()}>
         <div class="border-t border-border/50 px-3 py-3 bg-surface/50 rounded-b-lg">
@@ -720,6 +820,7 @@ function EmptyState() {
 type RecipeDetailProps = {
   recipe: Recipe | null
   executions: RecipeExecutions["items"]
+  lastResult: LastResult | null
   agents: Agents
   environments: Environments
   selectedEnvironmentId: string | null
@@ -765,10 +866,10 @@ export function RecipeDetail(props: RecipeDetailProps) {
 
   createEffect(
     on(
-      () => props.executing,
-      (executing, wasExecuting) => {
-        if (wasExecuting && !executing) {
-          setActiveTab("executions")
+      () => props.lastResult,
+      (result) => {
+        if (result) {
+          setActiveTab("result")
         }
       },
     ),
@@ -911,15 +1012,15 @@ export function RecipeDetail(props: RecipeDetailProps) {
                 type="button"
                 class="-mb-px ml-4 border-b px-0.5 py-2 text-xs font-medium transition-colors"
                 classList={{
-                  "border-accent text-text": activeTab() === "executions",
-                  "border-transparent text-text-muted hover:text-text": activeTab() !== "executions",
+                  "border-accent text-text": activeTab() === "result",
+                  "border-transparent text-text-muted hover:text-text": activeTab() !== "result",
                 }}
-                onClick={() => setActiveTab("executions")}
+                onClick={() => setActiveTab("result")}
               >
-                Executions
-                <Show when={props.executions.length > 0}>
-                  <span class="ml-1.5 rounded-full bg-surface-muted px-1.5 py-0.5 text-2xs text-text-muted">
-                    {props.executions.length}
+                Result
+                <Show when={props.lastResult?.status === "waiting_input" || props.executions.length > 0}>
+                  <span class="ml-1.5 rounded-full bg-warning/10 px-1.5 py-0.5 text-2xs text-warning">
+                    Input required
                   </span>
                 </Show>
               </button>
@@ -1069,34 +1170,127 @@ export function RecipeDetail(props: RecipeDetailProps) {
                 </div>
               </Show>
 
-              <Show when={activeTab() === "executions"}>
+              <Show when={activeTab() === "result"}>
                 <div class="p-4">
                   <Show
-                    when={props.executions.length > 0}
+                    when={props.lastResult}
                     fallback={
-                      <div class="flex flex-col items-center justify-center py-12 text-center">
-                        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-surface-muted mb-3">
-                          <Play class="h-7 w-7 text-text-muted opacity-40" />
+                      <Show
+                        when={props.executions.length > 0}
+                        fallback={
+                          <div class="flex flex-col items-center justify-center py-8 text-center">
+                            <p class="text-xs text-text-muted">No results yet</p>
+                          </div>
+                        }
+                      >
+                        <div class="space-y-3">
+                          <For each={props.executions}>
+                            {(execution) => (
+                              <div class="rounded-lg border border-warning/30 bg-warning/5 p-4">
+                                <div class="flex items-center gap-2 mb-3">
+                                  <HourglassHigh class="h-4 w-4 text-warning" weight="fill" />
+                                  <span class="text-xs font-medium text-text">Waiting for input</span>
+                                </div>
+                                <Show when={execution.pendingInputConfig}>
+                                  <PendingInputForm
+                                    config={execution.pendingInputConfig as unknown as PendingInputConfig}
+                                    onSubmit={(response) => props.onRespond?.(execution.id, response)}
+                                    submitting={props.responding}
+                                  />
+                                </Show>
+                              </div>
+                            )}
+                          </For>
                         </div>
-                        <p class="text-[13px] font-medium text-text">No executions yet</p>
-                        <p class="text-xs text-text-muted mt-0.5">Run the recipe to see execution history</p>
-                      </div>
+                      </Show>
                     }
                   >
-                    <div class="space-y-3">
-                      <For each={props.executions}>
-                        {(execution, index) => (
-                          <ExecutionRow
-                            execution={execution}
-                            recipe={recipe()}
-                            isLatest={index() === 0}
-                            onRespond={props.onRespond}
-                            responding={props.responding}
-                            tools={agent()?.runtimeConfig?.tools}
-                          />
-                        )}
-                      </For>
-                    </div>
+                    {(result) => {
+                      const statusConfig = () => {
+                        switch (result().status) {
+                          case "completed":
+                            return {
+                              label: "Completed",
+                              color: "border-success/30 bg-success/5",
+                              icon: CheckCircle,
+                              iconColor: "text-success",
+                            }
+                          case "failed":
+                            return {
+                              label: "Failed",
+                              color: "border-danger/30 bg-danger/5",
+                              icon: XCircle,
+                              iconColor: "text-danger",
+                            }
+                          case "waiting_input":
+                            return {
+                              label: "Waiting for input",
+                              color: "border-warning/30 bg-warning/5",
+                              icon: HourglassHigh,
+                              iconColor: "text-warning",
+                            }
+                          default:
+                            return {
+                              label: "Unknown",
+                              color: "border-border bg-surface",
+                              icon: Clock,
+                              iconColor: "text-text-muted",
+                            }
+                        }
+                      }
+
+                      return (
+                        <div class={`rounded-lg border transition-colors ${statusConfig().color}`}>
+                          <div class="flex items-center gap-3 px-3 py-3">
+                            <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-surface border border-border">
+                              {(() => {
+                                const Icon = statusConfig().icon
+                                return <Icon class={`h-4 w-4 ${statusConfig().iconColor}`} weight="fill" />
+                              })()}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                              <div class="flex items-center gap-2">
+                                <span class="text-xs font-medium text-text">{statusConfig().label}</span>
+                                <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">latest</span>
+                              </div>
+                              <Show when={result().error}>
+                                {(err) => (
+                                  <p class="text-2xs text-text-muted mt-0.5">
+                                    Step "{err().stepKey}" ({err().toolName}): {err().message}
+                                  </p>
+                                )}
+                              </Show>
+                            </div>
+                          </div>
+
+                          <Show
+                            when={
+                              result().status === "waiting_input" && result().pendingInputConfig && result().executionId
+                            }
+                          >
+                            <div class="border-t border-border/50 px-3 py-3 bg-surface/50">
+                              <PendingInputForm
+                                config={result().pendingInputConfig as unknown as PendingInputConfig}
+                                onSubmit={(response) => props.onRespond?.(result().executionId!, response)}
+                                submitting={props.responding}
+                              />
+                            </div>
+                          </Show>
+
+                          <Show when={result().stepResults && Object.keys(result().stepResults!).length > 0}>
+                            <div class="border-t border-border/50 px-3 py-3 bg-surface/50">
+                              <ResultDisplay
+                                stepResults={result().stepResults!}
+                                resolvedParams={result().resolvedParams}
+                                recipe={recipe()}
+                                tools={agent()?.runtimeConfig?.tools}
+                                failedStepKey={result().error?.stepKey}
+                              />
+                            </div>
+                          </Show>
+                        </div>
+                      )
+                    }}
                   </Show>
                 </div>
               </Show>

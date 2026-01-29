@@ -1,18 +1,7 @@
 import { z } from "zod"
 
-export const RecipeExecutionStatus = ["pending", "running", "waiting_input", "completed", "failed"] as const
-export type RecipeExecutionStatus = (typeof RecipeExecutionStatus)[number]
-
 export const RecipeStepType = ["action", "branch", "loop"] as const
 export type RecipeStepType = (typeof RecipeStepType)[number]
-
-export const RecipeExecutionErrorSchema = z.object({
-  stepId: z.string(),
-  toolName: z.string(),
-  message: z.string(),
-  code: z.string().optional(),
-})
-export type RecipeExecutionError = z.infer<typeof RecipeExecutionErrorSchema>
 
 const StaticBindingSchema = z.object({
   type: z.literal("static"),

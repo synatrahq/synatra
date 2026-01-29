@@ -230,6 +230,15 @@ export default function InboxPage() {
   const [recipeDeleteModalOpen, setRecipeDeleteModalOpen] = createSignal(false)
   const [recipeToDelete, setRecipeToDelete] = createSignal<Recipes["items"][number] | null>(null)
   const [selectedEnvironmentId, setSelectedEnvironmentId] = createSignal<string | null>(null)
+  const [lastRecipeResult, setLastRecipeResult] = createSignal<{
+    status: "completed" | "failed" | "waiting_input"
+    stepResults?: Record<string, unknown>
+    resolvedParams?: Record<string, Record<string, unknown>>
+    outputItemIds?: string[]
+    error?: { stepKey: string; toolName: string; message: string }
+    executionId?: string
+    pendingInputConfig?: unknown
+  } | null>(null)
 
   const channelsQuery = useQuery(() => ({
     queryKey: ["inbox", "channels", activeOrg()?.id],
@@ -423,6 +432,15 @@ export default function InboxPage() {
     },
   }))
 
+  createEffect(
+    on(
+      () => searchParams.recipe,
+      () => {
+        setLastRecipeResult(null)
+      },
+    ),
+  )
+
   const recipeExecuteMutation = useMutation(() => ({
     mutationFn: async ({
       id,
@@ -439,8 +457,29 @@ export default function InboxPage() {
       })
       return res.json()
     },
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ["recipe-executions", id, activeOrg()?.id] })
+    onSuccess: (data, { id }) => {
+      const result = data as {
+        ok: boolean
+        status: "completed" | "failed" | "waiting_input"
+        stepResults?: Record<string, unknown>
+        resolvedParams?: Record<string, Record<string, unknown>>
+        outputItemIds?: string[]
+        error?: { stepKey: string; toolName: string; message: string }
+        executionId?: string
+        pendingInputConfig?: unknown
+      }
+      setLastRecipeResult({
+        status: result.status,
+        stepResults: result.stepResults,
+        resolvedParams: result.resolvedParams,
+        outputItemIds: result.outputItemIds,
+        error: result.error,
+        executionId: result.executionId,
+        pendingInputConfig: result.pendingInputConfig,
+      })
+      if (result.status === "waiting_input") {
+        queryClient.invalidateQueries({ queryKey: ["recipe-executions", id, activeOrg()?.id] })
+      }
     },
   }))
 
@@ -468,11 +507,32 @@ export default function InboxPage() {
 
     setRecipeResponding(true)
     try {
-      await api.api.recipes[":id"].executions[":executionId"].respond.$post({
+      const res = await api.api.recipes[":id"].executions[":executionId"].respond.$post({
         param: { id: recipe.id, executionId },
         json: { response, environmentId: envId },
       })
-      queryClient.invalidateQueries({ queryKey: ["recipe-executions", recipe.id, activeOrg()?.id] })
+      const data = (await res.json()) as {
+        ok: boolean
+        status: "completed" | "failed" | "waiting_input"
+        stepResults?: Record<string, unknown>
+        resolvedParams?: Record<string, Record<string, unknown>>
+        outputItemIds?: string[]
+        error?: { stepKey: string; toolName: string; message: string }
+        executionId?: string
+        pendingInputConfig?: unknown
+      }
+      setLastRecipeResult({
+        status: data.status,
+        stepResults: data.stepResults,
+        resolvedParams: data.resolvedParams,
+        outputItemIds: data.outputItemIds,
+        error: data.error,
+        executionId: data.executionId,
+        pendingInputConfig: data.pendingInputConfig,
+      })
+      if (data.status === "waiting_input") {
+        queryClient.invalidateQueries({ queryKey: ["recipe-executions", recipe.id, activeOrg()?.id] })
+      }
     } finally {
       setRecipeResponding(false)
     }
@@ -1550,6 +1610,7 @@ export default function InboxPage() {
             <RecipeDetail
               recipe={recipeDetailQuery.data ?? null}
               executions={recipeExecutionsQuery.data ?? []}
+              lastResult={lastRecipeResult()}
               agents={allAgents()}
               environments={environments()}
               selectedEnvironmentId={selectedEnvironmentId()}
