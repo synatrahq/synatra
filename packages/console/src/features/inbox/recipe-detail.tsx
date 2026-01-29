@@ -1207,9 +1207,7 @@ export function RecipeDetail(props: RecipeDetailProps) {
               onEscape={() => setEditModalOpen(false)}
             >
               <ModalContainer size="sm">
-                <div class="border-b border-border px-4 py-3">
-                  <h3 class="text-xs font-medium text-text">Edit recipe</h3>
-                </div>
+                <ModalHeader title="Edit recipe" onClose={() => setEditModalOpen(false)} />
                 <ModalBody>
                   <div class="flex flex-col gap-3">
                     <div class="flex items-center gap-2">
