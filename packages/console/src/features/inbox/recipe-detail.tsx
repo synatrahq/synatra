@@ -4,7 +4,6 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  CaretDown,
   CaretRight,
   PencilSimple,
   ListChecks,
@@ -13,7 +12,6 @@ import {
   Code,
   TextT,
   Hash,
-  ToggleLeft,
   BracketsCurly,
   Table,
   ChartLine,
@@ -39,7 +37,7 @@ import {
   type SelectOption,
   type JSONSchema,
 } from "../../ui"
-import { EntityIcon, OutputItemRenderer, ToolStatusIcon } from "../../components"
+import { EntityIcon, OutputItemRenderer } from "../../components"
 import { FormField, extractDefaults, validateFieldValue } from "../../components/human-request/form-field"
 import { QuestionField } from "../../components/human-request/question-field"
 import { SelectRowsField } from "../../components/human-request/select-rows-field"
@@ -428,6 +426,7 @@ function StepResultItem(props: {
   const step = () => props.recipe.steps.find((s) => s.id === props.stepId)
   const outputDef = () => props.recipe.outputs.find((o) => o.stepId === props.stepId)
   const [expanded, setExpanded] = createSignal(props.isOutput || props.failed)
+  const [paramsExpanded, setParamsExpanded] = createSignal(false)
   const hasParams = () => props.resolvedParams && Object.keys(props.resolvedParams).length > 0
   const toolName = () => step()?.toolName ?? props.stepId
   const isCustomTool = () => !!props.tools?.find((t) => t.name === toolName())
@@ -503,14 +502,25 @@ function StepResultItem(props: {
       <Show when={expanded()}>
         <div class="ml-11 mt-2 mb-4 rounded-lg border border-border overflow-hidden bg-surface">
           <Show when={hasParams()}>
-            <div class="px-3 py-2.5 border-b border-border">
-              <div class="flex items-center gap-1.5 mb-2">
+            <div class="border-b border-border">
+              <button
+                type="button"
+                class="flex items-center gap-1.5 w-full px-3 py-2 hover:bg-surface-muted/50 transition-colors"
+                onClick={() => setParamsExpanded(!paramsExpanded())}
+              >
+                <span class="transition-transform" classList={{ "rotate-90": paramsExpanded() }}>
+                  <CaretRight class="h-3 w-3 text-text-muted" />
+                </span>
                 <BracketsCurly class="h-3 w-3 text-text-muted" />
                 <span class="text-2xs font-medium text-text-muted">Parameters</span>
-              </div>
-              <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2 max-h-32 overflow-y-auto">
-                {JSON.stringify(props.resolvedParams, null, 2)}
-              </pre>
+              </button>
+              <Show when={paramsExpanded()}>
+                <div class="px-3 pb-2.5">
+                  <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2 max-h-32 overflow-y-auto">
+                    {JSON.stringify(props.resolvedParams, null, 2)}
+                  </pre>
+                </div>
+              </Show>
             </div>
           </Show>
           <Show
