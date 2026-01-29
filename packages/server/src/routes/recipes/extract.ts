@@ -1,7 +1,7 @@
 import { Hono } from "hono"
 import { z } from "zod"
 import { zValidator } from "@hono/zod-validator"
-import { generateText, Output, jsonSchema, type JSONSchema7 } from "ai"
+import { generateText, tool, jsonSchema, hasToolCall, type JSONSchema7 } from "ai"
 import { loadConversationContext, buildRecipeExtractionPrompt, validateRecipeSteps } from "@synatra/core"
 import { getModel } from "../agents/copilot/models"
 import type { RecipeStep, RecipeInput, RecipeOutput, ParamBinding } from "@synatra/core/types"
@@ -110,13 +110,25 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
 
   const { model } = await getModel(body.modelId)
 
+  const submitRecipeTool = tool({
+    description: "Submit the extracted recipe. You MUST call this tool with the complete recipe.",
+    inputSchema: jsonSchema(RecipeJsonSchema as JSONSchema7),
+  })
+
   const result = await generateText({
     model,
-    output: Output.object({ schema: jsonSchema<ExtractedRecipe>(RecipeJsonSchema) }),
+    tools: { submit_recipe: submitRecipeTool },
+    toolChoice: "required",
+    stopWhen: hasToolCall("submit_recipe"),
     prompt,
   })
 
-  const extracted = result.output as ExtractedRecipe
+  const toolCall = result.toolCalls[0]
+  if (!toolCall || toolCall.toolName !== "submit_recipe") {
+    throw createError("BadRequestError", { message: "LLM did not submit a recipe" })
+  }
+
+  const extracted = toolCall.input as ExtractedRecipe
   const inputs = extracted.inputs ?? []
   const outputs = extracted.outputs ?? []
 
