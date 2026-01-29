@@ -1,4 +1,3 @@
-CREATE TYPE "public"."recipe_execution_status" AS ENUM('pending', 'running', 'waiting_input', 'completed', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."recipe_step_type" AS ENUM('action', 'branch', 'loop');--> statement-breakpoint
 CREATE TABLE "recipe_edge" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -17,17 +16,13 @@ CREATE TABLE "recipe_execution" (
 	"organization_id" uuid NOT NULL,
 	"environment_id" uuid NOT NULL,
 	"inputs" jsonb DEFAULT '{}'::jsonb NOT NULL,
-	"status" "recipe_execution_status" DEFAULT 'pending' NOT NULL,
 	"current_step_key" text,
 	"pending_input_config" jsonb,
 	"results" jsonb DEFAULT '{}'::jsonb NOT NULL,
-	"resolved_params" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"output_item_ids" jsonb DEFAULT '[]'::jsonb NOT NULL,
-	"error" jsonb,
 	"created_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"completed_at" timestamp with time zone
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "recipe_release" (
@@ -116,10 +111,8 @@ CREATE INDEX "recipe_edge_working_copy_idx" ON "recipe_edge" USING btree ("worki
 CREATE INDEX "recipe_edge_release_idx" ON "recipe_edge" USING btree ("release_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "recipe_edge_working_copy_unique_idx" ON "recipe_edge" USING btree ("working_copy_recipe_id","from_step_key","to_step_key") WHERE working_copy_recipe_id IS NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "recipe_edge_release_unique_idx" ON "recipe_edge" USING btree ("release_id","from_step_key","to_step_key") WHERE release_id IS NOT NULL;--> statement-breakpoint
-CREATE INDEX "recipe_execution_recipe_idx" ON "recipe_execution" USING btree ("recipe_id","created_at");--> statement-breakpoint
-CREATE INDEX "recipe_execution_release_idx" ON "recipe_execution" USING btree ("release_id","created_at");--> statement-breakpoint
-CREATE INDEX "recipe_execution_org_idx" ON "recipe_execution" USING btree ("organization_id","created_at");--> statement-breakpoint
-CREATE INDEX "recipe_execution_status_idx" ON "recipe_execution" USING btree ("organization_id","status","created_at");--> statement-breakpoint
+CREATE INDEX "recipe_execution_recipe_idx" ON "recipe_execution" USING btree ("recipe_id");--> statement-breakpoint
+CREATE INDEX "recipe_execution_org_idx" ON "recipe_execution" USING btree ("organization_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "recipe_release_unique_idx" ON "recipe_release" USING btree ("recipe_id","version");--> statement-breakpoint
 CREATE UNIQUE INDEX "recipe_release_semver_idx" ON "recipe_release" USING btree ("recipe_id","version_major","version_minor","version_patch");--> statement-breakpoint
 CREATE INDEX "recipe_release_recipe_idx" ON "recipe_release" USING btree ("recipe_id","created_at");--> statement-breakpoint

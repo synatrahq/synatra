@@ -1,5 +1,5 @@
 {
-  "id": "00be4333-fd04-4bb5-a08e-b2065a935210",
+  "id": "a5c8f738-2027-4e83-bf14-7750cbb7d52a",
   "prevId": "9a5cd05c-1415-434d-8e80-7c1cd69aad55",
   "version": "7",
   "dialect": "postgresql",
@@ -3890,14 +3890,6 @@
           "notNull": true,
           "default": "'{}'::jsonb"
         },
-        "status": {
-          "name": "status",
-          "type": "recipe_execution_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
         "current_step_key": {
           "name": "current_step_key",
           "type": "text",
@@ -3917,25 +3909,12 @@
           "notNull": true,
           "default": "'{}'::jsonb"
         },
-        "resolved_params": {
-          "name": "resolved_params",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
         "output_item_ids": {
           "name": "output_item_ids",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true,
           "default": "'[]'::jsonb"
-        },
-        "error": {
-          "name": "error",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
         },
         "created_by": {
           "name": "created_by",
@@ -3956,12 +3935,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "completed_at": {
-          "name": "completed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -3970,33 +3943,6 @@
           "columns": [
             {
               "expression": "recipe_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "recipe_execution_release_idx": {
-          "name": "recipe_execution_release_idx",
-          "columns": [
-            {
-              "expression": "release_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4012,39 +3958,6 @@
           "columns": [
             {
               "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "recipe_execution_status_idx": {
-          "name": "recipe_execution_status_idx",
-          "columns": [
-            {
-              "expression": "organization_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7868,17 +7781,6 @@
       "values": [
         "template",
         "script"
-      ]
-    },
-    "public.recipe_execution_status": {
-      "name": "recipe_execution_status",
-      "schema": "public",
-      "values": [
-        "pending",
-        "running",
-        "waiting_input",
-        "completed",
-        "failed"
       ]
     },
     "public.recipe_step_type": {
