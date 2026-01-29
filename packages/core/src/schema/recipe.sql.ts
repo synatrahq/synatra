@@ -8,7 +8,7 @@ import { ThreadTable } from "./thread.sql"
 import { RunTable } from "./run.sql"
 import { UserTable } from "./user.sql"
 import { RecipeExecutionStatus } from "../types"
-import type { RecipeInput, RecipeStep, RecipeOutput, PendingInputConfig } from "../types"
+import type { RecipeInput, RecipeStep, RecipeOutput, PendingInputConfig, RecipeExecutionError } from "../types"
 
 export const recipeExecutionStatusEnum = pgEnum("recipe_execution_status", RecipeExecutionStatus)
 
@@ -67,7 +67,7 @@ export const RecipeExecutionTable = pgTable(
     results: jsonb("results").$type<Record<string, unknown>>().notNull().default({}),
     resolvedParams: jsonb("resolved_params").$type<Record<string, Record<string, unknown>>>().notNull().default({}),
     outputItemIds: jsonb("output_item_ids").$type<string[]>().notNull().default([]),
-    error: text("error"),
+    error: jsonb("error").$type<RecipeExecutionError>(),
     createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

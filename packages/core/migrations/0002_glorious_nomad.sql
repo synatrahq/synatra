@@ -11,7 +11,7 @@ CREATE TABLE "recipe_execution" (
 	"results" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"resolved_params" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"output_item_ids" jsonb DEFAULT '[]'::jsonb NOT NULL,
-	"error" text,
+	"error" jsonb,
 	"created_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,

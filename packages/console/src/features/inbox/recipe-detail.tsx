@@ -51,6 +51,7 @@ import type {
   HumanRequestSelectRowsConfig,
   ParamBinding,
   RecipeStep,
+  RecipeExecutionError,
 } from "@synatra/core/types"
 
 type Tab = "configuration" | "executions"
@@ -417,10 +418,11 @@ function StepResultItem(props: {
   index: number
   isLast: boolean
   tools?: ToolDef[]
+  failed?: boolean
 }) {
   const step = () => props.recipe.steps.find((s) => s.id === props.stepId)
   const outputDef = () => props.recipe.outputs.find((o) => o.stepId === props.stepId)
-  const [expanded, setExpanded] = createSignal(props.isOutput)
+  const [expanded, setExpanded] = createSignal(props.isOutput || props.failed)
   const hasParams = () => props.resolvedParams && Object.keys(props.resolvedParams).length > 0
   const toolName = () => step()?.toolName ?? props.stepId
   const isCustomTool = () => !!props.tools?.find((t) => t.name === toolName())
@@ -459,20 +461,28 @@ function StepResultItem(props: {
         <div
           class="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 transition-colors"
           classList={{
-            "border-success bg-success/10 text-success": !expanded(),
-            "border-accent bg-accent/10 text-accent": expanded(),
+            "border-danger bg-danger/10 text-danger": props.failed,
+            "border-success bg-success/10 text-success": !props.failed && !expanded(),
+            "border-accent bg-accent/10 text-accent": !props.failed && expanded(),
           }}
         >
-          <StepToolIcon toolName={toolName()} isCustomTool={isCustomTool()} />
+          <Show when={props.failed} fallback={<StepToolIcon toolName={toolName()} isCustomTool={isCustomTool()} />}>
+            <XCircle class="h-4 w-4" weight="fill" />
+          </Show>
         </div>
 
         <div class="flex-1 min-w-0 py-1.5">
           <div class="flex items-center gap-2">
             <span class="text-2xs font-medium text-text-muted">Step {props.index + 1}</span>
-            <Show when={isOutputStep()}>
+            <Show when={props.failed}>
+              <span class="text-2xs text-danger bg-danger/10 px-1.5 py-0.5 rounded">failed</span>
+            </Show>
+            <Show when={isOutputStep() && !props.failed}>
               <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">output</span>
             </Show>
-            <CheckCircle class="h-3 w-3 text-success" weight="fill" />
+            <Show when={!props.failed}>
+              <CheckCircle class="h-3 w-3 text-success" weight="fill" />
+            </Show>
           </div>
           <span class="font-code text-xs text-text truncate block">{toolName()}</span>
         </div>
@@ -522,18 +532,25 @@ function StepResultItem(props: {
 }
 
 function ExecutionDetail(props: { execution: RecipeExecution; recipe: Recipe; tools?: ToolDef[] }) {
-  const sortedSteps = createMemo(() => {
-    const results = props.execution.results
-    if (!results) return []
+  const error = () => props.execution.error as RecipeExecutionError | null | undefined
+  const failedStepId = () => error()?.stepId ?? props.execution.currentStepId
 
+  const sortedSteps = createMemo(() => {
+    const results = props.execution.results ?? {}
     const stepOrder = new Map(props.recipe.steps.map((s, i) => [s.id, i]))
     const entries = Object.entries(results)
 
-    return entries.sort(([a], [b]) => {
+    const sorted = entries.sort(([a], [b]) => {
       const aOrder = stepOrder.get(a) ?? Number.MAX_VALUE
       const bOrder = stepOrder.get(b) ?? Number.MAX_VALUE
       return aOrder - bOrder
     })
+
+    if (props.execution.status === "failed" && failedStepId() && !results[failedStepId()!]) {
+      sorted.push([failedStepId()!, null])
+    }
+
+    return sorted
   })
 
   const outputStepIds = createMemo(() => new Set(props.recipe.outputs.map((o) => o.stepId)))
@@ -541,14 +558,18 @@ function ExecutionDetail(props: { execution: RecipeExecution; recipe: Recipe; to
 
   return (
     <div class="space-y-1">
-      <Show when={props.execution.status === "failed" && props.execution.error}>
-        <div class="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2.5 mb-3">
-          <div class="flex items-center gap-2 mb-1.5">
-            <XCircle class="h-4 w-4 text-danger" weight="fill" />
-            <span class="text-xs font-medium text-danger">Execution failed</span>
+      <Show when={props.execution.status === "failed" && error()}>
+        {(err) => (
+          <div class="rounded-lg border border-danger/30 bg-danger/5 px-3 py-2.5 mb-3">
+            <div class="flex items-center gap-2 mb-1.5">
+              <XCircle class="h-4 w-4 text-danger" weight="fill" />
+              <span class="text-xs font-medium text-danger">
+                Step "{err().stepId}" ({err().toolName}) failed
+              </span>
+            </div>
+            <p class="text-xs text-text leading-relaxed">{err().message}</p>
           </div>
-          <p class="text-xs text-text leading-relaxed">{props.execution.error}</p>
-        </div>
+        )}
       </Show>
 
       <div class="pl-1">
@@ -563,6 +584,7 @@ function ExecutionDetail(props: { execution: RecipeExecution; recipe: Recipe; to
               index={index()}
               isLast={index() === sortedSteps().length - 1}
               tools={props.tools}
+              failed={props.execution.status === "failed" && stepId === failedStepId()}
             />
           )}
         </For>

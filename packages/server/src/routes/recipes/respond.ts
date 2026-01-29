@@ -135,11 +135,16 @@ export const respond = new Hono().post(
         })
 
         if (!result.ok || !result.data.success) {
-          const baseError = !result.ok
-            ? toErrorMessage(result.error)
-            : (result.data.error ?? "Compute execution failed")
-          const error = `Step "${step.id}" (${step.toolName}): ${baseError}`
-          await updateRecipeExecution({ id: executionId, status: "failed", error })
+          const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Compute execution failed")
+          const error = { stepId: step.id, toolName: step.toolName, message }
+          await updateRecipeExecution({
+            id: executionId,
+            status: "failed",
+            currentStepId: step.id,
+            error,
+            results: stepResults,
+            resolvedParams,
+          })
           return c.json({ executionId, ok: false, error })
         }
 
@@ -150,8 +155,15 @@ export const respond = new Hono().post(
       const runtimeConfig = agent.runtimeConfig as { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
       const tool = runtimeConfig?.tools?.find((t) => t.name === step.toolName)
       if (!tool) {
-        const error = `Step "${step.id}" (${step.toolName}): Tool not found`
-        await updateRecipeExecution({ id: executionId, status: "failed", error })
+        const error = { stepId: step.id, toolName: step.toolName, message: "Tool not found" }
+        await updateRecipeExecution({
+          id: executionId,
+          status: "failed",
+          currentStepId: step.id,
+          error,
+          results: stepResults,
+          resolvedParams,
+        })
         return c.json({ executionId, ok: false, error })
       }
 
@@ -167,9 +179,16 @@ export const respond = new Hono().post(
       })
 
       if (!result.ok || !result.data.success) {
-        const baseError = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Code execution failed")
-        const error = `Step "${step.id}" (${step.toolName}): ${baseError}`
-        await updateRecipeExecution({ id: executionId, status: "failed", error })
+        const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Code execution failed")
+        const error = { stepId: step.id, toolName: step.toolName, message }
+        await updateRecipeExecution({
+          id: executionId,
+          status: "failed",
+          currentStepId: step.id,
+          error,
+          results: stepResults,
+          resolvedParams,
+        })
         return c.json({ executionId, ok: false, error })
       }
 

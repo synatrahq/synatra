@@ -10,6 +10,7 @@ import {
   RecipeStepSchema,
   RecipeOutputSchema,
   PendingInputConfigSchema,
+  RecipeExecutionErrorSchema,
   type RecipeInput,
   type RecipeStep,
   type RecipeOutput,
@@ -230,7 +231,7 @@ export const UpdateRecipeExecutionSchema = z.object({
   results: z.record(z.string(), z.unknown()).optional(),
   resolvedParams: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
   outputItemIds: z.array(z.string()).optional(),
-  error: z.string().optional(),
+  error: RecipeExecutionErrorSchema.optional(),
 })
 
 export async function updateRecipeExecution(raw: z.input<typeof UpdateRecipeExecutionSchema>) {
