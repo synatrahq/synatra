@@ -182,7 +182,7 @@ function StepItem(props: { step: RecipeStep; index: number; tools?: ToolDef[]; i
             </Show>
           </div>
           <div class="flex items-center gap-2 mt-0.5">
-            <span class="text-xs text-text truncate">{props.step.label}</span>
+            <span class="text-xs font-medium text-text truncate">{props.step.label}</span>
             <span class="font-code text-2xs text-text-muted shrink-0">({props.step.toolName})</span>
             <Show when={props.step.dependsOn.length > 0}>
               <div class="flex items-center gap-1 text-2xs text-text-muted shrink-0">
@@ -493,7 +493,7 @@ function StepResultItem(props: {
             </Show>
           </div>
           <div class="flex items-center gap-2">
-            <span class="text-xs text-text truncate">{step()?.label}</span>
+            <span class="text-xs font-medium text-text truncate">{step()?.label}</span>
             <span class="font-code text-2xs text-text-muted shrink-0">({toolName()})</span>
           </div>
         </div>
