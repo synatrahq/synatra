@@ -41,7 +41,18 @@ import { EntityIcon, OutputItemRenderer } from "../../components"
 import { FormField, extractDefaults, validateFieldValue } from "../../components/human-request/form-field"
 import { QuestionField } from "../../components/human-request/question-field"
 import { SelectRowsField } from "../../components/human-request/select-rows-field"
-import type { Recipe, RecipeExecutions, RecipeExecution, Agents, Environments, OutputItem } from "../../app/api"
+import type {
+  Recipe,
+  RecipeExecutions,
+  RecipeExecution,
+  RecipeReleases,
+  RecipeWorkingCopy,
+  Agents,
+  Environments,
+  OutputItem,
+} from "../../app/api"
+import { RecipeVersionControl } from "./recipe-version-control"
+import { RecipeDeployDropdown } from "./recipe-deploy-dropdown"
 import type {
   HumanRequestFieldConfig,
   HumanRequestFormConfig,
@@ -401,7 +412,7 @@ function StepResultItem(props: {
   tools?: ToolDef[]
   failed?: boolean
 }) {
-  const step = () => props.recipe.steps.find((s) => s.id === props.stepId)
+  const step = () => props.recipe.steps.find((s) => s.stepKey === props.stepId)
   const outputDef = () => props.recipe.outputs.find((o) => o.stepId === props.stepId)
   const [expanded, setExpanded] = createSignal(props.isOutput || props.failed)
   const [paramsExpanded, setParamsExpanded] = createSignal(false)
@@ -529,11 +540,11 @@ function StepResultItem(props: {
 
 function ExecutionDetail(props: { execution: RecipeExecution; recipe: Recipe; tools?: ToolDef[] }) {
   const error = () => props.execution.error as RecipeExecutionError | null | undefined
-  const failedStepId = () => error()?.stepId ?? props.execution.currentStepId
+  const failedStepKey = () => error()?.stepId ?? props.execution.currentStepKey
 
   const sortedSteps = createMemo(() => {
     const results = props.execution.results ?? {}
-    const stepOrder = new Map(props.recipe.steps.map((s, i) => [s.id, i]))
+    const stepOrder = new Map(props.recipe.steps.map((s, i) => [s.stepKey, i]))
     const entries = Object.entries(results)
 
     const sorted = entries.sort(([a], [b]) => {
@@ -542,8 +553,8 @@ function ExecutionDetail(props: { execution: RecipeExecution; recipe: Recipe; to
       return aOrder - bOrder
     })
 
-    if (props.execution.status === "failed" && failedStepId() && !results[failedStepId()!]) {
-      sorted.push([failedStepId()!, null])
+    if (props.execution.status === "failed" && failedStepKey() && !results[failedStepKey()!]) {
+      sorted.push([failedStepKey()!, null])
     }
 
     return sorted
@@ -580,7 +591,7 @@ function ExecutionDetail(props: { execution: RecipeExecution; recipe: Recipe; to
               index={index()}
               isLast={index() === sortedSteps().length - 1}
               tools={props.tools}
-              failed={props.execution.status === "failed" && stepId === failedStepId()}
+              failed={props.execution.status === "failed" && stepId === failedStepKey()}
             />
           )}
         </For>
@@ -708,6 +719,8 @@ function EmptyState() {
 type RecipeDetailProps = {
   recipe: Recipe | null
   executions: RecipeExecutions
+  releases: RecipeReleases
+  workingCopy: RecipeWorkingCopy | null
   agents: Agents
   environments: Environments
   selectedEnvironmentId: string | null
@@ -719,6 +732,10 @@ type RecipeDetailProps = {
   executing?: boolean
   onRespond?: (executionId: string, response: Record<string, unknown>) => void
   responding?: boolean
+  onDeploy?: (data: { bump: "major" | "minor" | "patch"; description: string }) => Promise<void>
+  deploying?: boolean
+  onAdopt?: (releaseId: string) => Promise<void>
+  onCheckout?: (releaseId: string) => Promise<void>
 }
 
 export function RecipeDetail(props: RecipeDetailProps) {
@@ -733,6 +750,19 @@ export function RecipeDetail(props: RecipeDetailProps) {
   const agent = createMemo(() => {
     if (!props.recipe) return null
     return props.agents.find((a) => a.id === props.recipe?.agentId) ?? null
+  })
+
+  const currentRelease = createMemo(() => {
+    const releaseId = props.recipe?.currentReleaseId
+    if (!releaseId) return null
+    return props.releases.find((r) => r.id === releaseId) ?? null
+  })
+
+  const hasUndeployedChanges = createMemo(() => {
+    const wc = props.workingCopy
+    const release = currentRelease()
+    if (!wc || !release) return false
+    return wc.configHash !== release.configHash
   })
 
   const environmentOptions = createMemo((): SelectOption<string>[] =>
@@ -850,6 +880,23 @@ export function RecipeDetail(props: RecipeDetailProps) {
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0">
+                <RecipeVersionControl
+                  currentVersion={recipe().version ?? null}
+                  currentReleaseId={recipe().currentReleaseId ?? null}
+                  releases={props.releases}
+                  hasUndeployedChanges={hasUndeployedChanges()}
+                  workingCopyUpdatedAt={props.workingCopy?.updatedAt ?? null}
+                  onAdopt={props.onAdopt}
+                  onCheckout={props.onCheckout}
+                />
+                <RecipeDeployDropdown
+                  currentVersion={recipe().version ?? null}
+                  disabled={props.deploying || !hasUndeployedChanges()}
+                  onDeploy={async (data) => {
+                    await props.onDeploy?.(data)
+                  }}
+                />
+                <div class="w-px h-5 bg-border" />
                 <Select
                   value={props.selectedEnvironmentId ?? undefined}
                   options={environmentOptions()}

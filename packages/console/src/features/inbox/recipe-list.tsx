@@ -89,7 +89,7 @@ function RecipeItemComponent(props: { recipe: RecipeListItem; isSelected: boolea
         </div>
 
         <p class="mt-0.5 truncate text-xs text-text-muted">
-          {props.recipe.agent?.name ?? "Agent"} · {props.recipe.steps.length} steps
+          {props.recipe.agent?.name ?? "Agent"} · {props.recipe.stepCount ?? 0} steps
         </p>
       </div>
     </A>

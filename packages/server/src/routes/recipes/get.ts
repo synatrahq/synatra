@@ -12,9 +12,9 @@ export const get = new Hono().get("/:id", async (c) => {
       inputs: release.inputs,
       outputs: release.outputs,
       steps: release.steps.map((s) => ({
-        id: s.stepKey,
+        stepKey: s.stepKey,
         label: s.label,
-        toolName: s.toolName,
+        toolName: s.toolName ?? "",
         params: s.params,
         dependsOn: release.edges.filter((e) => e.toStepKey === s.stepKey).map((e) => e.fromStepKey),
       })),

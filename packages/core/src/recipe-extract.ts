@@ -8,7 +8,7 @@ import { AgentReleaseTable, AgentWorkingCopyTable } from "./schema/agent.sql"
 import { createError } from "@synatra/util/error"
 import { principal } from "./principal"
 import { COMPUTE_TOOLS, OUTPUT_TOOLS, HUMAN_TOOLS } from "./system-tools"
-import type { RecipeStep, RecipeInput, RecipeOutput, ParamBinding, AgentTool } from "./types"
+import type { RecipeInput, RecipeOutput, ParamBinding, AgentTool } from "./types"
 
 function first<T>(arr: T[]): T | undefined {
   return arr[0]
@@ -175,25 +175,25 @@ export function extractAssistantMessages(messages: ExtractedMessage[]): Extracte
 
 export interface ExtractedRecipe {
   inputs: RecipeInput[]
-  steps: RecipeStep[]
+  steps: ExtractedStep[]
   outputs: RecipeOutput[]
 }
 
-export function validateRecipeSteps(steps: RecipeStep[]): { valid: boolean; errors: string[] } {
+export function validateRecipeSteps(steps: ExtractedStep[]): { valid: boolean; errors: string[] } {
   const errors: string[] = []
-  const stepIds = new Set(steps.map((s) => s.id))
-  const stepMap = new Map(steps.map((s) => [s.id, s]))
+  const stepKeys = new Set(steps.map((s) => s.stepKey))
+  const stepMap = new Map(steps.map((s) => [s.stepKey, s]))
 
   for (const step of steps) {
-    for (const depId of step.dependsOn) {
-      if (!stepIds.has(depId)) {
-        errors.push(`Step "${step.id}" depends on non-existent step "${depId}"`)
+    for (const depKey of step.dependsOn) {
+      if (!stepKeys.has(depKey)) {
+        errors.push(`Step "${step.stepKey}" depends on non-existent step "${depKey}"`)
       }
     }
 
     for (const [paramName, binding] of Object.entries(step.params)) {
-      if (binding.type === "step" && !stepIds.has(binding.stepId)) {
-        errors.push(`Step "${step.id}" param "${paramName}" references non-existent step "${binding.stepId}"`)
+      if (binding.type === "step" && !stepKeys.has(binding.stepId)) {
+        errors.push(`Step "${step.stepKey}" param "${paramName}" references non-existent step "${binding.stepId}"`)
       }
     }
   }
@@ -201,25 +201,25 @@ export function validateRecipeSteps(steps: RecipeStep[]): { valid: boolean; erro
   const visited = new Set<string>()
   const visiting = new Set<string>()
 
-  function hasCycle(stepId: string): boolean {
-    if (visiting.has(stepId)) return true
-    if (visited.has(stepId)) return false
+  function hasCycle(stepKey: string): boolean {
+    if (visiting.has(stepKey)) return true
+    if (visited.has(stepKey)) return false
 
-    visiting.add(stepId)
-    const step = stepMap.get(stepId)
+    visiting.add(stepKey)
+    const step = stepMap.get(stepKey)
     if (step) {
-      for (const depId of step.dependsOn) {
-        if (hasCycle(depId)) return true
+      for (const depKey of step.dependsOn) {
+        if (hasCycle(depKey)) return true
       }
     }
-    visiting.delete(stepId)
-    visited.add(stepId)
+    visiting.delete(stepKey)
+    visited.add(stepKey)
     return false
   }
 
   for (const step of steps) {
-    if (hasCycle(step.id)) {
-      errors.push(`Circular dependency detected involving step "${step.id}"`)
+    if (hasCycle(step.stepKey)) {
+      errors.push(`Circular dependency detected involving step "${step.stepKey}"`)
       break
     }
   }
@@ -309,8 +309,8 @@ Your task:
   "name": "Recipe name",
   "description": "What this recipe does",
   "inputs": [{ "key": "user_id", "label": "User ID", "type": "string", "required": true }],
-  "steps": [{ "id": "snake_case_id", "label": "Human readable", "toolName": "tool", "params": { ... }, "dependsOn": [] }],
-  "outputs": [{ "stepId": "output_step_id", "kind": "table" }]
+  "steps": [{ "stepKey": "snake_case_key", "label": "Human readable", "toolName": "tool", "params": { ... }, "dependsOn": [] }],
+  "outputs": [{ "stepId": "output_step_key", "kind": "table" }]
 }
 
 Input types: "string" | "number" | "date" | "dateRange" | "select"
@@ -374,7 +374,7 @@ The {{varName}} placeholders are replaced with resolved variable values.
 
 Example - output_markdown with dynamic content (common pattern):
 {
-  "id": "show_report",
+  "stepKey": "show_report",
   "label": "Display user report",
   "toolName": "output_markdown",
   "params": {
@@ -444,7 +444,7 @@ Use code_execute when you need transformations that bindings cannot express:
 IMPORTANT: The input parameter MUST be an object. Wrap arrays using object binding:
 
 {
-  "id": "filter_active",
+  "stepKey": "filter_active",
   "label": "Filter active users",
   "toolName": "code_execute",
   "params": {
@@ -474,15 +474,15 @@ Do NOT include:
 
 ## Step Design
 
-**id**: Unique snake_case identifier describing purpose
+**stepKey**: Unique snake_case identifier describing purpose
 - Good: "fetch_active_users", "calculate_total", "send_email"
 - Bad: "step_0", "step_1", "s1"
 
 **label**: Human-readable description for UI
 - Good: "Fetch active users", "Calculate order total"
 
-**dependsOn**: List step IDs that must complete before this step
-- Must reference existing step IDs
+**dependsOn**: List stepKeys that must complete before this step
+- Must reference existing stepKeys
 - No circular dependencies allowed
 
 ---
@@ -528,45 +528,53 @@ export function toSnakeCase(str: string): string {
 }
 
 export interface RawStep {
-  id: string
+  stepKey: string
   label: string
   toolName: string
   params: Record<string, ParamBinding>
   dependsOn: string[]
 }
 
-export interface NormalizedStepsResult {
-  steps: RecipeStep[]
-  idMap: Map<string, string>
+export interface ExtractedStep {
+  stepKey: string
+  label: string
+  toolName: string
+  params: Record<string, ParamBinding>
+  dependsOn: string[]
+}
+
+export interface NormalizeStepsResult {
+  steps: ExtractedStep[]
+  keyMap: Map<string, string>
   errors: string[]
 }
 
-export function normalizeStepIds(steps: RawStep[]): NormalizedStepsResult {
-  const idMap = new Map<string, string>()
-  const usedIds = new Set<string>()
+export function normalizeStepKeys(steps: RawStep[]): NormalizeStepsResult {
+  const keyMap = new Map<string, string>()
+  const usedKeys = new Set<string>()
   const errors: string[] = []
 
   const normalizedSteps = steps.map((step, index) => {
-    const originalId = step.id
-    const normalizedId = toSnakeCase(step.id) || `step_${index}`
+    const originalKey = step.stepKey
+    const normalizedKey = toSnakeCase(step.stepKey) || `step_${index}`
 
-    if (usedIds.has(normalizedId)) {
-      errors.push(`Duplicate step ID "${normalizedId}" (from "${originalId}")`)
+    if (usedKeys.has(normalizedKey)) {
+      errors.push(`Duplicate step key "${normalizedKey}" (from "${originalKey}")`)
     }
 
-    usedIds.add(normalizedId)
-    idMap.set(originalId, normalizedId)
+    usedKeys.add(normalizedKey)
+    keyMap.set(originalKey, normalizedKey)
 
-    return { ...step, id: normalizedId }
+    return { ...step, stepKey: normalizedKey }
   })
 
   return {
     steps: normalizedSteps.map((step) => ({
       ...step,
-      dependsOn: step.dependsOn.map((dep) => idMap.get(dep) ?? dep),
-      params: updateParamBindingRefs(step.params, idMap),
+      dependsOn: step.dependsOn.map((dep) => keyMap.get(dep) ?? dep),
+      params: updateParamBindingRefs(step.params, keyMap),
     })),
-    idMap,
+    keyMap,
     errors,
   }
 }

@@ -6,10 +6,10 @@ import {
   loadConversationContext,
   buildRecipeExtractionPrompt,
   validateRecipeSteps,
-  normalizeStepIds,
+  normalizeStepKeys,
 } from "@synatra/core"
 import { getModel } from "../agents/copilot/models"
-import type { RecipeStep, RecipeInput, RecipeOutput, ParamBinding } from "@synatra/core/types"
+import type { RecipeInput, RecipeOutput, ParamBinding } from "@synatra/core/types"
 import { createError } from "@synatra/util/error"
 
 const ExtractRequestSchema = z.object({
@@ -42,7 +42,7 @@ const RecipeJsonSchema: JSONSchema7 = {
       items: {
         type: "object",
         properties: {
-          id: {
+          stepKey: {
             type: "string",
             description:
               "Unique snake_case identifier describing what this step does (e.g., fetch_active_users, calculate_total)",
@@ -55,7 +55,7 @@ const RecipeJsonSchema: JSONSchema7 = {
           params: { type: "object", additionalProperties: { $ref: "#/$defs/binding" } },
           dependsOn: { type: "array", items: { type: "string" } },
         },
-        required: ["id", "label", "toolName", "params", "dependsOn"],
+        required: ["stepKey", "label", "toolName", "params", "dependsOn"],
       },
     },
     outputs: {
@@ -121,7 +121,7 @@ type ExtractedRecipe = {
   description: string
   inputs: Array<{ key: string; label: string; type: string; required: boolean }>
   steps: Array<{
-    id: string
+    stepKey: string
     label: string
     toolName: string
     params: Record<string, ParamBinding>
@@ -163,19 +163,12 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
     }
 
     const extracted = toolCall.input as ExtractedRecipe
-    const { steps: normalizedSteps, idMap, errors: normalizationErrors } = normalizeStepIds(extracted.steps ?? [])
-    const steps: RecipeStep[] = normalizedSteps.map((s) => ({
-      id: s.id,
-      label: s.label,
-      toolName: s.toolName,
-      params: s.params,
-      dependsOn: s.dependsOn,
-    }))
+    const { steps: normalizedSteps, keyMap, errors: normalizationErrors } = normalizeStepKeys(extracted.steps ?? [])
 
-    const validation = validateRecipeSteps(steps)
+    const validation = validateRecipeSteps(normalizedSteps)
     const allErrors = [...normalizationErrors, ...validation.errors]
-    if (steps.length === 0 || allErrors.length > 0) {
-      const errors = steps.length === 0 ? ["Recipe must have at least one step"] : allErrors
+    if (normalizedSteps.length === 0 || allErrors.length > 0) {
+      const errors = normalizedSteps.length === 0 ? ["Recipe must have at least one step"] : allErrors
       if (retryCount < MAX_RETRIES) {
         messages.push(
           {
@@ -222,9 +215,9 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
         type: i.type as RecipeInput["type"],
         required: i.required,
       })),
-      steps,
+      steps: normalizedSteps,
       outputs: outputs.map((o) => ({
-        stepId: idMap.get(o.stepId) ?? o.stepId,
+        stepId: keyMap.get(o.stepId) ?? o.stepId,
         kind: o.kind as RecipeOutput["kind"],
         name: o.name,
       })),

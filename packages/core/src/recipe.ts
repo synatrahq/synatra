@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { eq, and, desc, lt, or, getTableColumns } from "drizzle-orm"
+import { eq, and, desc, lt, or, getTableColumns, sql, inArray } from "drizzle-orm"
 import { createHash } from "crypto"
 import { principal } from "./principal"
 import { withDb, withTx, first } from "./database"
@@ -670,6 +670,27 @@ export async function checkoutRecipe(raw: z.input<typeof CheckoutRecipeSchema>) 
   })
 
   return { recipeId: input.recipeId, releaseId: input.releaseId }
+}
+
+export async function getRecipeStepCount(releaseIds: string[]): Promise<Map<string, number>> {
+  const counts = await withDb((db) =>
+    db
+      .select({
+        releaseId: RecipeStepTable.releaseId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(RecipeStepTable)
+      .where(inArray(RecipeStepTable.releaseId, releaseIds))
+      .groupBy(RecipeStepTable.releaseId),
+  )
+
+  const result = new Map<string, number>()
+  for (const row of counts) {
+    if (row.releaseId) {
+      result.set(row.releaseId, row.count)
+    }
+  }
+  return result
 }
 
 export async function listRecipeReleases(recipeId: string) {

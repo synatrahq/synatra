@@ -93,7 +93,7 @@ export type ArrayBinding = {
 export type ParamBinding = StaticBinding | InputBinding | StepBinding | TemplateBinding | ObjectBinding | ArrayBinding
 
 export const RecipeStepSchema = z.object({
-  id: z.string(),
+  stepKey: z.string(),
   label: z.string(),
   toolName: z.string(),
   params: z.record(z.string(), ParamBindingSchema),
