@@ -68,6 +68,7 @@ type LastResult = {
   error?: RecipeExecutionError
   executionId?: string
   pendingInputConfig?: unknown
+  durationMs?: number
 }
 
 type PendingInputConfig = {
@@ -1145,6 +1146,15 @@ export function RecipeDetail(props: RecipeDetailProps) {
                         }
                       }
 
+                      const formatDuration = (ms: number) => {
+                        if (ms < 1000) return `${ms}ms`
+                        const seconds = ms / 1000
+                        if (seconds < 60) return `${seconds.toFixed(1)}s`
+                        const minutes = Math.floor(seconds / 60)
+                        const remainingSeconds = Math.round(seconds % 60)
+                        return `${minutes}m ${remainingSeconds}s`
+                      }
+
                       return (
                         <div class={`rounded-lg border transition-colors ${statusConfig().color}`}>
                           <div class="flex items-center gap-3 px-3 py-3">
@@ -1155,10 +1165,14 @@ export function RecipeDetail(props: RecipeDetailProps) {
                               })()}
                             </div>
                             <div class="flex-1 min-w-0">
-                              <div class="flex items-center gap-2">
-                                <span class="text-xs font-medium text-text">{statusConfig().label}</span>
-                                <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">latest</span>
-                              </div>
+                              <span class="text-xs font-medium text-text">{statusConfig().label}</span>
+                              <Show when={result().durationMs}>
+                                {(duration) => (
+                                  <p class="text-2xs text-text-muted mt-0.5">
+                                    Executed in {formatDuration(duration())}
+                                  </p>
+                                )}
+                              </Show>
                             </div>
                           </div>
 

@@ -238,7 +238,9 @@ export default function InboxPage() {
     error?: { stepKey: string; toolName: string; message: string }
     executionId?: string
     pendingInputConfig?: unknown
+    durationMs?: number
   } | null>(null)
+  const [recipeExecuteStartedAt, setRecipeExecuteStartedAt] = createSignal<number | null>(null)
 
   const channelsQuery = useQuery(() => ({
     queryKey: ["inbox", "channels", activeOrg()?.id],
@@ -451,6 +453,7 @@ export default function InboxPage() {
       environmentId: string
       inputs: Record<string, unknown>
     }) => {
+      setRecipeExecuteStartedAt(Date.now())
       const res = await api.api.recipes[":id"].execute.$post({
         param: { id },
         json: { inputs, environmentId },
@@ -458,6 +461,8 @@ export default function InboxPage() {
       return res.json()
     },
     onSuccess: (data, { id }) => {
+      const startedAt = recipeExecuteStartedAt()
+      const durationMs = startedAt ? Date.now() - startedAt : undefined
       const result = data as {
         ok: boolean
         status: "completed" | "failed" | "waiting_input"
@@ -476,7 +481,9 @@ export default function InboxPage() {
         error: result.error,
         executionId: result.executionId,
         pendingInputConfig: result.pendingInputConfig,
+        durationMs,
       })
+      setRecipeExecuteStartedAt(null)
       if (result.status === "waiting_input") {
         queryClient.invalidateQueries({ queryKey: ["recipe-executions", id, activeOrg()?.id] })
       }
