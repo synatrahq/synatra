@@ -1,5 +1,5 @@
 {
-  "id": "01d3aac5-ae5c-49da-88bf-a3427606ef7a",
+  "id": "00be4333-fd04-4bb5-a08e-b2065a935210",
   "prevId": "9a5cd05c-1415-434d-8e80-7c1cd69aad55",
   "version": "7",
   "dialect": "postgresql",
@@ -3846,94 +3846,6 @@
           "value": "(working_copy_recipe_id IS NOT NULL AND release_id IS NULL) OR (working_copy_recipe_id IS NULL AND release_id IS NOT NULL)"
         }
       },
-      "isRLSEnabled": false
-    },
-    "public.recipe_execution_event": {
-      "name": "recipe_execution_event",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "execution_id": {
-          "name": "execution_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "event_type": {
-          "name": "event_type",
-          "type": "recipe_execution_event_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "step_key": {
-          "name": "step_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "payload": {
-          "name": "payload",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "recipe_execution_event_idx": {
-          "name": "recipe_execution_event_idx",
-          "columns": [
-            {
-              "expression": "execution_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "recipe_execution_event_execution_id_recipe_execution_id_fk": {
-          "name": "recipe_execution_event_execution_id_recipe_execution_id_fk",
-          "tableFrom": "recipe_execution_event",
-          "tableTo": "recipe_execution",
-          "columnsFrom": [
-            "execution_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.recipe_execution": {
@@ -7956,20 +7868,6 @@
       "values": [
         "template",
         "script"
-      ]
-    },
-    "public.recipe_execution_event_type": {
-      "name": "recipe_execution_event_type",
-      "schema": "public",
-      "values": [
-        "started",
-        "step_started",
-        "step_completed",
-        "step_failed",
-        "waiting_input",
-        "input_received",
-        "completed",
-        "failed"
       ]
     },
     "public.recipe_execution_status": {

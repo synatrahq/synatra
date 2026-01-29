@@ -10,7 +10,6 @@ import {
   RecipeStepTable,
   RecipeEdgeTable,
   RecipeExecutionTable,
-  RecipeExecutionEventTable,
 } from "./schema/recipe.sql"
 import { UserTable } from "./schema/user.sql"
 import { createError } from "@synatra/util/error"
@@ -24,7 +23,6 @@ import {
   PendingInputConfigSchema,
   RecipeExecutionErrorSchema,
   RecipeStepType,
-  RecipeExecutionEventType,
   type RecipeInput,
   type RecipeOutput,
   type ParamBinding,
@@ -918,39 +916,4 @@ export async function respondToRecipeExecution(raw: z.input<typeof RespondToReci
   }
 
   return { execution, response: input.response }
-}
-
-export const CreateRecipeExecutionEventSchema = z.object({
-  executionId: z.string(),
-  eventType: z.enum(RecipeExecutionEventType),
-  stepKey: z.string().optional(),
-  payload: z.record(z.string(), z.unknown()).optional(),
-})
-
-export async function createRecipeExecutionEvent(raw: z.input<typeof CreateRecipeExecutionEventSchema>) {
-  const input = CreateRecipeExecutionEventSchema.parse(raw)
-
-  const [event] = await withDb((db) =>
-    db
-      .insert(RecipeExecutionEventTable)
-      .values({
-        executionId: input.executionId,
-        eventType: input.eventType,
-        stepKey: input.stepKey,
-        payload: input.payload,
-      })
-      .returning(),
-  )
-
-  return event
-}
-
-export async function listRecipeExecutionEvents(executionId: string) {
-  return withDb((db) =>
-    db
-      .select()
-      .from(RecipeExecutionEventTable)
-      .where(eq(RecipeExecutionEventTable.executionId, executionId))
-      .orderBy(RecipeExecutionEventTable.createdAt),
-  )
 }

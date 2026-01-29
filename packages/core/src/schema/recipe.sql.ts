@@ -7,13 +7,12 @@ import { AgentTable, AgentReleaseTable } from "./agent.sql"
 import { ThreadTable } from "./thread.sql"
 import { RunTable } from "./run.sql"
 import { UserTable } from "./user.sql"
-import { RecipeExecutionStatus, RecipeStepType, RecipeExecutionEventType } from "../types"
+import { RecipeExecutionStatus, RecipeStepType } from "../types"
 import type { RecipeInput, RecipeOutput, PendingInputConfig, RecipeExecutionError, ParamBinding } from "../types"
 import { versionModeEnum } from "./trigger.sql"
 
 export const recipeExecutionStatusEnum = pgEnum("recipe_execution_status", RecipeExecutionStatus)
 export const recipeStepTypeEnum = pgEnum("recipe_step_type", RecipeStepType)
-export const recipeExecutionEventTypeEnum = pgEnum("recipe_execution_event_type", RecipeExecutionEventType)
 
 export const RecipeTable = pgTable(
   "recipe",
@@ -208,22 +207,3 @@ export const RecipeExecutionTable = pgTable(
 )
 
 export type RecipeExecution = typeof RecipeExecutionTable.$inferSelect
-
-export const RecipeExecutionEventTable = pgTable(
-  "recipe_execution_event",
-  {
-    id: uuid("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
-    executionId: uuid("execution_id")
-      .notNull()
-      .references(() => RecipeExecutionTable.id, { onDelete: "cascade" }),
-    eventType: recipeExecutionEventTypeEnum("event_type").notNull(),
-    stepKey: text("step_key"),
-    payload: jsonb("payload").$type<Record<string, unknown>>(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (table) => [index("recipe_execution_event_idx").on(table.executionId, table.createdAt)],
-)
-
-export type RecipeExecutionEvent = typeof RecipeExecutionEventTable.$inferSelect

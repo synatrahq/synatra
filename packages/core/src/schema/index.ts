@@ -37,7 +37,6 @@ import {
   RecipeStepTable,
   RecipeEdgeTable,
   RecipeExecutionTable,
-  RecipeExecutionEventTable,
 } from "./recipe.sql"
 
 import { MemberRole } from "../types"
@@ -52,7 +51,7 @@ import { AppId } from "../types"
 import { OutputKind } from "../types"
 import { HumanRequestKind, HumanRequestStatus, HumanResponseStatus } from "../types"
 import { LlmProvider } from "../types"
-import { RecipeExecutionStatus, RecipeStepType, RecipeExecutionEventType } from "../types"
+import { RecipeExecutionStatus, RecipeStepType } from "../types"
 
 export * from "./user.sql"
 export * from "./session.sql"
@@ -143,8 +142,6 @@ export const schema = {
   recipeStep: RecipeStepTable,
   recipeEdge: RecipeEdgeTable,
   recipeExecution: RecipeExecutionTable,
-  recipeExecutionEvent: RecipeExecutionEventTable,
   RecipeExecutionStatus,
   RecipeStepType,
-  RecipeExecutionEventType,
 }

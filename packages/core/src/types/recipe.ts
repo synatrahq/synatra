@@ -6,18 +6,6 @@ export type RecipeExecutionStatus = (typeof RecipeExecutionStatus)[number]
 export const RecipeStepType = ["action", "branch", "loop"] as const
 export type RecipeStepType = (typeof RecipeStepType)[number]
 
-export const RecipeExecutionEventType = [
-  "started",
-  "step_started",
-  "step_completed",
-  "step_failed",
-  "waiting_input",
-  "input_received",
-  "completed",
-  "failed",
-] as const
-export type RecipeExecutionEventType = (typeof RecipeExecutionEventType)[number]
-
 export const RecipeExecutionErrorSchema = z.object({
   stepId: z.string(),
   toolName: z.string(),
