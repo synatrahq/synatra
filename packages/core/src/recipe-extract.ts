@@ -348,7 +348,7 @@ Your task:
   "outputs": [{ "stepId": "output_step_key", "kind": "table" }]
 }
 
-Input types: "string" | "number" | "date" | "dateRange" | "select"
+Input types: "string" | "number"
 Output kinds: "table" | "chart" | "markdown" | "key_value"
 
 ---

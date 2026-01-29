@@ -81,7 +81,7 @@ export type RecipeStep = z.infer<typeof RecipeStepSchema>
 export const RecipeInputSchema = z.object({
   key: z.string(),
   label: z.string(),
-  type: z.enum(["string", "number", "date", "dateRange", "select"]),
+  type: z.enum(["string", "number"]),
   description: z.string().optional(),
   required: z.boolean().optional(),
   defaultValue: z.unknown().optional(),

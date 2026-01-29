@@ -51,7 +51,6 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
       if (value !== null && value !== undefined && value !== "") {
         switch (input.type) {
           case "string":
-          case "select":
             if (typeof value !== "string") {
               throw createError("BadRequestError", { message: `Input "${input.key}" must be a string` })
             }
@@ -59,26 +58,6 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
           case "number":
             if (typeof value !== "number") {
               throw createError("BadRequestError", { message: `Input "${input.key}" must be a number` })
-            }
-            break
-          case "date":
-            if (typeof value !== "string" || isNaN(Date.parse(value))) {
-              throw createError("BadRequestError", { message: `Input "${input.key}" must be a valid date string` })
-            }
-            break
-          case "dateRange":
-            if (
-              typeof value !== "object" ||
-              !("start" in value) ||
-              !("end" in value) ||
-              typeof value.start !== "string" ||
-              typeof value.end !== "string" ||
-              isNaN(Date.parse(value.start)) ||
-              isNaN(Date.parse(value.end))
-            ) {
-              throw createError("BadRequestError", {
-                message: `Input "${input.key}" must be an object with valid start and end date strings`,
-              })
             }
             break
         }

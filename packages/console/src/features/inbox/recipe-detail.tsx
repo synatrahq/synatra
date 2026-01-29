@@ -998,23 +998,11 @@ export function RecipeDetail(props: RecipeDetailProps) {
                           {(input) => (
                             <div class="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2.5 group hover:border-accent/30 transition-colors">
                               <div class="flex h-7 w-7 items-center justify-center rounded-md bg-surface-muted group-hover:bg-accent/10 transition-colors">
-                                <Switch>
-                                  <Match when={input.type === "string"}>
-                                    <TextT class="h-3.5 w-3.5 text-text-muted group-hover:text-accent transition-colors" />
-                                  </Match>
-                                  <Match when={input.type === "number"}>
-                                    <Hash class="h-3.5 w-3.5 text-text-muted group-hover:text-accent transition-colors" />
-                                  </Match>
-                                  <Match when={input.type === "date" || input.type === "dateRange"}>
-                                    <Clock class="h-3.5 w-3.5 text-text-muted group-hover:text-accent transition-colors" />
-                                  </Match>
-                                  <Match when={input.type === "select"}>
-                                    <ListDashes class="h-3.5 w-3.5 text-text-muted group-hover:text-accent transition-colors" />
-                                  </Match>
-                                  <Match when={true}>
-                                    <BracketsCurly class="h-3.5 w-3.5 text-text-muted group-hover:text-accent transition-colors" />
-                                  </Match>
-                                </Switch>
+                                {input.type === "number" ? (
+                                  <Hash class="h-3.5 w-3.5 text-text-muted group-hover:text-accent transition-colors" />
+                                ) : (
+                                  <TextT class="h-3.5 w-3.5 text-text-muted group-hover:text-accent transition-colors" />
+                                )}
                               </div>
                               <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2">
@@ -1283,37 +1271,20 @@ export function RecipeDetail(props: RecipeDetailProps) {
                               <span class="text-warning">*</span>
                             </Show>
                           </label>
-                          <Switch>
-                            <Match when={input.type === "number"}>
-                              <Input
-                                type="number"
-                                value={String(inputValues()[input.key] ?? "")}
-                                onInput={(e) => {
-                                  const v = e.currentTarget.value
-                                  handleInputChange(input.key, v === "" ? undefined : Number(v))
-                                }}
-                                class="h-8 text-xs"
-                                placeholder={input.description}
-                              />
-                            </Match>
-                            <Match when={input.type === "date"}>
-                              <Input
-                                type="date"
-                                value={String(inputValues()[input.key] ?? "")}
-                                onInput={(e) => handleInputChange(input.key, e.currentTarget.value)}
-                                class="h-8 text-xs"
-                              />
-                            </Match>
-                            <Match when={true}>
-                              <Input
-                                type="text"
-                                value={String(inputValues()[input.key] ?? "")}
-                                onInput={(e) => handleInputChange(input.key, e.currentTarget.value)}
-                                class="h-8 text-xs"
-                                placeholder={input.description}
-                              />
-                            </Match>
-                          </Switch>
+                          <Input
+                            type={input.type === "number" ? "number" : "text"}
+                            value={String(inputValues()[input.key] ?? "")}
+                            onInput={(e) => {
+                              const v = e.currentTarget.value
+                              if (input.type === "number") {
+                                handleInputChange(input.key, v === "" ? undefined : Number(v))
+                              } else {
+                                handleInputChange(input.key, v)
+                              }
+                            }}
+                            class="h-8 text-xs"
+                            placeholder={input.description}
+                          />
                         </div>
                       )}
                     </For>
