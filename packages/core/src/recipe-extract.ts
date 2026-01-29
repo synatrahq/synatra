@@ -196,6 +196,18 @@ export function validateRecipeSteps(steps: ExtractedStep[]): { valid: boolean; e
         errors.push(`Step "${step.stepKey}" param "${paramName}" references non-existent step "${binding.stepId}"`)
       }
     }
+
+    if (step.toolName === "human_request") {
+      const fieldsBinding = step.params.fields
+      if (fieldsBinding?.type === "static" && Array.isArray(fieldsBinding.value)) {
+        const fields = fieldsBinding.value as Array<{ kind: string }>
+        const unsupported = fields.filter((f) => f.kind === "confirm" || f.kind === "approval")
+        if (unsupported.length > 0) {
+          const kinds = [...new Set(unsupported.map((f) => f.kind))].join(", ")
+          errors.push(`Step "${step.stepKey}" uses unsupported field kinds: ${kinds}`)
+        }
+      }
+    }
   }
 
   const visited = new Set<string>()
@@ -459,10 +471,11 @@ IMPORTANT: The input parameter MUST be an object. Wrap arrays using object bindi
 
 Include as steps:
 - output_table, output_chart, output_markdown, output_key_value: Display results to user
-- human_request: Pause for user input (form/question/select_rows)
+- human_request: Pause for user input (form/question/select_rows only)
 
 Do NOT include:
 - task_complete: Recipe completes automatically after last step
+- human_request with confirm/approval fields: These are for one-time conversational decisions, not reusable recipes
 
 ---
 
