@@ -175,11 +175,12 @@ function StepItem(props: { step: RecipeStep; index: number; tools?: ToolDef[]; i
             </Show>
           </div>
           <div class="flex items-center gap-2 mt-0.5">
-            <span class="font-code text-xs text-text truncate">{props.step.toolName}</span>
+            <span class="text-xs text-text truncate">{props.step.label}</span>
+            <span class="font-code text-2xs text-text-muted shrink-0">({props.step.toolName})</span>
             <Show when={props.step.dependsOn.length > 0}>
               <div class="flex items-center gap-1 text-2xs text-text-muted shrink-0">
                 <PlugsConnected class="h-3 w-3" />
-                {props.step.dependsOn.map((d) => `#${Number(d.replace("step_", "")) + 1}`).join(", ")}
+                {props.step.dependsOn.join(", ")}
               </div>
             </Show>
           </div>
@@ -484,7 +485,10 @@ function StepResultItem(props: {
               <CheckCircle class="h-3 w-3 text-success" weight="fill" />
             </Show>
           </div>
-          <span class="font-code text-xs text-text truncate block">{toolName()}</span>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-text truncate">{step()?.label}</span>
+            <span class="font-code text-2xs text-text-muted shrink-0">({toolName()})</span>
+          </div>
         </div>
 
         <span class="shrink-0 transition-transform" classList={{ "rotate-90": expanded() }}>

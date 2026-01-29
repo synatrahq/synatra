@@ -112,6 +112,7 @@ describe("resolveStepParams", () => {
   test("resolves all params for a step", () => {
     const step: RecipeStep = {
       id: "step_1",
+      label: "Send email",
       toolName: "send_email",
       params: {
         to: { type: "step", stepId: "step_0", path: "$.email" },
@@ -139,9 +140,9 @@ describe("resolveStepParams", () => {
 describe("getStepExecutionOrder", () => {
   test("returns steps in dependency order", () => {
     const steps: RecipeStep[] = [
-      { id: "step_2", toolName: "c", params: {}, dependsOn: ["step_1"] },
-      { id: "step_0", toolName: "a", params: {}, dependsOn: [] },
-      { id: "step_1", toolName: "b", params: {}, dependsOn: ["step_0"] },
+      { id: "step_2", label: "Step C", toolName: "c", params: {}, dependsOn: ["step_1"] },
+      { id: "step_0", label: "Step A", toolName: "a", params: {}, dependsOn: [] },
+      { id: "step_1", label: "Step B", toolName: "b", params: {}, dependsOn: ["step_0"] },
     ]
 
     const ordered = getStepExecutionOrder(steps)
@@ -150,9 +151,9 @@ describe("getStepExecutionOrder", () => {
 
   test("handles parallel steps", () => {
     const steps: RecipeStep[] = [
-      { id: "step_0", toolName: "a", params: {}, dependsOn: [] },
-      { id: "step_1", toolName: "b", params: {}, dependsOn: [] },
-      { id: "step_2", toolName: "c", params: {}, dependsOn: ["step_0", "step_1"] },
+      { id: "step_0", label: "Step A", toolName: "a", params: {}, dependsOn: [] },
+      { id: "step_1", label: "Step B", toolName: "b", params: {}, dependsOn: [] },
+      { id: "step_2", label: "Step C", toolName: "c", params: {}, dependsOn: ["step_0", "step_1"] },
     ]
 
     const ordered = getStepExecutionOrder(steps)
@@ -165,6 +166,7 @@ describe("isHumanInputStep", () => {
   test("returns true for form human_request", () => {
     const step: RecipeStep = {
       id: "step_0",
+      label: "Input form",
       toolName: "human_request",
       params: {
         title: { type: "static", value: "Input" },
@@ -178,6 +180,7 @@ describe("isHumanInputStep", () => {
   test("returns true for question human_request", () => {
     const step: RecipeStep = {
       id: "step_0",
+      label: "Question form",
       toolName: "human_request",
       params: {
         title: { type: "static", value: "Question" },
@@ -191,6 +194,7 @@ describe("isHumanInputStep", () => {
   test("returns false for confirm human_request", () => {
     const step: RecipeStep = {
       id: "step_0",
+      label: "Confirm action",
       toolName: "human_request",
       params: {
         title: { type: "static", value: "Confirm" },
@@ -204,6 +208,7 @@ describe("isHumanInputStep", () => {
   test("returns false for non-human_request tool", () => {
     const step: RecipeStep = {
       id: "step_0",
+      label: "Fetch data",
       toolName: "fetch_data",
       params: {},
       dependsOn: [],
@@ -214,9 +219,9 @@ describe("isHumanInputStep", () => {
 
 describe("RecipeRunner", () => {
   const steps: RecipeStep[] = [
-    { id: "step_0", toolName: "fetch", params: {}, dependsOn: [] },
-    { id: "step_1", toolName: "transform", params: {}, dependsOn: ["step_0"] },
-    { id: "step_2", toolName: "output", params: {}, dependsOn: ["step_1"] },
+    { id: "step_0", label: "Fetch data", toolName: "fetch", params: {}, dependsOn: [] },
+    { id: "step_1", label: "Transform data", toolName: "transform", params: {}, dependsOn: ["step_0"] },
+    { id: "step_2", label: "Output result", toolName: "output", params: {}, dependsOn: ["step_1"] },
   ]
 
   test("createRecipeRunner initializes correctly", () => {

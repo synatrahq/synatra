@@ -324,12 +324,13 @@ Return a JSON object with this structure:
   ],
   "steps": [
     {
-      "id": "step_0",
+      "id": "fetch_user_data",
+      "label": "Fetch user data from database",
       "toolName": "string",
       "params": {
         "paramName": { ParamBinding }
       },
-      "dependsOn": ["step_ids"]
+      "dependsOn": ["previous_step_id"]
     }
   ],
   "outputs": [
@@ -390,6 +391,16 @@ The code then accesses the array via \`input.data\`.
 - output_table, output_chart, output_markdown, output_key_value: Include as regular steps
 - human_request (form/question/select_rows): Include as steps, will pause execution for user input
 - task_complete: Do NOT include, recipe completes after last step
+
+## Step ID and Label Guidelines
+
+- **id**: Use unique snake_case identifiers that describe the step's purpose (e.g., "fetch_active_users", "calculate_order_total", "send_notification_email")
+  - Must be unique across all steps
+  - Use descriptive names, not generic ones like "step_0" or "step_1"
+  - Keep it concise but meaningful
+- **label**: Human-readable description for UI display (e.g., "Fetch active users", "Calculate order total")
+  - Should be a short phrase describing what the step does
+  - Will be shown to users in the recipe editor
 
 ## Guidelines
 

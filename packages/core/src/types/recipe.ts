@@ -67,6 +67,7 @@ export type ParamBinding = StaticBinding | InputBinding | StepBinding | Template
 
 export const RecipeStepSchema = z.object({
   id: z.string(),
+  label: z.string(),
   toolName: z.string(),
   params: z.record(z.string(), ParamBindingSchema),
   dependsOn: z.array(z.string()),

@@ -37,12 +37,20 @@ const RecipeJsonSchema: JSONSchema7 = {
       items: {
         type: "object",
         properties: {
-          id: { type: "string" },
+          id: {
+            type: "string",
+            description:
+              "Unique snake_case identifier describing what this step does (e.g., fetch_active_users, calculate_total)",
+          },
+          label: {
+            type: "string",
+            description: "Human-readable label for UI display (e.g., 'Fetch active users', 'Calculate order total')",
+          },
           toolName: { type: "string" },
           params: { type: "object", additionalProperties: { $ref: "#/$defs/binding" } },
           dependsOn: { type: "array", items: { type: "string" } },
         },
-        required: ["id", "toolName", "params", "dependsOn"],
+        required: ["id", "label", "toolName", "params", "dependsOn"],
       },
     },
     outputs: {
@@ -99,8 +107,82 @@ type ExtractedRecipe = {
   name: string
   description: string
   inputs: Array<{ key: string; label: string; type: string; required: boolean }>
-  steps: Array<{ id: string; toolName: string; params: Record<string, ParamBinding>; dependsOn: string[] }>
+  steps: Array<{
+    id: string
+    label: string
+    toolName: string
+    params: Record<string, ParamBinding>
+    dependsOn: string[]
+  }>
   outputs: Array<{ stepId: string; kind: string; name?: string }>
+}
+
+function toSnakeCase(str: string): string {
+  return str
+    .replace(/([a-z])([A-Z])/g, "$1_$2")
+    .replace(/[\s-]+/g, "_")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "")
+}
+
+function normalizeStepIds(steps: ExtractedRecipe["steps"]): {
+  steps: { id: string; label: string; toolName: string; params: Record<string, ParamBinding>; dependsOn: string[] }[]
+  idMap: Map<string, string>
+  errors: string[]
+} {
+  const idMap = new Map<string, string>()
+  const usedIds = new Set<string>()
+  const errors: string[] = []
+
+  const normalizedSteps = steps.map((step, index) => {
+    const originalId = step.id
+    const normalizedId = toSnakeCase(step.id) || `step_${index}`
+
+    if (usedIds.has(normalizedId)) {
+      errors.push(`Duplicate step ID "${normalizedId}" (from "${originalId}")`)
+    }
+
+    usedIds.add(normalizedId)
+    idMap.set(originalId, normalizedId)
+
+    return { ...step, id: normalizedId }
+  })
+
+  return {
+    steps: normalizedSteps.map((step) => ({
+      ...step,
+      dependsOn: step.dependsOn.map((dep) => idMap.get(dep) ?? dep),
+      params: updateParamBindingRefs(step.params, idMap),
+    })),
+    idMap,
+    errors,
+  }
+}
+
+function updateParamBindingRefs(
+  params: Record<string, ParamBinding>,
+  idMap: Map<string, string>,
+): Record<string, ParamBinding> {
+  const updated: Record<string, ParamBinding> = {}
+  for (const [key, binding] of Object.entries(params)) {
+    updated[key] = updateBindingRef(binding, idMap)
+  }
+  return updated
+}
+
+function updateBindingRef(binding: ParamBinding, idMap: Map<string, string>): ParamBinding {
+  if (binding.type === "step") {
+    return { ...binding, stepId: idMap.get(binding.stepId) ?? binding.stepId }
+  }
+  if (binding.type === "template") {
+    return { ...binding, variables: updateParamBindingRefs(binding.variables, idMap) }
+  }
+  if (binding.type === "object") {
+    return { ...binding, entries: updateParamBindingRefs(binding.entries, idMap) }
+  }
+  return binding
 }
 
 const MAX_RETRIES = 2
@@ -136,16 +218,19 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
     }
 
     const extracted = toolCall.input as ExtractedRecipe
-    const steps: RecipeStep[] = (extracted.steps ?? []).map((s) => ({
+    const { steps: normalizedSteps, idMap, errors: normalizationErrors } = normalizeStepIds(extracted.steps ?? [])
+    const steps: RecipeStep[] = normalizedSteps.map((s) => ({
       id: s.id,
+      label: s.label,
       toolName: s.toolName,
       params: s.params,
       dependsOn: s.dependsOn,
     }))
 
     const validation = validateRecipeSteps(steps)
-    if (steps.length === 0 || !validation.valid) {
-      const errors = steps.length === 0 ? ["Recipe must have at least one step"] : validation.errors
+    const allErrors = [...normalizationErrors, ...validation.errors]
+    if (steps.length === 0 || allErrors.length > 0) {
+      const errors = steps.length === 0 ? ["Recipe must have at least one step"] : allErrors
       if (retryCount < MAX_RETRIES) {
         messages.push(
           {
@@ -194,7 +279,7 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
       })),
       steps,
       outputs: outputs.map((o) => ({
-        stepId: o.stepId,
+        stepId: idMap.get(o.stepId) ?? o.stepId,
         kind: o.kind as RecipeOutput["kind"],
         name: o.name,
       })),

@@ -159,17 +159,15 @@ export function RecipeExtractModal(props: RecipeExtractModalProps) {
                   </label>
                   <div class="max-h-48 space-y-1.5 overflow-y-auto rounded-lg border border-border bg-surface p-2">
                     <For each={result().steps}>
-                      {(step) => (
+                      {(step, index) => (
                         <div class="flex items-center gap-2 rounded bg-surface-muted px-2 py-1.5">
                           <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-surface text-2xs font-medium text-text-muted">
-                            {Number(step.id.replace("step_", "")) + 1}
+                            {index() + 1}
                           </span>
-                          <span class="font-code text-xs text-text">{step.toolName}</span>
+                          <span class="text-xs text-text truncate">{step.label}</span>
+                          <span class="font-code text-2xs text-text-muted shrink-0">({step.toolName})</span>
                           <Show when={step.dependsOn.length > 0}>
-                            <Badge variant="secondary">
-                              depends:{" "}
-                              {step.dependsOn.map((d: string) => Number(d.replace("step_", "")) + 1).join(", ")}
-                            </Badge>
+                            <Badge variant="secondary">depends: {step.dependsOn.join(", ")}</Badge>
                           </Show>
                         </div>
                       )}
