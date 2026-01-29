@@ -29,8 +29,6 @@ import type {
   Recipes,
   Recipe,
   RecipeExecutions,
-  RecipeReleases,
-  RecipeWorkingCopy,
   Agents,
   Environments,
 } from "../../app/api"
@@ -413,32 +411,6 @@ export default function InboxPage() {
     }
   })
 
-  const recipeReleasesQuery = useQuery(() => {
-    const recipe = selectedRecipe()
-    return {
-      queryKey: ["recipe-releases", recipe?.id ?? "", activeOrg()?.id],
-      queryFn: async (): Promise<RecipeReleases> => {
-        if (!recipe) return []
-        const res = await api.api.recipes[":id"].releases.$get({ param: { id: recipe.id } })
-        return res.json()
-      },
-      enabled: !!recipe,
-    }
-  })
-
-  const recipeWorkingCopyQuery = useQuery(() => {
-    const recipe = selectedRecipe()
-    return {
-      queryKey: ["recipe-working-copy", recipe?.id ?? "", activeOrg()?.id],
-      queryFn: async (): Promise<RecipeWorkingCopy | null> => {
-        if (!recipe) return null
-        const res = await api.api.recipes[":id"]["working-copy"].$get({ param: { id: recipe.id } })
-        return res.json()
-      },
-      enabled: !!recipe,
-    }
-  })
-
   const recipeUpdateMutation = useMutation(() => ({
     mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string }) => {
       const res = await api.api.recipes[":id"].$patch({ param: { id }, json: data })
@@ -483,47 +455,6 @@ export default function InboxPage() {
       if (searchParams.recipe === deletedId) {
         setSearchParams({ recipe: undefined })
       }
-    },
-  }))
-
-  const recipeDeployMutation = useMutation(() => ({
-    mutationFn: async (data: { id: string; bump: "major" | "minor" | "patch"; description: string }) => {
-      const res = await api.api.recipes[":id"].deploy.$post({
-        param: { id: data.id },
-        json: { bump: data.bump, description: data.description },
-      })
-      return res.json()
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["recipes"] })
-      queryClient.invalidateQueries({ queryKey: ["recipe", variables.id] })
-      queryClient.invalidateQueries({ queryKey: ["recipe-releases", variables.id] })
-      queryClient.invalidateQueries({ queryKey: ["recipe-working-copy", variables.id] })
-    },
-  }))
-
-  const recipeAdoptMutation = useMutation(() => ({
-    mutationFn: async (data: { recipeId: string; releaseId: string }) => {
-      const res = await api.api.recipes[":id"].releases[":releaseId"].adopt.$post({
-        param: { id: data.recipeId, releaseId: data.releaseId },
-      })
-      return res.json()
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["recipes"] })
-      queryClient.invalidateQueries({ queryKey: ["recipe", variables.recipeId] })
-    },
-  }))
-
-  const recipeCheckoutMutation = useMutation(() => ({
-    mutationFn: async (data: { recipeId: string; releaseId: string }) => {
-      const res = await api.api.recipes[":id"].releases[":releaseId"].checkout.$post({
-        param: { id: data.recipeId, releaseId: data.releaseId },
-      })
-      return res.json()
-    },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["recipe-working-copy", variables.recipeId] })
     },
   }))
 
@@ -1616,8 +1547,6 @@ export default function InboxPage() {
             <RecipeDetail
               recipe={recipeDetailQuery.data ?? null}
               executions={recipeExecutionsQuery.data ?? []}
-              releases={recipeReleasesQuery.data ?? []}
-              workingCopy={recipeWorkingCopyQuery.data ?? null}
               agents={allAgents()}
               environments={environments()}
               selectedEnvironmentId={selectedEnvironmentId()}
@@ -1645,25 +1574,6 @@ export default function InboxPage() {
               executing={recipeExecuteMutation.isPending}
               onRespond={handleRecipeRespond}
               responding={recipeResponding()}
-              onDeploy={async (data) => {
-                const recipe = selectedRecipe()
-                if (recipe) {
-                  await recipeDeployMutation.mutateAsync({ id: recipe.id, ...data })
-                }
-              }}
-              deploying={recipeDeployMutation.isPending}
-              onAdopt={async (releaseId) => {
-                const recipe = selectedRecipe()
-                if (recipe) {
-                  await recipeAdoptMutation.mutateAsync({ recipeId: recipe.id, releaseId })
-                }
-              }}
-              onCheckout={async (releaseId) => {
-                const recipe = selectedRecipe()
-                if (recipe) {
-                  await recipeCheckoutMutation.mutateAsync({ recipeId: recipe.id, releaseId })
-                }
-              }}
             />
           </Show>
 
