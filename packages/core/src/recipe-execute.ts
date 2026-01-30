@@ -29,12 +29,12 @@ export function getValueByPath(obj: unknown, path?: string): unknown {
   const parts = normalizedPath.split(/\.|\[|\]/).filter(Boolean)
   let current: unknown = obj
 
-  for (const part of parts) {
+  for (const [i, part] of parts.entries()) {
     if (current === null || current === undefined) return undefined
 
     if (part === "*") {
       if (!Array.isArray(current)) return undefined
-      const remaining = parts.slice(parts.indexOf(part) + 1).join(".")
+      const remaining = parts.slice(i + 1).join(".")
       if (remaining) {
         return current.map((item) => getValueByPath(item, remaining))
       }
@@ -42,9 +42,9 @@ export function getValueByPath(obj: unknown, path?: string): unknown {
     }
 
     if (typeof current === "object" && current !== null) {
-      const index = parseInt(part, 10)
-      if (!isNaN(index) && Array.isArray(current)) {
-        current = current[index]
+      const idx = parseInt(part, 10)
+      if (!isNaN(idx) && Array.isArray(current)) {
+        current = current[idx]
       } else {
         current = (current as Record<string, unknown>)[part]
       }
