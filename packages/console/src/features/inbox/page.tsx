@@ -28,7 +28,7 @@ import type {
   RecipeExtractResult,
   Recipes,
   Recipe,
-  RecipeExecutions,
+  RecipeExecution,
   Agents,
   Environments,
 } from "../../app/api"
@@ -409,15 +409,15 @@ export default function InboxPage() {
     }
   })
 
-  const recipeExecutionsQuery = useQuery(() => {
+  const pendingExecutionQuery = useQuery(() => {
     const recipe = selectedRecipe()
     return {
-      queryKey: ["recipe-executions", recipe?.id ?? "", activeOrg()?.id],
-      queryFn: async (): Promise<RecipeExecutions["items"]> => {
-        if (!recipe) return []
+      queryKey: ["pending-execution", recipe?.id ?? "", activeOrg()?.id],
+      queryFn: async (): Promise<RecipeExecution | null> => {
+        if (!recipe) return null
         const res = await api.api.recipes[":id"].executions.$get({ param: { id: recipe.id } })
         const data = await res.json()
-        return data.items
+        return data.items[0] ?? null
       },
       enabled: !!recipe,
     }
@@ -1616,7 +1616,7 @@ export default function InboxPage() {
           >
             <RecipeDetail
               recipe={recipeDetailQuery.data ?? null}
-              executions={recipeExecutionsQuery.data ?? []}
+              pendingExecution={pendingExecutionQuery.data ?? null}
               lastResult={lastRecipeResult()}
               agents={allAgents()}
               environments={environments()}

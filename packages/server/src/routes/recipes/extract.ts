@@ -31,7 +31,7 @@ const RecipeJsonSchema: JSONSchema7 = {
         properties: {
           key: { type: "string" },
           label: { type: "string" },
-          type: { type: "string", enum: ["string", "number", "date", "dateRange", "select"] },
+          type: { type: "string", enum: ["string", "number"] },
           required: { type: "boolean" },
         },
         required: ["key", "label", "type", "required"],

@@ -42,7 +42,7 @@ import { EntityIcon, OutputItemRenderer } from "../../components"
 import { FormField, extractDefaults, validateFieldValue } from "../../components/human-request/form-field"
 import { QuestionField } from "../../components/human-request/question-field"
 import { SelectRowsField } from "../../components/human-request/select-rows-field"
-import type { Recipe, RecipeExecutions, RecipeExecution, Agents, Environments, OutputItem } from "../../app/api"
+import type { Recipe, RecipeExecution, Agents, Environments, OutputItem } from "../../app/api"
 import type {
   HumanRequestFieldConfig,
   HumanRequestFormConfig,
@@ -726,7 +726,7 @@ function EmptyState() {
 
 type RecipeDetailProps = {
   recipe: Recipe | null
-  executions: RecipeExecutions["items"]
+  pendingExecution: RecipeExecution | null
   lastResult: LastResult | null
   agents: Agents
   environments: Environments
@@ -925,10 +925,10 @@ export function RecipeDetail(props: RecipeDetailProps) {
                 onClick={() => setActiveTab("result")}
               >
                 Result
-                <Show when={props.lastResult?.status === "waiting_input" || props.executions.length > 0}>
-                  <span class="ml-1.5 rounded-full bg-warning/10 px-1.5 py-0.5 text-2xs text-warning">
+                <Show when={props.lastResult?.status === "waiting_input" || props.pendingExecution}>
+                  <Badge variant="warning" class="ml-1.5">
                     Input required
-                  </span>
+                  </Badge>
                 </Show>
               </button>
             </div>
@@ -1071,32 +1071,28 @@ export function RecipeDetail(props: RecipeDetailProps) {
                     when={props.lastResult}
                     fallback={
                       <Show
-                        when={props.executions.length > 0}
+                        when={props.pendingExecution}
                         fallback={
                           <div class="flex flex-col items-center justify-center py-8 text-center">
                             <p class="text-xs text-text-muted">No results yet</p>
                           </div>
                         }
                       >
-                        <div class="space-y-3">
-                          <For each={props.executions}>
-                            {(execution) => (
-                              <div class="rounded-lg border border-warning/30 bg-warning/5 p-4">
-                                <div class="flex items-center gap-2 mb-3">
-                                  <HourglassHigh class="h-4 w-4 text-warning" weight="fill" />
-                                  <span class="text-xs font-medium text-text">Waiting for input</span>
-                                </div>
-                                <Show when={execution.pendingInputConfig}>
-                                  <PendingInputForm
-                                    config={execution.pendingInputConfig as unknown as PendingInputConfig}
-                                    onSubmit={(response) => props.onRespond?.(execution.id, response)}
-                                    submitting={props.responding}
-                                  />
-                                </Show>
-                              </div>
-                            )}
-                          </For>
-                        </div>
+                        {(execution) => (
+                          <div class="rounded-lg border border-warning/30 bg-warning/5 p-4">
+                            <div class="flex items-center gap-2 mb-3">
+                              <HourglassHigh class="h-4 w-4 text-warning" weight="fill" />
+                              <span class="text-xs font-medium text-text">Waiting for input</span>
+                            </div>
+                            <Show when={execution().pendingInputConfig}>
+                              <PendingInputForm
+                                config={execution().pendingInputConfig as unknown as PendingInputConfig}
+                                onSubmit={(response) => props.onRespond?.(execution().id, response)}
+                                submitting={props.responding}
+                              />
+                            </Show>
+                          </div>
+                        )}
                       </Show>
                     }
                   >
