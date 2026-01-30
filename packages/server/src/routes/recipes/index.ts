@@ -5,7 +5,7 @@ import { create } from "./create"
 import { update } from "./update"
 import { del } from "./delete"
 import { execute } from "./execute"
-import { executions } from "./executions"
+import { pendingExecution } from "./pending-execution"
 import { respond } from "./respond"
 import { extract } from "./extract"
 import { models } from "./models"
@@ -25,5 +25,5 @@ export const recipes = new Hono()
   .route("/", releases)
   .route("/", deploy)
   .route("/", execute)
-  .route("/", executions)
+  .route("/", pendingExecution)
   .route("/", respond)

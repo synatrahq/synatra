@@ -907,9 +907,30 @@ export async function findRecipeExecutionById(id: string) {
   )
 }
 
+export async function findPendingExecution(recipeId: string) {
+  const organizationId = principal.orgId()
+  const userId = principal.userId()
+  return withDb((db) =>
+    db
+      .select()
+      .from(RecipeExecutionTable)
+      .where(
+        and(
+          eq(RecipeExecutionTable.recipeId, recipeId),
+          eq(RecipeExecutionTable.organizationId, organizationId),
+          eq(RecipeExecutionTable.createdBy, userId),
+        ),
+      )
+      .orderBy(desc(RecipeExecutionTable.createdAt))
+      .limit(1)
+      .then(first),
+  )
+}
+
 export const ListRecipeExecutionsSchema = z
   .object({
     recipeId: z.string().optional(),
+    createdBy: z.string().optional(),
     cursor: z.string().optional(),
     limit: z.number().min(1).max(100).optional(),
   })
@@ -924,6 +945,9 @@ export async function listRecipeExecutions(raw?: z.input<typeof ListRecipeExecut
 
   if (filters?.recipeId) {
     conditions.push(eq(RecipeExecutionTable.recipeId, filters.recipeId))
+  }
+  if (filters?.createdBy) {
+    conditions.push(eq(RecipeExecutionTable.createdBy, filters.createdBy))
   }
   if (filters?.cursor) {
     const { date, id } = parseCursor(filters.cursor)

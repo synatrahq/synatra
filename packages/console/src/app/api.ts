@@ -141,8 +141,9 @@ export type CheckoutSessionResponse = InferResponseType<(typeof api.api.subscrip
 
 export type Recipe = InferResponseType<(typeof api.api.recipes)[":id"]["$get"]>
 export type Recipes = InferResponseType<(typeof api.api.recipes)["$get"]>
-export type RecipeExecutions = InferResponseType<(typeof api.api.recipes)[":id"]["executions"]["$get"]>
-export type RecipeExecution = RecipeExecutions["items"][number]
+export type RecipeExecution = NonNullable<
+  InferResponseType<(typeof api.api.recipes)[":id"]["pending-execution"]["$get"]>
+>
 export type RecipeCreateInput = InferRequestType<(typeof api.api.recipes)["$post"]>["json"]
 export type RecipeUpdateInput = InferRequestType<(typeof api.api.recipes)[":id"]["$patch"]>["json"]
 export type RecipeExtractInput = InferRequestType<(typeof api.api.recipes)["extract"]["$post"]>["json"]

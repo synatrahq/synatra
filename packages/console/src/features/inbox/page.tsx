@@ -415,9 +415,8 @@ export default function InboxPage() {
       queryKey: ["pending-execution", recipe?.id ?? "", activeOrg()?.id],
       queryFn: async (): Promise<RecipeExecution | null> => {
         if (!recipe) return null
-        const res = await api.api.recipes[":id"].executions.$get({ param: { id: recipe.id } })
-        const data = await res.json()
-        return data.items[0] ?? null
+        const res = await api.api.recipes[":id"]["pending-execution"].$get({ param: { id: recipe.id } })
+        return res.json()
       },
       enabled: !!recipe,
     }
