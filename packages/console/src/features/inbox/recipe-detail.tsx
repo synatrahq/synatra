@@ -618,21 +618,6 @@ function ResultDisplay(props: {
   )
 }
 
-function ExecutionStatusIcon(props: { status: string }) {
-  switch (props.status) {
-    case "completed":
-      return <CheckCircle class="h-4 w-4 text-success" weight="fill" />
-    case "failed":
-      return <XCircle class="h-4 w-4 text-danger" weight="fill" />
-    case "running":
-      return <Spinner size="xs" />
-    case "waiting_input":
-      return <HourglassHigh class="h-4 w-4 text-warning" weight="fill" />
-    default:
-      return <Clock class="h-4 w-4 text-text-muted" />
-  }
-}
-
 function ExecutionRow(props: {
   execution: RecipeExecution
   recipe: Recipe
