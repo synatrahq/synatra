@@ -1,5 +1,5 @@
 {
-  "id": "a5c8f738-2027-4e83-bf14-7750cbb7d52a",
+  "id": "8153905e-d53f-40c9-8b21-6c07b717f484",
   "prevId": "9a5cd05c-1415-434d-8e80-7c1cd69aad55",
   "version": "7",
   "dialect": "postgresql",
@@ -4304,26 +4304,19 @@
           "primaryKey": false,
           "notNull": true
         },
-        "step_type": {
-          "name": "step_type",
+        "type": {
+          "name": "type",
           "type": "recipe_step_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'action'"
+          "default": "'tool'"
         },
-        "tool_name": {
-          "name": "tool_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "params": {
-          "name": "params",
+        "config": {
+          "name": "config",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
+          "notNull": true
         },
         "position": {
           "name": "position",
@@ -7787,9 +7780,7 @@
       "name": "recipe_step_type",
       "schema": "public",
       "values": [
-        "action",
-        "branch",
-        "loop"
+        "tool"
       ]
     },
     "public.connection_mode": {

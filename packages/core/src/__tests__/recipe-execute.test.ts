@@ -114,12 +114,14 @@ describe("resolveStepParams", () => {
     const step: NormalizedStep = {
       stepKey: "step_1",
       label: "Send email",
-      stepType: "action",
-      toolName: "send_email",
-      params: {
-        to: { type: "step", stepId: "step_0", path: "$.email" },
-        subject: { type: "static", value: "Hello" },
-        name: { type: "input", inputKey: "userName" },
+      type: "tool",
+      config: {
+        toolName: "send_email",
+        params: {
+          to: { type: "step", stepId: "step_0", path: "$.email" },
+          subject: { type: "static", value: "Hello" },
+          name: { type: "input", inputKey: "userName" },
+        },
       },
       position: 1,
       dependsOn: ["step_0"],
@@ -146,19 +148,24 @@ describe("getStepExecutionOrder", () => {
       {
         stepKey: "step_2",
         label: "Step C",
-        stepType: "action",
-        toolName: "c",
-        params: {},
+        type: "tool",
+        config: { toolName: "c", params: {} },
         position: 2,
         dependsOn: ["step_1"],
       },
-      { stepKey: "step_0", label: "Step A", stepType: "action", toolName: "a", params: {}, position: 0, dependsOn: [] },
+      {
+        stepKey: "step_0",
+        label: "Step A",
+        type: "tool",
+        config: { toolName: "a", params: {} },
+        position: 0,
+        dependsOn: [],
+      },
       {
         stepKey: "step_1",
         label: "Step B",
-        stepType: "action",
-        toolName: "b",
-        params: {},
+        type: "tool",
+        config: { toolName: "b", params: {} },
         position: 1,
         dependsOn: ["step_0"],
       },
@@ -170,14 +177,27 @@ describe("getStepExecutionOrder", () => {
 
   test("handles parallel steps", () => {
     const steps: NormalizedStep[] = [
-      { stepKey: "step_0", label: "Step A", stepType: "action", toolName: "a", params: {}, position: 0, dependsOn: [] },
-      { stepKey: "step_1", label: "Step B", stepType: "action", toolName: "b", params: {}, position: 1, dependsOn: [] },
+      {
+        stepKey: "step_0",
+        label: "Step A",
+        type: "tool",
+        config: { toolName: "a", params: {} },
+        position: 0,
+        dependsOn: [],
+      },
+      {
+        stepKey: "step_1",
+        label: "Step B",
+        type: "tool",
+        config: { toolName: "b", params: {} },
+        position: 1,
+        dependsOn: [],
+      },
       {
         stepKey: "step_2",
         label: "Step C",
-        stepType: "action",
-        toolName: "c",
-        params: {},
+        type: "tool",
+        config: { toolName: "c", params: {} },
         position: 2,
         dependsOn: ["step_0", "step_1"],
       },
@@ -194,11 +214,13 @@ describe("isHumanInputStep", () => {
     const step: NormalizedStep = {
       stepKey: "step_0",
       label: "Input form",
-      stepType: "action",
-      toolName: "human_request",
-      params: {
-        title: { type: "static", value: "Input" },
-        fields: { type: "static", value: [{ kind: "form", key: "data", schema: {} }] },
+      type: "tool",
+      config: {
+        toolName: "human_request",
+        params: {
+          title: { type: "static", value: "Input" },
+          fields: { type: "static", value: [{ kind: "form", key: "data", schema: {} }] },
+        },
       },
       position: 0,
       dependsOn: [],
@@ -210,11 +232,13 @@ describe("isHumanInputStep", () => {
     const step: NormalizedStep = {
       stepKey: "step_0",
       label: "Question form",
-      stepType: "action",
-      toolName: "human_request",
-      params: {
-        title: { type: "static", value: "Question" },
-        fields: { type: "static", value: [{ kind: "question", key: "answer" }] },
+      type: "tool",
+      config: {
+        toolName: "human_request",
+        params: {
+          title: { type: "static", value: "Question" },
+          fields: { type: "static", value: [{ kind: "question", key: "answer" }] },
+        },
       },
       position: 0,
       dependsOn: [],
@@ -226,11 +250,13 @@ describe("isHumanInputStep", () => {
     const step: NormalizedStep = {
       stepKey: "step_0",
       label: "Confirm action",
-      stepType: "action",
-      toolName: "human_request",
-      params: {
-        title: { type: "static", value: "Confirm" },
-        fields: { type: "static", value: [{ kind: "confirm", key: "confirmed" }] },
+      type: "tool",
+      config: {
+        toolName: "human_request",
+        params: {
+          title: { type: "static", value: "Confirm" },
+          fields: { type: "static", value: [{ kind: "confirm", key: "confirmed" }] },
+        },
       },
       position: 0,
       dependsOn: [],
@@ -242,9 +268,8 @@ describe("isHumanInputStep", () => {
     const step: NormalizedStep = {
       stepKey: "step_0",
       label: "Fetch data",
-      stepType: "action",
-      toolName: "fetch_data",
-      params: {},
+      type: "tool",
+      config: { toolName: "fetch_data", params: {} },
       position: 0,
       dependsOn: [],
     }
@@ -257,27 +282,24 @@ describe("RecipeRunner", () => {
     {
       stepKey: "step_0",
       label: "Fetch data",
-      stepType: "action",
-      toolName: "fetch",
-      params: {},
+      type: "tool",
+      config: { toolName: "fetch", params: {} },
       position: 0,
       dependsOn: [],
     },
     {
       stepKey: "step_1",
       label: "Transform data",
-      stepType: "action",
-      toolName: "transform",
-      params: {},
+      type: "tool",
+      config: { toolName: "transform", params: {} },
       position: 1,
       dependsOn: ["step_0"],
     },
     {
       stepKey: "step_2",
       label: "Output result",
-      stepType: "action",
-      toolName: "output",
-      params: {},
+      type: "tool",
+      config: { toolName: "output", params: {} },
       position: 2,
       dependsOn: ["step_1"],
     },

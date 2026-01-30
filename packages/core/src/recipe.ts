@@ -23,9 +23,9 @@ import {
   RecipeOutputSchema,
   PendingInputConfigSchema,
   RecipeStepType,
+  ToolStepConfigSchema,
   type RecipeInput,
   type RecipeOutput,
-  type ParamBinding,
 } from "./types"
 
 function parseCursor(cursor: string): { date: Date; id: string } {
@@ -94,9 +94,8 @@ export const CreateRecipeSchema = z.object({
     z.object({
       stepKey: z.string(),
       label: z.string(),
-      stepType: z.enum(RecipeStepType).default("action"),
-      toolName: z.string().optional(),
-      params: z.record(z.string(), z.unknown()),
+      type: z.enum(RecipeStepType).default("tool"),
+      config: ToolStepConfigSchema,
       dependsOn: z.array(z.string()),
     }),
   ),
@@ -177,9 +176,8 @@ export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
             releaseId: release.id,
             stepKey: step.stepKey,
             label: step.label,
-            stepType: step.stepType ?? "action",
-            toolName: step.toolName ?? null,
-            params: step.params as Record<string, ParamBinding>,
+            type: step.type,
+            config: step.config,
             position: idx,
           })),
         )
@@ -189,9 +187,8 @@ export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
             workingCopyRecipeId: recipe.id,
             stepKey: step.stepKey,
             label: step.label,
-            stepType: step.stepType ?? "action",
-            toolName: step.toolName ?? null,
-            params: step.params as Record<string, ParamBinding>,
+            type: step.type,
+            config: step.config,
             position: idx,
           })),
         )
@@ -395,9 +392,8 @@ export const SaveRecipeWorkingCopySchema = z.object({
       z.object({
         stepKey: z.string(),
         label: z.string(),
-        stepType: z.enum(RecipeStepType).default("action"),
-        toolName: z.string().optional(),
-        params: z.record(z.string(), z.unknown()),
+        type: z.enum(RecipeStepType).default("tool"),
+        config: ToolStepConfigSchema,
         dependsOn: z.array(z.string()),
       }),
     )
@@ -456,9 +452,8 @@ export async function saveRecipeWorkingCopy(raw: z.input<typeof SaveRecipeWorkin
             workingCopyRecipeId: input.recipeId,
             stepKey: step.stepKey,
             label: step.label,
-            stepType: step.stepType ?? "action",
-            toolName: step.toolName ?? null,
-            params: step.params as Record<string, ParamBinding>,
+            type: step.type,
+            config: step.config,
             position: idx,
           })),
         )
@@ -579,9 +574,8 @@ export async function deployRecipe(raw: z.input<typeof DeployRecipeSchema>) {
           releaseId: created.id,
           stepKey: step.stepKey,
           label: step.label,
-          stepType: step.stepType,
-          toolName: step.toolName,
-          params: step.params,
+          type: step.type,
+          config: step.config,
           position: step.position,
         })),
       )
@@ -703,9 +697,8 @@ export async function checkoutRecipe(raw: z.input<typeof CheckoutRecipeSchema>) 
           workingCopyRecipeId: input.recipeId,
           stepKey: step.stepKey,
           label: step.label,
-          stepType: step.stepType,
-          toolName: step.toolName,
-          params: step.params,
+          type: step.type,
+          config: step.config,
           position: step.position,
         })),
       )

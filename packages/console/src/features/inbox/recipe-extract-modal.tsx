@@ -187,7 +187,7 @@ export function RecipeExtractModal(props: RecipeExtractModalProps) {
                             {index() + 1}
                           </span>
                           <span class="text-xs text-text truncate">{step.label}</span>
-                          <span class="font-code text-2xs text-text-muted shrink-0">({step.toolName})</span>
+                          <span class="font-code text-2xs text-text-muted shrink-0">({step.config.toolName})</span>
                           <Show when={step.dependsOn.length > 0}>
                             <Badge variant="secondary">depends: {step.dependsOn.join(", ")}</Badge>
                           </Show>

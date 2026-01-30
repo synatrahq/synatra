@@ -8,7 +8,7 @@ import { AgentReleaseTable, AgentWorkingCopyTable } from "./schema/agent.sql"
 import { createError } from "@synatra/util/error"
 import { principal } from "./principal"
 import { COMPUTE_TOOLS, OUTPUT_TOOLS, HUMAN_TOOLS } from "./system-tools"
-import type { RecipeInput, RecipeOutput, ParamBinding, AgentTool } from "./types"
+import type { RecipeInput, RecipeOutput, ParamBinding, AgentTool, ToolStepConfig } from "./types"
 
 const SAMPLE_LIMIT = 3
 const STRING_LIMIT = 200
@@ -221,12 +221,12 @@ export function validateRecipeSteps(
       }
     }
 
-    for (const [paramName, binding] of Object.entries(step.params)) {
+    for (const [paramName, binding] of Object.entries(step.config.params)) {
       validateBinding(binding, step.stepKey, paramName)
     }
 
-    if (step.toolName === "human_request") {
-      const fieldsBinding = step.params.fields
+    if (step.config.toolName === "human_request") {
+      const fieldsBinding = step.config.params.fields
       if (fieldsBinding?.type === "static" && Array.isArray(fieldsBinding.value)) {
         const fields = fieldsBinding.value as Array<{ kind: string }>
         const unsupported = fields.filter((f) => f.kind === "confirm" || f.kind === "approval")
@@ -579,8 +579,8 @@ export interface RawStep {
 export interface ExtractedStep {
   stepKey: string
   label: string
-  toolName: string
-  params: Record<string, ParamBinding>
+  type: "tool"
+  config: ToolStepConfig
   dependsOn: string[]
 }
 
@@ -611,9 +611,14 @@ export function normalizeStepKeys(steps: RawStep[]): NormalizeStepsResult {
 
   return {
     steps: normalizedSteps.map((step) => ({
-      ...step,
+      stepKey: step.stepKey,
+      label: step.label,
+      type: "tool" as const,
+      config: {
+        toolName: step.toolName,
+        params: updateParamBindingRefs(step.params, keyMap),
+      },
       dependsOn: step.dependsOn.map((dep) => keyMap.get(dep) ?? dep),
-      params: updateParamBindingRefs(step.params, keyMap),
     })),
     keyMap,
     errors,

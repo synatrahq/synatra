@@ -1,4 +1,4 @@
-CREATE TYPE "public"."recipe_step_type" AS ENUM('action', 'branch', 'loop');--> statement-breakpoint
+CREATE TYPE "public"."recipe_step_type" AS ENUM('tool');--> statement-breakpoint
 CREATE TABLE "recipe_edge" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"working_copy_recipe_id" uuid,
@@ -49,9 +49,8 @@ CREATE TABLE "recipe_step" (
 	"release_id" uuid,
 	"step_key" text NOT NULL,
 	"label" text NOT NULL,
-	"step_type" "recipe_step_type" DEFAULT 'action' NOT NULL,
-	"tool_name" text,
-	"params" jsonb DEFAULT '{}'::jsonb NOT NULL,
+	"type" "recipe_step_type" DEFAULT 'tool' NOT NULL,
+	"config" jsonb NOT NULL,
 	"position" integer NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "recipe_step_parent_check" CHECK ((working_copy_recipe_id IS NOT NULL AND release_id IS NULL) OR (working_copy_recipe_id IS NULL AND release_id IS NOT NULL))

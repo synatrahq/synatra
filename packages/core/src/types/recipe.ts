@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-export const RecipeStepType = ["action", "branch", "loop"] as const
+export const RecipeStepType = ["tool"] as const
 export type RecipeStepType = (typeof RecipeStepType)[number]
 
 const StaticBindingSchema = z.object({
@@ -69,11 +69,21 @@ export type ArrayBinding = {
 
 export type ParamBinding = StaticBinding | InputBinding | StepBinding | TemplateBinding | ObjectBinding | ArrayBinding
 
+export type ToolStepConfig = {
+  toolName: string
+  params: Record<string, ParamBinding>
+}
+
+export const ToolStepConfigSchema = z.object({
+  toolName: z.string(),
+  params: z.record(z.string(), ParamBindingSchema),
+})
+
 export const RecipeStepSchema = z.object({
   stepKey: z.string(),
   label: z.string(),
-  toolName: z.string(),
-  params: z.record(z.string(), ParamBindingSchema),
+  type: z.enum(RecipeStepType),
+  config: ToolStepConfigSchema,
   dependsOn: z.array(z.string()),
 })
 export type RecipeStep = z.infer<typeof RecipeStepSchema>

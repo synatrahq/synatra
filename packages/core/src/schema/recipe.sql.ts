@@ -8,7 +8,7 @@ import { ThreadTable } from "./thread.sql"
 import { RunTable } from "./run.sql"
 import { UserTable } from "./user.sql"
 import { RecipeStepType } from "../types"
-import type { RecipeInput, RecipeOutput, PendingInputConfig, ParamBinding } from "../types"
+import type { RecipeInput, RecipeOutput, PendingInputConfig, ToolStepConfig } from "../types"
 import { versionModeEnum } from "./trigger.sql"
 export const recipeStepTypeEnum = pgEnum("recipe_step_type", RecipeStepType)
 
@@ -109,9 +109,8 @@ export const RecipeStepTable = pgTable(
     releaseId: uuid("release_id").references(() => RecipeReleaseTable.id, { onDelete: "cascade" }),
     stepKey: text("step_key").notNull(),
     label: text("label").notNull(),
-    stepType: recipeStepTypeEnum("step_type").default("action").notNull(),
-    toolName: text("tool_name"),
-    params: jsonb("params").$type<Record<string, ParamBinding>>().notNull().default({}),
+    type: recipeStepTypeEnum("type").default("tool").notNull(),
+    config: jsonb("config").$type<ToolStepConfig>().notNull(),
     position: integer("position").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },

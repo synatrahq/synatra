@@ -1,4 +1,4 @@
-import type { ParamBinding, PendingInputConfig, RecipeOutput } from "./types"
+import type { ParamBinding, PendingInputConfig, RecipeOutput, ToolStepConfig } from "./types"
 import type { RecipeStep as RecipeStepDb, RecipeEdge } from "./schema/recipe.sql"
 import { isOutputTool, isHumanTool, isComputeTool } from "./system-tools"
 import type { ProblemDetails } from "@synatra/util/error"
@@ -6,9 +6,8 @@ import type { ProblemDetails } from "@synatra/util/error"
 export interface NormalizedStep {
   stepKey: string
   label: string
-  stepType: "action" | "branch" | "loop"
-  toolName: string | null
-  params: Record<string, ParamBinding>
+  type: "tool"
+  config: ToolStepConfig
   position: number
   dependsOn: string[]
 }
@@ -84,7 +83,7 @@ export function resolveBinding(binding: ParamBinding, context: RecipeExecutionCo
 
 export function resolveStepParams(step: NormalizedStep, context: RecipeExecutionContext): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(step.params).map(([name, binding]) => [name, resolveBinding(binding, context)]),
+    Object.entries(step.config.params).map(([name, binding]) => [name, resolveBinding(binding, context)]),
   )
 }
 
@@ -99,12 +98,19 @@ export function buildNormalizedSteps(steps: RecipeStepDb[], edges: RecipeEdge[])
   return steps.map((step) => ({
     stepKey: step.stepKey,
     label: step.label,
-    stepType: step.stepType,
-    toolName: step.toolName,
-    params: step.params,
+    type: step.type,
+    config: step.config,
     position: step.position,
     dependsOn: edgeMap.get(step.stepKey) ?? [],
   }))
+}
+
+export function getStepToolName(step: NormalizedStep): string {
+  return step.config.toolName
+}
+
+export function getStepParams(step: NormalizedStep): Record<string, ParamBinding> {
+  return step.config.params
 }
 
 export function getStepExecutionOrder(steps: NormalizedStep[]): NormalizedStep[] {
@@ -133,9 +139,11 @@ export function getStepExecutionOrder(steps: NormalizedStep[]): NormalizedStep[]
 }
 
 export function isHumanInputStep(step: NormalizedStep): boolean {
-  if (step.toolName !== "human_request") return false
+  const toolName = getStepToolName(step)
+  if (toolName !== "human_request") return false
 
-  const fieldsBinding = step.params.fields
+  const params = getStepParams(step)
+  const fieldsBinding = params.fields
   if (!fieldsBinding || fieldsBinding.type !== "static") return false
 
   const fields = fieldsBinding.value as Array<{ kind: string }>
@@ -172,8 +180,9 @@ export interface ExecuteStepOptions {
 
 export async function executeRecipeStep(options: ExecuteStepOptions): Promise<StepExecutionResult> {
   const { step, params, executeFunction, executeCodePure, createOutputItem } = options
+  const toolName = getStepToolName(step)
 
-  if (step.toolName === "code_execute") {
+  if (toolName === "code_execute") {
     const code = params.code as string
     const input = params.input
     const result = await executeCodePure(code, input)
@@ -184,7 +193,7 @@ export async function executeRecipeStep(options: ExecuteStepOptions): Promise<St
     return { type: "success", result: result.result }
   }
 
-  if (step.toolName && isHumanTool(step.toolName)) {
+  if (isHumanTool(toolName)) {
     if (isHumanInputStep(step)) {
       const config = buildPendingInputConfig(step, params)
       return { type: "waiting_input", config }
@@ -192,14 +201,14 @@ export async function executeRecipeStep(options: ExecuteStepOptions): Promise<St
     return { type: "success", result: { skipped: true, reason: "approval_not_supported" } }
   }
 
-  if (step.toolName && isOutputTool(step.toolName)) {
+  if (isOutputTool(toolName)) {
     const kindMap: Record<string, string> = {
       output_table: "table",
       output_chart: "chart",
       output_markdown: "markdown",
       output_key_value: "key_value",
     }
-    const kind = kindMap[step.toolName] ?? "markdown"
+    const kind = kindMap[toolName] ?? "markdown"
     const name = params.name as string | undefined
     const { name: _, ...payload } = params
 
@@ -207,15 +216,11 @@ export async function executeRecipeStep(options: ExecuteStepOptions): Promise<St
     return { type: "output", outputItemId }
   }
 
-  if (step.toolName && isComputeTool(step.toolName)) {
-    return { type: "error", error: `Unknown compute tool: ${step.toolName}` }
+  if (isComputeTool(toolName)) {
+    return { type: "error", error: `Unknown compute tool: ${toolName}` }
   }
 
-  if (!step.toolName) {
-    return { type: "error", error: "Step has no tool name" }
-  }
-
-  const result = await executeFunction(step.toolName, params)
+  const result = await executeFunction(toolName, params)
 
   if (!result.ok) {
     return { type: "error", error: result.error ?? "Function execution failed" }
@@ -380,6 +385,7 @@ export async function executeStepLoop(
 
   for (let i = startIndex; i < steps.length; i++) {
     const step = steps[i]
+    const toolName = getStepToolName(step)
     const params = resolveStepParams(step, context)
     resolvedParams[step.stepKey] = params
 
@@ -395,7 +401,7 @@ export async function executeStepLoop(
       }
     }
 
-    if (step.toolName && isOutputTool(step.toolName)) {
+    if (isOutputTool(toolName)) {
       stepResults[step.stepKey] = params
       if (deps.threadId && deps.createOutputItem) {
         const output = deps.recipeOutputs.find((o) => o.stepId === step.stepKey)
@@ -412,7 +418,7 @@ export async function executeStepLoop(
       continue
     }
 
-    if (step.toolName && isComputeTool(step.toolName)) {
+    if (isComputeTool(toolName)) {
       const code = params.code as string
       const input = params.input as Record<string, unknown> | undefined
       const timeout =
@@ -431,7 +437,7 @@ export async function executeStepLoop(
         const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Compute execution failed")
         return {
           status: "failed",
-          error: { stepKey: step.stepKey, toolName: step.toolName, message },
+          error: { stepKey: step.stepKey, toolName, message },
           currentStepKey: step.stepKey,
           stepResults,
           resolvedParams,
@@ -442,21 +448,11 @@ export async function executeStepLoop(
       continue
     }
 
-    if (!step.toolName) {
-      return {
-        status: "failed",
-        error: { stepKey: step.stepKey, toolName: "", message: "Step has no tool name" },
-        currentStepKey: step.stepKey,
-        stepResults,
-        resolvedParams,
-      }
-    }
-
-    const tool = deps.agentTools.find((t) => t.name === step.toolName)
+    const tool = deps.agentTools.find((t) => t.name === toolName)
     if (!tool) {
       return {
         status: "failed",
-        error: { stepKey: step.stepKey, toolName: step.toolName, message: "Tool not found" },
+        error: { stepKey: step.stepKey, toolName, message: "Tool not found" },
         currentStepKey: step.stepKey,
         stepResults,
         resolvedParams,
@@ -478,7 +474,7 @@ export async function executeStepLoop(
       const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Code execution failed")
       return {
         status: "failed",
-        error: { stepKey: step.stepKey, toolName: step.toolName, message },
+        error: { stepKey: step.stepKey, toolName, message },
         currentStepKey: step.stepKey,
         stepResults,
         resolvedParams,

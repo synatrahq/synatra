@@ -52,6 +52,14 @@ import type {
   RecipeStep,
 } from "@synatra/core/types"
 
+function getToolName(step: RecipeStep): string {
+  return step.config.toolName
+}
+
+function getParams(step: RecipeStep): Record<string, ParamBinding> {
+  return step.config.params
+}
+
 type Tab = "configuration" | "result"
 
 type RecipeExecutionError = {
@@ -149,8 +157,10 @@ function StepToolIcon(props: { toolName: string; isCustomTool: boolean; class?: 
 
 function StepItem(props: { step: RecipeStep; index: number; tools?: ToolDef[]; isLast?: boolean; totalSteps: number }) {
   const [expanded, setExpanded] = createSignal(false)
-  const hasParams = () => Object.keys(props.step.params).length > 0
-  const toolDef = () => props.tools?.find((t) => t.name === props.step.toolName)
+  const toolName = () => getToolName(props.step)
+  const params = () => getParams(props.step)
+  const hasParams = () => Object.keys(params()).length > 0
+  const toolDef = () => props.tools?.find((t) => t.name === toolName())
   const isCustomTool = () => !!toolDef()
 
   return (
@@ -171,7 +181,7 @@ function StepItem(props: { step: RecipeStep; index: number; tools?: ToolDef[]; i
             "border-border bg-surface group-hover:border-accent/50 text-text-muted": !expanded(),
           }}
         >
-          <StepToolIcon toolName={props.step.toolName} isCustomTool={isCustomTool()} />
+          <StepToolIcon toolName={toolName()} isCustomTool={isCustomTool()} />
         </div>
 
         <div class="flex-1 min-w-0 py-1.5">
@@ -183,7 +193,7 @@ function StepItem(props: { step: RecipeStep; index: number; tools?: ToolDef[]; i
           </div>
           <div class="flex items-center gap-2 mt-0.5">
             <span class="text-xs font-medium text-text truncate">{props.step.label}</span>
-            <span class="font-code text-2xs text-text-muted shrink-0">({props.step.toolName})</span>
+            <span class="font-code text-2xs text-text-muted shrink-0">({toolName()})</span>
             <Show when={props.step.dependsOn.length > 0}>
               <div class="flex items-center gap-1 text-2xs text-text-muted shrink-0">
                 <PlugsConnected class="h-3 w-3" />
@@ -212,7 +222,7 @@ function StepItem(props: { step: RecipeStep; index: number; tools?: ToolDef[]; i
                 <span class="text-2xs font-medium text-text-muted">Parameters</span>
               </div>
               <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2">
-                {JSON.stringify(resolveParams(props.step.params), null, 2)}
+                {JSON.stringify(resolveParams(params()), null, 2)}
               </pre>
             </div>
           </Show>
@@ -432,7 +442,7 @@ function StepResultItem(props: {
   const [expanded, setExpanded] = createSignal(props.isOutput || props.failed)
   const [paramsExpanded, setParamsExpanded] = createSignal(false)
   const hasParams = () => props.resolvedParams && Object.keys(props.resolvedParams).length > 0
-  const toolName = () => step()?.toolName ?? props.stepId
+  const toolName = () => (step() ? getToolName(step()!) : props.stepId)
   const isCustomTool = () => !!props.tools?.find((t) => t.name === toolName())
 
   const asOutputItem = (): OutputItem | null => {
