@@ -48,7 +48,7 @@ import type {
   HumanRequestFormConfig,
   HumanRequestQuestionConfig,
   HumanRequestSelectRowsConfig,
-  ParamBinding,
+  Value,
   QueryStepConfig,
   OutputStepConfig,
   InputStepConfig,
@@ -77,9 +77,9 @@ function getStepDisplayName(step: RecipeStepLike): string {
   }
 }
 
-function getStepBinding(step: RecipeStepLike): ParamBinding | null {
+function getStepBinding(step: RecipeStepLike): Value | null {
   if (step.type === "query" || step.type === "code" || step.type === "output") {
-    const config = step.config as { params?: ParamBinding }
+    const config = step.config as { params?: Value }
     return config.params ?? null
   }
   return null
@@ -119,7 +119,7 @@ function formatPath(path?: Array<string | number>): string {
     .join("")
 }
 
-function formatBindingRef(binding: ParamBinding): string {
+function formatBindingRef(binding: Value): string {
   switch (binding.type) {
     case "literal":
       return JSON.stringify(binding.value)
@@ -132,7 +132,7 @@ function formatBindingRef(binding: ParamBinding): string {
   }
 }
 
-function resolveBinding(binding: ParamBinding): unknown {
+function resolveBinding(binding: Value): unknown {
   switch (binding.type) {
     case "literal":
       return binding.value
@@ -149,7 +149,7 @@ function resolveBinding(binding: ParamBinding): unknown {
   }
 }
 
-function isParamBinding(value: unknown): value is ParamBinding {
+function isValue(value: unknown): value is Value {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -163,7 +163,7 @@ function resolveInputFields(fields: unknown[]): unknown[] {
     if (typeof field !== "object" || field === null) return field
     const f = field as Record<string, unknown>
     const resolved: Record<string, unknown> = Object.fromEntries(
-      Object.entries(f).map(([key, value]) => [key, isParamBinding(value) ? resolveBinding(value) : value]),
+      Object.entries(f).map(([key, value]) => [key, isValue(value) ? resolveBinding(value) : value]),
     )
     return resolved
   })
@@ -212,16 +212,15 @@ function StepItem(props: {
   const hasBinding = () => !!binding()
   const isQueryStep = () => props.step.type === "query"
   const isCodeStep = () => props.step.type === "code"
-  const queryConfig = () =>
-    props.step.type === "query" ? (props.step.config as { description?: string; code?: ParamBinding }) : null
-  const codeConfig = () => (props.step.type === "code" ? (props.step.config as { code?: ParamBinding }) : null)
+  const queryConfig = () => (props.step.type === "query" ? (props.step.config as { description?: string }) : null)
+  const codeConfig = () => (props.step.type === "code" ? (props.step.config as { code?: Value }) : null)
   const inputConfig = () =>
     props.step.type === "input" ? (props.step.config as { params?: { fields?: unknown[] } }) : null
   const outputConfig = () => (props.step.type === "output" ? (props.step.config as { kind?: string }) : null)
   const stepCode = () => {
-    const code = queryConfig()?.code ?? codeConfig()?.code
+    const code = codeConfig()?.code
     if (!code) return undefined
-    const resolved = isParamBinding(code) ? resolveBinding(code) : code
+    const resolved = isValue(code) ? resolveBinding(code) : code
     if (resolved === undefined || resolved === null) return undefined
     return typeof resolved === "string" ? resolved : JSON.stringify(resolved, null, 2)
   }

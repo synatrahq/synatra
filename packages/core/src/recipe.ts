@@ -24,7 +24,7 @@ import {
   RecipeOutputSchema,
   PendingInputConfigSchema,
   RecipeStepInputSchema,
-  type ParamBinding,
+  type Value,
   type RecipeStepConfig,
 } from "./types"
 
@@ -46,9 +46,9 @@ function hashConfig(config: Record<string, unknown>): string {
   return createHash("sha256").update(serializeConfig(config)).digest("hex")
 }
 
-export function extractBindingRefs(binding: ParamBinding): string[] {
+export function extractBindingRefs(binding: Value): string[] {
   const refs: string[] = []
-  function walk(b: ParamBinding): void {
+  function walk(b: Value): void {
     if (b.type === "ref" && b.scope === "step") refs.push(b.key)
     if (b.type === "template") {
       for (const part of b.parts) {
@@ -66,15 +66,15 @@ export function collectStepRefs(config: RecipeStepConfig): string[] {
   const refs: string[] = []
   if ("params" in config && config.params && typeof config.params === "object") {
     if ("type" in config.params) {
-      refs.push(...extractBindingRefs(config.params as ParamBinding))
+      refs.push(...extractBindingRefs(config.params as Value))
     } else if ("fields" in config.params) {
       const params = config.params as {
-        fields: Array<Record<string, ParamBinding>>
-        title: ParamBinding
-        description?: ParamBinding
+        fields: Array<Record<string, Value>>
+        title: Value
+        description?: Value
       }
       refs.push(...extractBindingRefs(params.title))
-      if (params.description) refs.push(...extractBindingRefs(params.description as ParamBinding))
+      if (params.description) refs.push(...extractBindingRefs(params.description as Value))
       for (const field of params.fields) {
         for (const value of Object.values(field)) {
           if (value === undefined) continue

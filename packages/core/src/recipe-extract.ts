@@ -12,7 +12,7 @@ import { buildExtractionPrompt, buildRetryPrompt } from "./recipe-extract-prompt
 import type {
   RecipeInput,
   RecipeOutput,
-  ParamBinding,
+  Value,
   AgentTool,
   QueryStepConfig,
   CodeStepConfig,
@@ -166,7 +166,7 @@ export function validateRecipeSteps(
   const inputKeys = new Set(inputs.map((i) => i.key))
   const precedingKeys = new Set<string>()
 
-  function validateBinding(binding: ParamBinding, stepKey: string, paramPath: string): void {
+  function validateBinding(binding: Value, stepKey: string, paramPath: string): void {
     if (!binding || typeof binding !== "object" || !("type" in binding)) {
       errors.push(`Step "${stepKey}" param "${paramPath}" is not a valid binding`)
       return
@@ -215,7 +215,7 @@ export function validateRecipeSteps(
       step.config.params.fields.forEach((field, index) => {
         for (const [key, value] of Object.entries(field)) {
           if (value === undefined) continue
-          validateBinding(value as ParamBinding, step.stepKey, `params.fields[${index}].${key}`)
+          validateBinding(value as Value, step.stepKey, `params.fields[${index}].${key}`)
         }
       })
     }
@@ -314,7 +314,7 @@ export interface RawStep {
   stepKey: string
   label: string
   toolName: string
-  params: Record<string, ParamBinding>
+  params: Record<string, Value>
 }
 
 export type ExtractedStep = {
@@ -346,7 +346,7 @@ function convertRawStepToExtractedStep(
   agentTools: AgentTool[],
 ): ExtractedStep {
   const { stepKey, label, toolName, params } = step
-  const normalizedParams = updateParamBindingRefs(params, keyMap)
+  const normalizedParams = updateValueRefs(params, keyMap)
 
   if (toolName in OUTPUT_KIND_MAP) {
     const kind = OUTPUT_KIND_MAP[toolName]
@@ -379,8 +379,8 @@ function convertRawStepToExtractedStep(
           typeof dataValue === "object" &&
           "type" in dataValue &&
           ["literal", "ref", "template", "object", "array"].includes((dataValue as { type: string }).type)
-        const data: ParamBinding = isBinding
-          ? updateBindingRef(dataValue as ParamBinding, keyMap)
+        const data: Value = isBinding
+          ? updateBindingRef(dataValue as Value, keyMap)
           : { type: "literal" as const, value: dataValue ?? [] }
 
         return {
@@ -398,8 +398,8 @@ function convertRawStepToExtractedStep(
           typeof defaultsValue === "object" &&
           "type" in defaultsValue &&
           ["literal", "ref", "template", "object", "array"].includes((defaultsValue as { type: string }).type)
-        const defaults: ParamBinding | undefined = isBinding
-          ? updateBindingRef(defaultsValue as ParamBinding, keyMap)
+        const defaults: Value | undefined = isBinding
+          ? updateBindingRef(defaultsValue as Value, keyMap)
           : defaultsValue
             ? { type: "literal" as const, value: defaultsValue }
             : undefined
@@ -526,14 +526,11 @@ export function normalizeStepKeys(steps: RawStep[], agentTools: AgentTool[] = []
   }
 }
 
-export function updateParamBindingRefs(
-  params: Record<string, ParamBinding>,
-  idMap: Map<string, string>,
-): Record<string, ParamBinding> {
+export function updateValueRefs(params: Record<string, Value>, idMap: Map<string, string>): Record<string, Value> {
   return Object.fromEntries(Object.entries(params).map(([key, binding]) => [key, updateBindingRef(binding, idMap)]))
 }
 
-export function updateBindingRef(binding: ParamBinding, idMap: Map<string, string>): ParamBinding {
+export function updateBindingRef(binding: Value, idMap: Map<string, string>): Value {
   if (binding.type === "ref" && binding.scope === "step") {
     return { ...binding, key: idMap.get(binding.key) ?? binding.key }
   }
@@ -544,7 +541,7 @@ export function updateBindingRef(binding: ParamBinding, idMap: Map<string, strin
     }
   }
   if (binding.type === "object") {
-    return { ...binding, entries: updateParamBindingRefs(binding.entries, idMap) }
+    return { ...binding, entries: updateValueRefs(binding.entries, idMap) }
   }
   if (binding.type === "array") {
     return { ...binding, items: binding.items.map((item) => updateBindingRef(item, idMap)) }

@@ -33,7 +33,7 @@ Data flows between steps through bindings. This is the core mechanism:
 </critical_understanding>
 
 <binding_reference>
-## ParamBinding Types
+## Value Types
 
 Every parameter value comes from a binding. Choose the right type:
 
@@ -117,7 +117,7 @@ Steps execute in array order. Only reference EARLIER steps.
 human_request with kind=confirm is for one-time decisions, not reusable recipes.
 
 ### Rule 8: select_rows Data Binding
-When using human_request with select_rows, data must be a ParamBinding.
+When using human_request with select_rows, data must be a Value.
 Example:
 {
   "kind": "select_rows",
@@ -128,7 +128,7 @@ Example:
 }
 
 ### Rule 9: form Defaults Binding
-Use defaults with a ParamBinding to pre-fill form fields from previous step results.
+Use defaults with a Value to pre-fill form fields from previous step results.
 Example:
 {
   "kind": "form",

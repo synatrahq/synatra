@@ -19,25 +19,25 @@ const RefBindingSchema = z.object({
 const TemplateBindingSchema: z.ZodType<TemplateBinding> = z.lazy(() =>
   z.object({
     type: z.literal("template"),
-    parts: z.array(z.union([z.string(), ParamBindingSchema])),
+    parts: z.array(z.union([z.string(), ValueSchema])),
   }),
 )
 
 const ObjectBindingSchema: z.ZodType<ObjectBinding> = z.lazy(() =>
   z.object({
     type: z.literal("object"),
-    entries: z.record(z.string(), ParamBindingSchema),
+    entries: z.record(z.string(), ValueSchema),
   }),
 )
 
 const ArrayBindingSchema: z.ZodType<ArrayBinding> = z.lazy(() =>
   z.object({
     type: z.literal("array"),
-    items: z.array(ParamBindingSchema),
+    items: z.array(ValueSchema),
   }),
 )
 
-export const ParamBindingSchema: z.ZodType<ParamBinding> = z.union([
+export const ValueSchema: z.ZodType<Value> = z.union([
   LiteralBindingSchema,
   RefBindingSchema,
   TemplateBindingSchema,
@@ -49,19 +49,18 @@ export type LiteralBinding = z.infer<typeof LiteralBindingSchema>
 export type RefBinding = z.infer<typeof RefBindingSchema>
 export type TemplateBinding = {
   type: "template"
-  parts: Array<string | ParamBinding>
+  parts: Array<string | Value>
 }
 export type ObjectBinding = {
   type: "object"
-  entries: Record<string, ParamBinding>
+  entries: Record<string, Value>
 }
 export type ArrayBinding = {
   type: "array"
-  items: ParamBinding[]
+  items: Value[]
 }
 
-export type ParamBinding = LiteralBinding | RefBinding | TemplateBinding | ObjectBinding | ArrayBinding
-export type Value = ParamBinding
+export type Value = LiteralBinding | RefBinding | TemplateBinding | ObjectBinding | ArrayBinding
 
 const JsonSchemaSchema = z.record(z.string(), z.unknown())
 
@@ -69,16 +68,16 @@ export const QueryStepConfigSchema = z.object({
   description: z.string(),
   paramSchema: JsonSchemaSchema,
   returnSchema: JsonSchemaSchema,
-  code: ParamBindingSchema,
-  timeoutMs: ParamBindingSchema.optional(),
-  params: ParamBindingSchema,
+  code: ValueSchema,
+  timeoutMs: ValueSchema.optional(),
+  params: ValueSchema,
 })
 export type QueryStepConfig = z.infer<typeof QueryStepConfigSchema>
 
 export const CodeStepConfigSchema = z.object({
-  code: ParamBindingSchema,
-  timeoutMs: ParamBindingSchema.optional(),
-  params: ParamBindingSchema,
+  code: ValueSchema,
+  timeoutMs: ValueSchema.optional(),
+  params: ValueSchema,
 })
 export type CodeStepConfig = z.infer<typeof CodeStepConfigSchema>
 
@@ -87,8 +86,8 @@ export type OutputStepKind = (typeof OutputStepKind)[number]
 
 export const OutputStepConfigSchema = z.object({
   kind: z.enum(OutputStepKind),
-  name: ParamBindingSchema.optional(),
-  params: ParamBindingSchema,
+  name: ValueSchema.optional(),
+  params: ValueSchema,
 })
 export type OutputStepConfig = z.infer<typeof OutputStepConfigSchema>
 
@@ -97,33 +96,33 @@ export type InputStepFieldKind = (typeof InputStepFieldKind)[number]
 
 export const InputStepFormFieldSchema = z
   .object({
-    kind: ParamBindingSchema,
-    key: ParamBindingSchema,
-    schema: ParamBindingSchema,
-    defaults: ParamBindingSchema.optional(),
+    kind: ValueSchema,
+    key: ValueSchema,
+    schema: ValueSchema,
+    defaults: ValueSchema.optional(),
   })
-  .catchall(ParamBindingSchema)
+  .catchall(ValueSchema)
 export type InputStepFormField = z.infer<typeof InputStepFormFieldSchema>
 
 export const InputStepSelectRowsFieldSchema = z
   .object({
-    kind: ParamBindingSchema,
-    key: ParamBindingSchema,
-    columns: ParamBindingSchema,
-    data: ParamBindingSchema,
-    selectionMode: ParamBindingSchema,
-    allowNone: ParamBindingSchema.optional(),
+    kind: ValueSchema,
+    key: ValueSchema,
+    columns: ValueSchema,
+    data: ValueSchema,
+    selectionMode: ValueSchema,
+    allowNone: ValueSchema.optional(),
   })
-  .catchall(ParamBindingSchema)
+  .catchall(ValueSchema)
 export type InputStepSelectRowsField = z.infer<typeof InputStepSelectRowsFieldSchema>
 
 export const InputStepQuestionFieldSchema = z
   .object({
-    kind: ParamBindingSchema,
-    key: ParamBindingSchema,
-    questions: ParamBindingSchema,
+    kind: ValueSchema,
+    key: ValueSchema,
+    questions: ValueSchema,
   })
-  .catchall(ParamBindingSchema)
+  .catchall(ValueSchema)
 export type InputStepQuestionField = z.infer<typeof InputStepQuestionFieldSchema>
 
 export const InputStepFieldConfigSchema = z.union([
@@ -135,8 +134,8 @@ export type InputStepFieldConfig = z.infer<typeof InputStepFieldConfigSchema>
 
 export const InputStepConfigSchema = z.object({
   params: z.object({
-    title: ParamBindingSchema,
-    description: ParamBindingSchema.optional(),
+    title: ValueSchema,
+    description: ValueSchema.optional(),
     fields: z.array(InputStepFieldConfigSchema),
   }),
 })

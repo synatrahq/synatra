@@ -14,7 +14,7 @@ import {
   type RecipeExecutionContext,
   type NormalizedStep,
 } from "../recipe-execute"
-import type { ParamBinding } from "../types"
+import type { Value } from "../types"
 
 describe("getValueByPath", () => {
   test("returns whole object for empty or undefined path", () => {
@@ -63,27 +63,27 @@ describe("resolveBinding", () => {
   }
 
   test("resolves literal binding", () => {
-    const binding: ParamBinding = { type: "literal", value: 42 }
+    const binding: Value = { type: "literal", value: 42 }
     expect(resolveBinding(binding, context)).toBe(42)
   })
 
   test("resolves input ref", () => {
-    const binding: ParamBinding = { type: "ref", scope: "input", key: "userId" }
+    const binding: Value = { type: "ref", scope: "input", key: "userId" }
     expect(resolveBinding(binding, context)).toBe("123")
   })
 
   test("resolves step ref without path", () => {
-    const binding: ParamBinding = { type: "ref", scope: "step", key: "step_1" }
+    const binding: Value = { type: "ref", scope: "step", key: "step_1" }
     expect(resolveBinding(binding, context)).toBe("processed")
   })
 
   test("resolves step ref with path", () => {
-    const binding: ParamBinding = { type: "ref", scope: "step", key: "step_0", path: ["data", 0, "email"] }
+    const binding: Value = { type: "ref", scope: "step", key: "step_0", path: ["data", 0, "email"] }
     expect(resolveBinding(binding, context)).toBe("a@test.com")
   })
 
   test("resolves template binding", () => {
-    const binding: ParamBinding = {
+    const binding: Value = {
       type: "template",
       parts: [
         "Hello ",
@@ -96,7 +96,7 @@ describe("resolveBinding", () => {
   })
 
   test("resolves object binding", () => {
-    const binding: ParamBinding = {
+    const binding: Value = {
       type: "object",
       entries: {
         user: { type: "ref", scope: "input", key: "name" },
@@ -110,7 +110,7 @@ describe("resolveBinding", () => {
   })
 
   test("resolves array binding", () => {
-    const binding: ParamBinding = {
+    const binding: Value = {
       type: "array",
       items: [
         { type: "ref", scope: "input", key: "userId" },
@@ -128,7 +128,7 @@ describe("resolveBinding with cast (as)", () => {
       results: {},
       resolvedParams: {},
     }
-    const binding: ParamBinding = { type: "ref", scope: "input", key: "count", as: "number" }
+    const binding: Value = { type: "ref", scope: "input", key: "count", as: "number" }
     expect(resolveBinding(binding, context)).toBe(42)
   })
 
@@ -138,7 +138,7 @@ describe("resolveBinding with cast (as)", () => {
       results: {},
       resolvedParams: {},
     }
-    const binding: ParamBinding = { type: "ref", scope: "input", key: "price", as: "number" }
+    const binding: Value = { type: "ref", scope: "input", key: "price", as: "number" }
     expect(resolveBinding(binding, context)).toBe(19.99)
   })
 
@@ -148,7 +148,7 @@ describe("resolveBinding with cast (as)", () => {
       results: {},
       resolvedParams: {},
     }
-    const binding: ParamBinding = { type: "ref", scope: "input", key: "value", as: "number" }
+    const binding: Value = { type: "ref", scope: "input", key: "value", as: "number" }
     expect(resolveBinding(binding, context)).toBeUndefined()
   })
 
@@ -158,7 +158,7 @@ describe("resolveBinding with cast (as)", () => {
       results: {},
       resolvedParams: {},
     }
-    const binding: ParamBinding = { type: "ref", scope: "input", key: "value", as: "number" }
+    const binding: Value = { type: "ref", scope: "input", key: "value", as: "number" }
     expect(resolveBinding(binding, context)).toBeUndefined()
   })
 
@@ -168,7 +168,7 @@ describe("resolveBinding with cast (as)", () => {
       results: {},
       resolvedParams: {},
     }
-    const binding: ParamBinding = { type: "ref", scope: "input", key: "flag", as: "boolean" }
+    const binding: Value = { type: "ref", scope: "input", key: "flag", as: "boolean" }
     expect(resolveBinding(binding, context)).toBe(true)
   })
 
@@ -178,7 +178,7 @@ describe("resolveBinding with cast (as)", () => {
       results: {},
       resolvedParams: {},
     }
-    const binding: ParamBinding = { type: "ref", scope: "input", key: "flag", as: "boolean" }
+    const binding: Value = { type: "ref", scope: "input", key: "flag", as: "boolean" }
     expect(resolveBinding(binding, context)).toBe(false)
   })
 
@@ -198,7 +198,7 @@ describe("resolveBinding with cast (as)", () => {
       results: {},
       resolvedParams: {},
     }
-    const binding: ParamBinding = { type: "ref", scope: "input", key: "value", as: "boolean" }
+    const binding: Value = { type: "ref", scope: "input", key: "value", as: "boolean" }
     expect(resolveBinding(binding, context)).toBeUndefined()
   })
 

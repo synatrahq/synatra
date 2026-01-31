@@ -1,5 +1,5 @@
 import type {
-  ParamBinding,
+  Value,
   PendingInputConfig,
   RecipeOutput,
   QueryStepConfig,
@@ -95,7 +95,7 @@ function castBindingValue(value: unknown, target: BindingCast): unknown {
   }
 }
 
-export function resolveBinding(binding: ParamBinding, context: RecipeExecutionContext): unknown {
+export function resolveBinding(binding: Value, context: RecipeExecutionContext): unknown {
   switch (binding.type) {
     case "literal":
       return binding.value
@@ -157,7 +157,7 @@ export function buildPendingInputConfig(
     const resolved = Object.fromEntries(
       Object.entries(field)
         .filter(([, value]) => value !== undefined)
-        .map(([key, value]) => [key, resolveBinding(value as ParamBinding, context)]),
+        .map(([key, value]) => [key, resolveBinding(value as Value, context)]),
     )
     const kind = resolved.kind
     if (kind !== "select_rows" && kind !== "form" && kind !== "question") {
