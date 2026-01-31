@@ -132,7 +132,14 @@ export function buildPendingInputConfig(
     if (field.kind === "select_rows") {
       return {
         ...field,
-        data: resolveBinding(field.dataBinding, context) as Array<Record<string, unknown>>,
+        data: resolveBinding(field.data, context) as Array<Record<string, unknown>>,
+      }
+    }
+    if (field.kind === "form" && field.defaults) {
+      const resolvedDefaults = resolveBinding(field.defaults, context) as Record<string, unknown>
+      return {
+        ...field,
+        defaults: resolvedDefaults,
       }
     }
     return field

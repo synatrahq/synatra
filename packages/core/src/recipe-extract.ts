@@ -8,6 +8,7 @@ import { AgentReleaseTable, AgentWorkingCopyTable } from "./schema/agent.sql"
 import { createError } from "@synatra/util/error"
 import { principal } from "./principal"
 import { COMPUTE_TOOLS, OUTPUT_TOOLS, HUMAN_TOOLS } from "./system-tools"
+import { buildExtractionPromptV2, buildRetryPrompt } from "./recipe-extract-prompt"
 import type {
   RecipeInput,
   RecipeOutput,
@@ -233,7 +234,10 @@ export function validateRecipeSteps(
     if (step.type === "input") {
       for (const field of step.config.fields) {
         if (field.kind === "select_rows") {
-          validateBinding(field.dataBinding, step.stepKey, `fields.${field.key}.dataBinding`)
+          validateBinding(field.data, step.stepKey, `fields.${field.key}.data`)
+        }
+        if (field.kind === "form" && field.defaults) {
+          validateBinding(field.defaults, step.stepKey, `fields.${field.key}.defaults`)
         }
       }
     }
@@ -517,6 +521,19 @@ Remember: This conversation is ONE example. The recipe should work when the unde
 `
 
 export function buildRecipeExtractionPrompt(context: ConversationContext): string {
+  return buildExtractionPromptV2(
+    context.agentTools,
+    context.messages.map((m) => ({
+      type: m.type,
+      content: m.content,
+      toolCall: m.toolCall,
+      toolResult: m.toolResult,
+    })),
+    sampleValue,
+  )
+}
+
+export function buildRecipeExtractionPromptLegacy(context: ConversationContext): string {
   const toolSchemas = formatToolSchemas(context.agentTools)
   const conversationLog = formatConversationForLLM(context)
   return `${RECIPE_EXTRACTION_PROMPT}
@@ -532,6 +549,10 @@ ${conversationLog}
 ---
 
 Extract the recipe from the above conversation log. Return only the JSON object.`
+}
+
+export function buildValidationRetryPrompt(errors: string[]): string {
+  return buildRetryPrompt(errors)
 }
 
 export function toSnakeCase(str: string): string {
@@ -608,22 +629,43 @@ function convertRawStepToExtractedStep(
         : []
 
     const convertedFields = fields.map((f) => {
-      if (f.kind === "select_rows" && f.data) {
-        const dataStepId = (normalizedParams.fields as ParamBinding & { type: "static" })?.value
+      if (f.kind === "select_rows") {
+        const dataValue = f.data ?? f.dataBinding
+        const isBinding =
+          dataValue &&
+          typeof dataValue === "object" &&
+          "type" in dataValue &&
+          ["static", "input", "step", "template", "object", "array"].includes((dataValue as { type: string }).type)
+        const data: ParamBinding = isBinding
+          ? updateBindingRef(dataValue as ParamBinding, keyMap)
+          : { type: "static" as const, value: dataValue ?? [] }
+
         return {
           kind: "select_rows" as const,
           key: String(f.key ?? "selection"),
           columns: (f.columns as Array<{ key: string; label: string }>) ?? [],
-          dataBinding: { type: "static" as const, value: f.data },
+          data,
           selectionMode: (f.selectionMode as "single" | "multiple") ?? "multiple",
         }
       }
       if (f.kind === "form") {
+        const defaultsValue = f.defaults ?? f.defaultsBinding
+        const isBinding =
+          defaultsValue &&
+          typeof defaultsValue === "object" &&
+          "type" in defaultsValue &&
+          ["static", "input", "step", "template", "object", "array"].includes((defaultsValue as { type: string }).type)
+        const defaults: ParamBinding | undefined = isBinding
+          ? updateBindingRef(defaultsValue as ParamBinding, keyMap)
+          : defaultsValue
+            ? { type: "static" as const, value: defaultsValue }
+            : undefined
+
         return {
           kind: "form" as const,
           key: String(f.key ?? "form"),
           schema: (f.schema as Record<string, unknown>) ?? {},
-          defaults: f.defaults as Record<string, unknown> | undefined,
+          defaults,
         }
       }
       if (f.kind === "question") {

@@ -5,6 +5,7 @@ import { generateText, tool, jsonSchema, hasToolCall, type JSONSchema7, type Mod
 import {
   loadConversationContext,
   buildRecipeExtractionPrompt,
+  buildValidationRetryPrompt,
   validateRecipeSteps,
   normalizeStepKeys,
   type RawStep,
@@ -170,6 +171,7 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
     if (normalizedSteps.length === 0 || allErrors.length > 0) {
       const errors = normalizedSteps.length === 0 ? ["Recipe must have at least one step"] : allErrors
       if (retryCount < MAX_RETRIES) {
+        const retryPrompt = buildValidationRetryPrompt(errors)
         messages.push(
           {
             role: "assistant",
@@ -191,7 +193,7 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
                 toolName: "submit_recipe",
                 output: {
                   type: "error-text" as const,
-                  value: `Validation failed: ${errors.join(", ")}. Please fix and resubmit.`,
+                  value: retryPrompt,
                 },
               },
             ],

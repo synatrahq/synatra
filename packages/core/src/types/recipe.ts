@@ -105,7 +105,7 @@ export const InputStepFormFieldSchema = z.object({
   kind: z.literal("form"),
   key: z.string(),
   schema: z.record(z.string(), z.unknown()),
-  defaults: z.record(z.string(), z.unknown()).optional(),
+  defaults: ParamBindingSchema.optional(),
 })
 export type InputStepFormField = z.infer<typeof InputStepFormFieldSchema>
 
@@ -113,7 +113,7 @@ export const InputStepSelectRowsFieldSchema = z.object({
   kind: z.literal("select_rows"),
   key: z.string(),
   columns: z.array(z.object({ key: z.string(), label: z.string() })),
-  dataBinding: ParamBindingSchema,
+  data: ParamBindingSchema,
   selectionMode: z.enum(["single", "multiple"]),
   allowNone: z.boolean().optional(),
 })

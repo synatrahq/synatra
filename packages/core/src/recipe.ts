@@ -65,7 +65,8 @@ function collectStepRefs(config: RecipeStepConfig): string[] {
   if ("binding" in config) refs.push(...extractBindingRefs(config.binding))
   if ("fields" in config) {
     for (const field of config.fields) {
-      if (field.kind === "select_rows") refs.push(...extractBindingRefs(field.dataBinding))
+      if (field.kind === "select_rows") refs.push(...extractBindingRefs(field.data))
+      if (field.kind === "form" && field.defaults) refs.push(...extractBindingRefs(field.defaults))
     }
   }
   return refs

@@ -310,13 +310,13 @@ function FieldContent(props: {
       <Match when={props.field.kind === "form"}>
         <FormField
           config={props.field as HumanRequestFormConfig & { key: string }}
-          value={
-            (props.value as Record<string, unknown>) ??
-            extractDefaults(
-              (props.field as HumanRequestFormConfig).schema as JSONSchema,
-              ((props.field as HumanRequestFormConfig).schema as JSONSchema)?.required ?? [],
-            )
-          }
+          value={(() => {
+            if (props.value) return props.value as Record<string, unknown>
+            const formConfig = props.field as HumanRequestFormConfig
+            const schema = formConfig.schema as JSONSchema
+            const schemaDefaults = extractDefaults(schema, schema?.required ?? [])
+            return { ...schemaDefaults, ...formConfig.defaults }
+          })()}
           onChange={(v) => props.onChange(v)}
           touched={props.touched ?? {}}
           onBlur={(name) => props.onBlur?.(name)}
@@ -347,18 +347,30 @@ function PendingInputForm(props: {
 }) {
   const fields = () => props.config.fields
 
-  const initResponses = () =>
+  const buildInitialResponses = () =>
     Object.fromEntries(
       fields()
         .filter((f) => f.kind === "form")
         .map((f) => {
-          const schema = (f as HumanRequestFormConfig).schema as JSONSchema
-          return [f.key, extractDefaults(schema, schema?.required ?? [])]
+          const formConfig = f as HumanRequestFormConfig
+          const schema = formConfig.schema as JSONSchema
+          const schemaDefaults = extractDefaults(schema, schema?.required ?? [])
+          return [f.key, { ...schemaDefaults, ...formConfig.defaults }]
         }),
     )
 
-  const [responses, setResponses] = createSignal<Record<string, unknown>>(initResponses())
+  const [responses, setResponses] = createSignal<Record<string, unknown>>(buildInitialResponses())
   const [touched, setTouched] = createSignal<Record<string, Record<string, boolean>>>({})
+
+  createEffect(
+    on(
+      () => props.config,
+      () => {
+        setResponses(buildInitialResponses())
+        setTouched({})
+      },
+    ),
+  )
 
   const handleFieldChange = (key: string, value: unknown) => {
     setResponses((prev) => ({ ...prev, [key]: value }))
