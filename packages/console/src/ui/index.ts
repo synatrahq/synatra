@@ -46,6 +46,7 @@ export { Skeleton, SkeletonText, SkeletonAvatar, SkeletonCard } from "./skeleton
 
 export { SchemaEditor, TopLevelSchemaEditor, parseRef } from "./schema-editor"
 export { SchemaTypeDisplay } from "./schema-type-display"
+export { FunctionSignature } from "./function-signature"
 
 export {
   JSONSchemaField,

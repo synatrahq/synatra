@@ -35,7 +35,7 @@ import {
   ModalBody,
   ModalFooter,
   CodeEditor,
-  SchemaTypeDisplay,
+  FunctionSignature,
   type SelectOption,
   type JSONSchema,
 } from "../../ui"
@@ -294,30 +294,18 @@ function StepItem(props: {
               const codeConf = isCodeStep() ? (props.step.config as CodeStepConfig) : null
               const paramSchema = (queryConf?.paramSchema ?? codeConf?.paramSchema) as JSONSchema | undefined
               const returnSchema = (queryConf?.returnSchema ?? codeConf?.returnSchema) as JSONSchema | undefined
-              const hasParamSchema = paramSchema && Object.keys(paramSchema).length > 0
-              const hasReturnSchema = returnSchema && Object.keys(returnSchema).length > 0
               return (
                 <>
                   <div class="border-b border-border/50 px-3 py-2 font-code text-xs">
-                    <span class="text-syntax-keyword">async function</span>{" "}
-                    <span class="text-syntax-function">{props.step.stepKey}</span>
-                    <span class="text-syntax-punctuation">(</span>
-                    <Show when={hasBinding()}>
-                      <span class="text-syntax-variable">params</span>
-                      <span class="text-syntax-punctuation">: </span>
-                      <Show when={hasParamSchema} fallback={<span class="text-syntax-type">unknown</span>}>
-                        <SchemaTypeDisplay schema={paramSchema!} />
-                      </Show>
-                      <span class="text-syntax-punctuation">, </span>
-                    </Show>
-                    <span class="text-syntax-variable">context</span>
-                    <span class="text-syntax-punctuation">): </span>
-                    <span class="text-syntax-type">Promise&lt;</span>
-                    <Show when={hasReturnSchema} fallback={<span class="text-syntax-type">unknown</span>}>
-                      <SchemaTypeDisplay schema={returnSchema!} />
-                    </Show>
-                    <span class="text-syntax-type">&gt;</span>
-                    <span class="text-syntax-punctuation">{" {"}</span>
+                    <FunctionSignature
+                      name={props.step.stepKey}
+                      hasParams={hasBinding()}
+                      paramSchema={paramSchema}
+                      returnSchema={returnSchema}
+                      wrapReturnInPromise
+                      defaultParamType="unknown"
+                      defaultReturnType="unknown"
+                    />
                   </div>
                   <div class="max-h-48 overflow-y-auto">
                     <CodeEditor value={stepCode() ?? ""} language="javascript" readonly />

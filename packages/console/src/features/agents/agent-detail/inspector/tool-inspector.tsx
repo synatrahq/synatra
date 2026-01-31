@@ -7,7 +7,7 @@ import {
   CodeEditor,
   Checkbox,
   TopLevelSchemaEditor,
-  SchemaTypeDisplay,
+  FunctionSignature,
   FormField,
   CollapsibleSection,
 } from "../../../../ui"
@@ -385,23 +385,14 @@ export function ToolInspector(props: {
       <CollapsibleSection title="Code">
         <div class="overflow-hidden rounded-md bg-surface-muted font-code text-xs">
           <div class="border-b border-border/50 px-3 py-2">
-            <span class="text-syntax-keyword">async function</span>{" "}
-            <span class="text-syntax-function">{props.tool.name || "tool"}</span>
-            <span class="text-syntax-punctuation">(</span>
-            <Show when={hasParams()}>
-              <span class="text-syntax-variable">params</span>
-              <span class="text-syntax-punctuation">: </span>
-              <SchemaTypeDisplay schema={props.tool.params} />
-              <span class="text-syntax-punctuation">, </span>
-            </Show>
-            <span class="text-syntax-variable">context</span>
-            <span class="text-syntax-punctuation">: </span>
-            <ContextTypeDisplay resources={resources()} />
-            <span class="text-syntax-punctuation">): </span>
-            <Show when={hasReturns()} fallback={<span class="text-syntax-type">void</span>}>
-              <SchemaTypeDisplay schema={props.tool.returns} />
-            </Show>
-            <span class="text-syntax-punctuation">{" {"}</span>
+            <FunctionSignature
+              name={props.tool.name || "tool"}
+              hasParams={hasParams()}
+              paramSchema={hasParams() ? props.tool.params : undefined}
+              returnSchema={hasReturns() ? props.tool.returns : undefined}
+              contextType={<ContextTypeDisplay resources={resources()} />}
+              defaultReturnType="void"
+            />
           </div>
           <CodeEditor
             value={props.tool.code}
