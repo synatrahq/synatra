@@ -42,7 +42,7 @@ import { EntityIcon, OutputItemRenderer } from "../../components"
 import { FormField, extractDefaults, validateFieldValue } from "../../components/human-request/form-field"
 import { QuestionField } from "../../components/human-request/question-field"
 import { SelectRowsField } from "../../components/human-request/select-rows-field"
-import type { Recipe, RecipeExecution, Agents, Environments, OutputItem } from "../../app/api"
+import type { Recipe, RecipeExecution, RecipePendingExecution, Agents, Environments, OutputItem } from "../../app/api"
 import type {
   HumanRequestFieldConfig,
   HumanRequestFormConfig,
@@ -803,7 +803,7 @@ function EmptyState() {
 
 type RecipeDetailProps = {
   recipe: Recipe | null
-  pendingExecution: RecipeExecution | null
+  pendingExecution: RecipePendingExecution
   lastResult: LastResult | null
   agents: Agents
   environments: Environments

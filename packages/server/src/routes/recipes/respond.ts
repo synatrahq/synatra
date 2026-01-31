@@ -66,8 +66,6 @@ export const respond = new Hono().post(
     const stepResults = { ...(execution.results as Record<string, unknown>) }
     stepResults[execution.currentStepKey] = response
 
-    await updateRecipeExecution({ id: executionId, pendingInputConfig: null })
-
     const result = await executeStepLoop(
       sortedSteps,
       currentStepIndex + 1,

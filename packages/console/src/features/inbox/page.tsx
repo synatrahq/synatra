@@ -28,7 +28,7 @@ import type {
   RecipeExtractResult,
   Recipes,
   Recipe,
-  RecipeExecution,
+  RecipePendingExecution,
   Agents,
   Environments,
 } from "../../app/api"
@@ -415,7 +415,7 @@ export default function InboxPage() {
     const id = selectedRecipeId()
     return {
       queryKey: ["pending-execution", id ?? "", activeOrg()?.id],
-      queryFn: async (): Promise<RecipeExecution | null> => {
+      queryFn: async (): Promise<RecipePendingExecution> => {
         if (!id) return null
         const res = await api.api.recipes[":id"]["pending-execution"].$get({ param: { id } })
         return res.json()
