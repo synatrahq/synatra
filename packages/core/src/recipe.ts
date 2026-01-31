@@ -64,6 +64,15 @@ export function extractBindingRefs(binding: Value): string[] {
 
 export function collectStepRefs(config: RecipeStepConfig): string[] {
   const refs: string[] = []
+  if ("code" in config && config.code) {
+    refs.push(...extractBindingRefs(config.code as Value))
+  }
+  if ("timeoutMs" in config && config.timeoutMs) {
+    refs.push(...extractBindingRefs(config.timeoutMs as Value))
+  }
+  if ("name" in config && config.name) {
+    refs.push(...extractBindingRefs(config.name as Value))
+  }
   if ("params" in config && config.params && typeof config.params === "object") {
     if ("type" in config.params) {
       refs.push(...extractBindingRefs(config.params as Value))
