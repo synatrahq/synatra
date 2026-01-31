@@ -63,11 +63,11 @@ export function extractBindingRefs(binding: Value): string[] {
     if (b.type === "ref" && b.scope === "step") refs.push(b.key)
     if (b.type === "template") {
       for (const part of b.parts) {
-        if (typeof part !== "string") walk(part)
+        if (part.type === "expr") walk(part.value)
       }
     }
     if (b.type === "object") Object.values(b.entries).forEach(walk)
-    if (b.type === "array") walk(b.items)
+    if (b.type === "array") b.items.forEach(walk)
   }
   walk(binding)
   return [...new Set(refs)]

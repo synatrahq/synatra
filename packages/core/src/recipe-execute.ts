@@ -107,8 +107,8 @@ export function resolveBinding(binding: Value, context: RecipeExecutionContext):
     case "template": {
       return binding.parts
         .map((part) => {
-          if (typeof part === "string") return part
-          const value = resolveBinding(part, context)
+          if (part.type === "text") return part.value
+          const value = resolveBinding(part.value, context)
           return value === null || value === undefined ? "" : String(value)
         })
         .join("")
@@ -116,7 +116,7 @@ export function resolveBinding(binding: Value, context: RecipeExecutionContext):
     case "object":
       return Object.fromEntries(Object.entries(binding.entries).map(([key, b]) => [key, resolveBinding(b, context)]))
     case "array":
-      return [resolveBinding(binding.items, context)]
+      return binding.items.map((item) => resolveBinding(item, context))
     default:
       return undefined
   }

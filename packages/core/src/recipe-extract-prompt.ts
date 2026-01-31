@@ -64,13 +64,13 @@ Example map: { "type": "ref", "scope": "step", "key": "fetch_users", "path": ["d
 Optional cast: "as": "string" | "number" | "boolean" | "object" | "array"
 
 template - String interpolation (always returns string)
-Example: { "type": "template", "parts": ["User ", { "type": "ref", "scope": "step", "key": "fetch_users", "path": ["data", 0, "name"] }, " (ID: ", { "type": "ref", "scope": "step", "key": "fetch_users", "path": ["data", 0, "id"] }, ")"] }
+Example: { "type": "template", "parts": [{ "type": "text", "value": "User " }, { "type": "expr", "value": { "type": "ref", "scope": "step", "key": "fetch_users", "path": ["data", 0, "name"] } }, { "type": "text", "value": " (ID: " }, { "type": "expr", "value": { "type": "ref", "scope": "step", "key": "fetch_users", "path": ["data", 0, "id"] } }, { "type": "text", "value": ")" }] }
 
 object - Construct object from multiple bindings
 Example: { "type": "object", "entries": { "userId": ..., "date": ... } }
 
-array - Construct array from a binding
-Example: { "type": "array", "items": { "type": "ref", "scope": "step", "key": "fetch_users", "path": ["data", 0, "id"] } }
+array - Construct array from bindings
+Example: { "type": "array", "items": [{ "type": "ref", "scope": "step", "key": "fetch_users", "path": ["data", 0, "id"] }, { "type": "literal", "value": "fallback" }] }
 </binding_reference>
 
 <extraction_rules>
@@ -368,12 +368,12 @@ Recipe:
         "content": {
           "type": "template",
           "parts": [
-            "## ",
-            { "type": "ref", "scope": "step", "key": "fetch_stats", "path": ["name"] },
-            "\n\n**Orders:** ",
-            { "type": "ref", "scope": "step", "key": "fetch_stats", "path": ["orders"] },
-            "\n**Revenue:** $",
-            { "type": "ref", "scope": "step", "key": "fetch_stats", "path": ["revenue"] }
+            { "type": "text", "value": "## " },
+            { "type": "expr", "value": { "type": "ref", "scope": "step", "key": "fetch_stats", "path": ["name"] } },
+            { "type": "text", "value": "\n\n**Orders:** " },
+            { "type": "expr", "value": { "type": "ref", "scope": "step", "key": "fetch_stats", "path": ["orders"] } },
+            { "type": "text", "value": "\n**Revenue:** $" },
+            { "type": "expr", "value": { "type": "ref", "scope": "step", "key": "fetch_stats", "path": ["revenue"] } }
           ]
         }
       }
@@ -382,7 +382,7 @@ Recipe:
 }
 
 Key points:
-- template.parts alternates strings and ref bindings
+- template.parts uses text/expr parts
 - Each ref extracts a specific field via path
 </examples>
 

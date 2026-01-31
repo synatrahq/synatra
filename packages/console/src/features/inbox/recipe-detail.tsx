@@ -140,11 +140,13 @@ function resolveBinding(binding: Value): unknown {
       return `${base}${formatPath(binding.path)}`
     }
     case "template":
-      return binding.parts.map((part) => (typeof part === "string" ? part : `{{ ${formatBindingRef(part)} }}`)).join("")
+      return binding.parts
+        .map((part) => (part.type === "text" ? part.value : `{{ ${formatBindingRef(part.value)} }}`))
+        .join("")
     case "object":
       return Object.fromEntries(Object.entries(binding.entries).map(([k, v]) => [k, resolveBinding(v)]))
     case "array":
-      return [resolveBinding(binding.items)]
+      return binding.items.map((item) => resolveBinding(item))
   }
 }
 

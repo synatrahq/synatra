@@ -86,10 +86,10 @@ describe("resolveBinding", () => {
     const binding: Value = {
       type: "template",
       parts: [
-        "Hello ",
-        { type: "ref", scope: "input", key: "name" },
-        ", your ID is ",
-        { type: "ref", scope: "input", key: "userId" },
+        { type: "text", value: "Hello " },
+        { type: "expr", value: { type: "ref", scope: "input", key: "name" } },
+        { type: "text", value: ", your ID is " },
+        { type: "expr", value: { type: "ref", scope: "input", key: "userId" } },
       ],
     }
     expect(resolveBinding(binding, context)).toBe("Hello Alice, your ID is 123")
@@ -112,9 +112,12 @@ describe("resolveBinding", () => {
   test("resolves array binding", () => {
     const binding: Value = {
       type: "array",
-      items: { type: "ref", scope: "input", key: "userId" },
+      items: [
+        { type: "ref", scope: "input", key: "userId" },
+        { type: "literal", value: "static" },
+      ],
     }
-    expect(resolveBinding(binding, context)).toEqual(["123"])
+    expect(resolveBinding(binding, context)).toEqual(["123", "static"])
   })
 })
 

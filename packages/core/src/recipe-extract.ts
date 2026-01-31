@@ -184,8 +184,8 @@ export function validateRecipeSteps(
         break
       case "template":
         for (const [index, part] of binding.parts.entries()) {
-          if (typeof part !== "string") {
-            validateBinding(part, stepKey, `${paramPath}.parts[${index}]`)
+          if (part.type === "expr") {
+            validateBinding(part.value, stepKey, `${paramPath}.parts[${index}].value`)
           }
         }
         break
@@ -195,7 +195,9 @@ export function validateRecipeSteps(
         }
         break
       case "array":
-        validateBinding(binding.items, stepKey, `${paramPath}.items`)
+        binding.items.forEach((item, index) => {
+          validateBinding(item, stepKey, `${paramPath}.items[${index}]`)
+        })
         break
     }
   }
@@ -535,14 +537,16 @@ export function updateBindingRef(binding: Value, idMap: Map<string, string>): Va
   if (binding.type === "template") {
     return {
       ...binding,
-      parts: binding.parts.map((part) => (typeof part === "string" ? part : updateBindingRef(part, idMap))),
+      parts: binding.parts.map((part) =>
+        part.type === "text" ? part : { ...part, value: updateBindingRef(part.value, idMap) },
+      ),
     }
   }
   if (binding.type === "object") {
     return { ...binding, entries: updateValueRefs(binding.entries, idMap) }
   }
   if (binding.type === "array") {
-    return { ...binding, items: updateBindingRef(binding.items, idMap) }
+    return { ...binding, items: binding.items.map((item) => updateBindingRef(item, idMap)) }
   }
   return binding
 }

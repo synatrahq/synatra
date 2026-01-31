@@ -19,10 +19,23 @@ const RefBindingSchema = z.object({
   as: z.enum(["string", "number", "boolean", "object", "array"]).optional(),
 })
 
+const TemplatePartSchema: z.ZodType<TemplatePart> = z.lazy(() =>
+  z.union([
+    z.object({
+      type: z.literal("text"),
+      value: z.string(),
+    }),
+    z.object({
+      type: z.literal("expr"),
+      value: ValueSchema,
+    }),
+  ]),
+)
+
 const TemplateBindingSchema: z.ZodType<TemplateBinding> = z.lazy(() =>
   z.object({
     type: z.literal("template"),
-    parts: z.array(z.union([z.string(), ValueSchema])),
+    parts: z.array(TemplatePartSchema),
   }),
 )
 
@@ -36,7 +49,7 @@ const ObjectBindingSchema: z.ZodType<ObjectBinding> = z.lazy(() =>
 const ArrayBindingSchema: z.ZodType<ArrayBinding> = z.lazy(() =>
   z.object({
     type: z.literal("array"),
-    items: ValueSchema,
+    items: z.array(ValueSchema),
   }),
 )
 
@@ -50,9 +63,19 @@ export const ValueSchema: z.ZodType<Value> = z.union([
 
 export type LiteralBinding = z.infer<typeof LiteralBindingSchema>
 export type RefBinding = z.infer<typeof RefBindingSchema>
+export type TemplatePart =
+  | {
+      type: "text"
+      value: string
+    }
+  | {
+      type: "expr"
+      value: Value
+    }
+
 export type TemplateBinding = {
   type: "template"
-  parts: Array<string | Value>
+  parts: TemplatePart[]
 }
 export type ObjectBinding = {
   type: "object"
@@ -60,7 +83,7 @@ export type ObjectBinding = {
 }
 export type ArrayBinding = {
   type: "array"
-  items: Value
+  items: Value[]
 }
 
 export type Value = LiteralBinding | RefBinding | TemplateBinding | ObjectBinding | ArrayBinding
