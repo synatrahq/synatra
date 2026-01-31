@@ -38,43 +38,39 @@ Data flows between steps through bindings. This is the core mechanism:
 Every parameter value comes from a binding. Choose the right type:
 
 ### Decision Tree
-\`\`\`
 Is the value always constant?
-├─ YES → static
-└─ NO → Should user provide it at start?
-         ├─ YES → input (define in inputs array first!)
-         └─ NO → From previous step?
-                  ├─ YES → Can get with simple path?
-                  │         ├─ YES → step (with optional path)
-                  │         └─ NO (needs logic) → Create code step, then step binding
-                  └─ NO → Combining multiple values?
-                           ├─ Into string → template
-                           ├─ Into object → object
-                           └─ Into array → array
-\`\`\`
+- YES → literal
+- NO → Should user provide it at start?
+  - YES → ref (scope=input) (define in inputs array first)
+  - NO → From previous step?
+    - YES → Can get with simple path?
+      - YES → ref (scope=step, with optional path)
+      - NO (needs logic) → Create code step, then ref to its output
+    - NO → Combining multiple values?
+      - Into string → template
+      - Into object → object
+      - Into array → array
 
 ### Binding Formats
 
-**static** - Constant values
-\`{ "type": "static", "value": "SELECT * FROM users" }\`
+literal - Constant values
+Example: { "type": "literal", "value": "SELECT * FROM users" }
 
-**input** - User provides at recipe start
-\`{ "type": "input", "inputKey": "customer_id" }\`
-IMPORTANT: Must define input in "inputs" array first!
+ref - Reference input or step output
+Example input: { "type": "ref", "scope": "input", "key": "customer_id" }
+Example step: { "type": "ref", "scope": "step", "key": "fetch_users" }
+Example path: { "type": "ref", "scope": "step", "key": "fetch_users", "path": ["data", 0, "id"] }
+Example map: { "type": "ref", "scope": "step", "key": "fetch_users", "path": ["data", "*", "email"] }
+Optional cast: "as": "string" | "number" | "boolean" | "object" | "array"
 
-**step** - Reference previous step result
-\`{ "type": "step", "stepKey": "fetch_users" }\` - whole result
-\`{ "type": "step", "stepKey": "fetch_users", "path": "$.data[0].id" }\` - nested value
-\`{ "type": "step", "stepKey": "fetch_users", "path": "$[*].email" }\` - map array
+template - String interpolation (always returns string)
+Example: { "type": "template", "parts": ["User ", { "type": "ref", "scope": "step", "key": "fetch_users", "path": ["data", 0, "name"] }, " (ID: ", { "type": "ref", "scope": "step", "key": "fetch_users", "path": ["data", 0, "id"] }, ")"] }
 
-**template** - String interpolation
-\`{ "type": "template", "template": "User {{name}} (ID: {{id}})", "variables": { "name": ..., "id": ... } }\`
+object - Construct object from multiple bindings
+Example: { "type": "object", "entries": { "userId": ..., "date": ... } }
 
-**object** - Construct object from multiple bindings
-\`{ "type": "object", "entries": { "userId": ..., "date": ... } }\`
-
-**array** - Construct array from multiple bindings
-\`{ "type": "array", "items": [..., ...] }\`
+array - Construct array from multiple bindings
+Example: { "type": "array", "items": [..., ...] }
 </binding_reference>
 
 <extraction_rules>
@@ -83,19 +79,19 @@ IMPORTANT: Must define input in "inputs" array first!
 ### Rule 1: Parameterize Magic Values
 Concrete values from conversation (IDs, names, dates, thresholds) → become inputs
 
-[BAD] BAD: \`{ "type": "static", "value": "ABC123" }\`
-[GOOD] GOOD: Define input \`customer_id\`, use \`{ "type": "input", "inputKey": "customer_id" }\`
+BAD: { "type": "literal", "value": "ABC123" }
+GOOD: Define input customer_id, use { "type": "ref", "scope": "input", "key": "customer_id" }
 
 ### Rule 2: Never Hardcode Tool Results
 If data came from a tool, reference it dynamically.
 
-[BAD] BAD: \`{ "type": "static", "value": [{"id": 1}, {"id": 2}] }\`
-[GOOD] GOOD: \`{ "type": "step", "stepKey": "fetch_data" }\`
+BAD: { "type": "literal", "value": [{"id": 1}, {"id": 2}] }
+GOOD: { "type": "ref", "scope": "step", "key": "fetch_data" }
 
 ### Rule 3: Every Step Must Be Consumed
 A step is valid only if:
-- Its result is used by another step via step binding, OR
-- It's an output step (displays to user)
+- Its result is used by another step via ref, OR
+- It is an output step (displays to user)
 
 IMPORTANT: Remove exploration/debugging steps that aren't part of the final workflow.
 
@@ -103,17 +99,16 @@ IMPORTANT: Remove exploration/debugging steps that aren't part of the final work
 Output steps should show everything the tool returns, not just what was shown in conversation.
 
 ### Rule 5: code_execute Input Must Be Object
-Always wrap arrays in object binding:
-\`\`\`json
+Always wrap arrays in object binding.
+Example:
 {
   "input": {
     "type": "object",
     "entries": {
-      "items": { "type": "step", "stepKey": "fetch_items" }
+      "items": { "type": "ref", "scope": "step", "key": "fetch_items" }
     }
   }
 }
-\`\`\`
 
 ### Rule 6: Step Order = Dependency Order
 Steps execute in array order. Only reference EARLIER steps.
@@ -122,27 +117,25 @@ Steps execute in array order. Only reference EARLIER steps.
 human_request with kind=confirm is for one-time decisions, not reusable recipes.
 
 ### Rule 8: select_rows Data Binding
-When using human_request with select_rows, "data" must be a ParamBinding:
-\`\`\`json
+When using human_request with select_rows, data must be a ParamBinding.
+Example:
 {
   "kind": "select_rows",
   "key": "selected",
   "columns": [...],
-  "data": { "type": "step", "stepKey": "previous_step" },
+  "data": { "type": "ref", "scope": "step", "key": "previous_step" },
   "selectionMode": "multiple"
 }
-\`\`\`
 
 ### Rule 9: form Defaults Binding
-Use "defaults" with a ParamBinding to pre-fill form fields from previous step results:
-\`\`\`json
+Use defaults with a ParamBinding to pre-fill form fields from previous step results.
+Example:
 {
   "kind": "form",
   "key": "user_input",
   "schema": { "type": "object", "properties": { "name": { "type": "string" }, "email": { "type": "string" } } },
-  "defaults": { "type": "step", "stepKey": "select_user", "path": "$.responses.user.selectedRows[0]" }
+  "defaults": { "type": "ref", "scope": "step", "key": "select_user", "path": ["responses", "user", "selectedRows", 0] }
 }
-\`\`\`
 The resolved object's keys are matched to form field names automatically.
 </extraction_rules>
 
@@ -152,7 +145,6 @@ The resolved object's keys are matched to form field names automatically.
 When an input step completes, its result is stored and can be referenced by later steps.
 
 ### select_rows Result
-\`\`\`json
 {
   "responses": {
     "<field_key>": {
@@ -163,13 +155,11 @@ When an input step completes, its result is stored and can be referenced by late
     }
   }
 }
-\`\`\`
-Access pattern: \`{ "type": "step", "stepKey": "select_step", "path": "$.responses.<field_key>.selectedRows" }\`
-Single row: \`"path": "$.responses.<field_key>.selectedRows[0]"\`
-Specific field: \`"path": "$.responses.<field_key>.selectedRows[0].id"\`
+Access pattern: { "type": "ref", "scope": "step", "key": "select_step", "path": ["responses", "<field_key>", "selectedRows"] }
+Single row: "path": ["responses", "<field_key>", "selectedRows", 0]
+Specific field: "path": ["responses", "<field_key>", "selectedRows", 0, "id"]
 
 ### form Result
-\`\`\`json
 {
   "responses": {
     "<field_key>": {
@@ -180,12 +170,10 @@ Specific field: \`"path": "$.responses.<field_key>.selectedRows[0].id"\`
     }
   }
 }
-\`\`\`
-Access pattern: \`{ "type": "step", "stepKey": "form_step", "path": "$.responses.<field_key>.values" }\`
-Specific field: \`"path": "$.responses.<field_key>.values.name"\`
+Access pattern: { "type": "ref", "scope": "step", "key": "form_step", "path": ["responses", "<field_key>", "values"] }
+Specific field: "path": ["responses", "<field_key>", "values", "name"]
 
 ### question Result
-\`\`\`json
 {
   "responses": {
     "<field_key>": {
@@ -193,126 +181,29 @@ Specific field: \`"path": "$.responses.<field_key>.values.name"\`
     }
   }
 }
-\`\`\`
 </input_step_results>
 
 <thinking_process>
 ## Before Generating JSON
 
-Work through these steps mentally:
+Work through these steps:
 
-### 1. INTENT ANALYSIS
-What is the user's actual goal? Not "get customer ABC123's orders" but "analyze any customer's orders".
-Ask: What would change if they ran this with different data?
-
-### 2. MAGIC VALUE DETECTION
-List every concrete value that should become an input:
-- Customer IDs, user IDs, any identifiers
-- Date ranges, time periods
-- Thresholds, limits
-- Names, emails, specific strings
-
-For each: Is this truly variable, or a constant (like a status code)?
-
-### 3. DATA FLOW MAPPING
-Trace how data moves:
-- What does each tool return? (Look at tool_result in conversation)
-- Which fields are used downstream?
-- What transformations are needed?
-
-### 4. STEP CONSTRUCTION
-For each step:
-- What tool or operation?
-- What are the params? (with correct bindings)
-- What does it return?
-- Who consumes it?
-
-### 5. VALIDATION
-- Every step binding references an earlier step?
-- Every input binding has corresponding input definition?
-- Every non-output step is consumed somewhere?
-- No circular references?
+1. INTENT: What is the user's generalizable goal? (not "get customer ABC123" but "get any customer")
+2. MAGIC VALUES: List concrete values (IDs, names, dates) that should become inputs
+3. DATA FLOW: Trace how data moves between steps
+4. VALIDATION: Every ref binding points to an earlier step or defined input?
 </thinking_process>
 
 <examples>
-## Transformation Examples
+## Examples
 
-### Example 1: Simple Query + Display
+### Example 1: Query + Display
 
-<conversation_example>
-User: Show me all orders for customer ABC123 from January 2026
-Tool Call: get_orders { customer_id: "ABC123", date_from: "2026-01-01", date_to: "2026-01-31" }
-Tool Result: [
-  { order_id: "ord_1", amount: 100, status: "completed", created_at: "2026-01-05" },
-  { order_id: "ord_2", amount: 250, status: "pending", created_at: "2026-01-15" }
-]
-</conversation_example>
+Conversation: User asks for orders for customer ABC123
 
-<extracted_recipe>
+Recipe:
 {
-  "name": "Customer Orders Report",
-  "description": "Display orders for a customer within a date range",
-  "inputs": [
-    { "key": "customer_id", "label": "Customer ID", "type": "string", "required": true },
-    { "key": "date_from", "label": "Start Date", "type": "string", "required": true },
-    { "key": "date_to", "label": "End Date", "type": "string", "required": true }
-  ],
-  "steps": [
-    {
-      "stepKey": "fetch_orders",
-      "label": "Fetch customer orders",
-      "toolName": "get_orders",
-      "params": {
-        "customer_id": { "type": "input", "inputKey": "customer_id" },
-        "date_from": { "type": "input", "inputKey": "date_from" },
-        "date_to": { "type": "input", "inputKey": "date_to" }
-      }
-    },
-    {
-      "stepKey": "display_orders",
-      "label": "Display orders table",
-      "toolName": "output_table",
-      "params": {
-        "columns": { "type": "static", "value": [
-          { "key": "order_id", "label": "Order ID" },
-          { "key": "amount", "label": "Amount" },
-          { "key": "status", "label": "Status" },
-          { "key": "created_at", "label": "Created At" }
-        ]},
-        "data": { "type": "step", "stepKey": "fetch_orders" }
-      }
-    }
-  ],
-  "outputs": [{ "stepId": "display_orders", "kind": "table" }]
-}
-</extracted_recipe>
-
-<explanation>
-- "ABC123" → input "customer_id" (user may query different customers)
-- Dates → inputs (date range will vary each run)
-- output_table uses ALL columns from tool result, not just displayed ones
-- data binding references fetch_orders step result directly
-</explanation>
-
----
-
-### Example 2: Query + Transform + Display
-
-<conversation_example>
-User: Calculate total revenue by status for customer XYZ
-Tool Call: get_orders { customer_id: "XYZ" }
-Tool Result: [
-  { order_id: "1", amount: 100, status: "completed" },
-  { order_id: "2", amount: 200, status: "completed" },
-  { order_id: "3", amount: 150, status: "pending" }
-]
-Assistant: Completed: $300, Pending: $150
-</conversation_example>
-
-<extracted_recipe>
-{
-  "name": "Revenue by Status",
-  "description": "Calculate and display revenue grouped by order status",
+  "name": "Customer Orders",
   "inputs": [
     { "key": "customer_id", "label": "Customer ID", "type": "string", "required": true }
   ],
@@ -322,354 +213,202 @@ Assistant: Completed: $300, Pending: $150
       "label": "Fetch orders",
       "toolName": "get_orders",
       "params": {
-        "customer_id": { "type": "input", "inputKey": "customer_id" }
+        "customer_id": { "type": "ref", "scope": "input", "key": "customer_id" }
       }
     },
     {
-      "stepKey": "calculate_revenue",
-      "label": "Group revenue by status",
+      "stepKey": "display",
+      "label": "Display orders",
+      "toolName": "output_table",
+      "params": {
+        "columns": { "type": "literal", "value": [
+          { "key": "order_id", "label": "Order ID" },
+          { "key": "amount", "label": "Amount" },
+          { "key": "status", "label": "Status" }
+        ]},
+        "data": { "type": "ref", "scope": "step", "key": "fetch_orders" }
+      }
+    }
+  ]
+}
+
+Key points:
+- "ABC123" → input (parameterized)
+- data binding references fetch_orders directly
+
+### Example 2: Query + Transform + Display
+
+Conversation: Calculate total revenue by status
+
+Recipe:
+{
+  "name": "Revenue by Status",
+  "inputs": [
+    { "key": "customer_id", "label": "Customer ID", "type": "string", "required": true }
+  ],
+  "steps": [
+    {
+      "stepKey": "fetch_orders",
+      "label": "Fetch orders",
+      "toolName": "get_orders",
+      "params": {
+        "customer_id": { "type": "ref", "scope": "input", "key": "customer_id" }
+      }
+    },
+    {
+      "stepKey": "group_revenue",
+      "label": "Group by status",
       "toolName": "code_execute",
       "params": {
-        "code": { "type": "static", "value": "const grouped = {}; for (const o of input.orders) { grouped[o.status] = (grouped[o.status] || 0) + o.amount; } return Object.entries(grouped).map(([status, total]) => ({ status, total }));" },
+        "code": { "type": "literal", "value": "const grouped = {}; for (const o of input.orders) { grouped[o.status] = (grouped[o.status] || 0) + o.amount; } return Object.entries(grouped).map(([status, total]) => ({ status, total }));" },
         "input": {
           "type": "object",
           "entries": {
-            "orders": { "type": "step", "stepKey": "fetch_orders" }
+            "orders": { "type": "ref", "scope": "step", "key": "fetch_orders" }
           }
         }
       }
     },
     {
-      "stepKey": "display_revenue",
-      "label": "Display revenue breakdown",
+      "stepKey": "display",
+      "label": "Display revenue",
       "toolName": "output_table",
       "params": {
-        "columns": { "type": "static", "value": [
+        "columns": { "type": "literal", "value": [
           { "key": "status", "label": "Status" },
-          { "key": "total", "label": "Total Revenue" }
+          { "key": "total", "label": "Total" }
         ]},
-        "data": { "type": "step", "stepKey": "calculate_revenue" }
+        "data": { "type": "ref", "scope": "step", "key": "group_revenue" }
       }
     }
-  ],
-  "outputs": [{ "stepId": "display_revenue", "kind": "table" }]
+  ]
 }
-</extracted_recipe>
 
-<explanation>
-- Transformation needed → code_execute step
-- code_execute input MUST be object: { "orders": step_binding }
-- Access array as input.orders inside code
-- Output displays computed result, not raw orders
-</explanation>
+Key points:
+- code_execute input MUST be object (wrap array in entries)
+- Access as input.orders in code
 
----
+### Example 3: User Selection Mid-Flow
 
-### Example 3: With User Input Mid-Flow (select_rows)
+Conversation: Let user select rows then process them
 
-<conversation_example>
-User: Let me select which users to email
-Tool Call: get_users { status: "active" }
-Tool Result: [{ id: 1, email: "a@test.com", name: "Alice" }, { id: 2, email: "b@test.com", name: "Bob" }]
-Assistant: Please select users...
-User: Selected Alice
-Tool Call: send_email { to: "a@test.com", subject: "Hello", body: "..." }
-</conversation_example>
-
-<extracted_recipe>
+Recipe:
 {
-  "name": "Email Selected Users",
-  "description": "Select active users and send them emails",
-  "inputs": [
-    { "key": "email_subject", "label": "Email Subject", "type": "string", "required": true },
-    { "key": "email_body", "label": "Email Body", "type": "string", "required": true }
-  ],
+  "name": "Process Selected Users",
+  "inputs": [],
   "steps": [
     {
       "stepKey": "fetch_users",
-      "label": "Fetch active users",
+      "label": "Fetch users",
       "toolName": "get_users",
       "params": {
-        "status": { "type": "static", "value": "active" }
+        "status": { "type": "literal", "value": "active" }
       }
     },
     {
       "stepKey": "select_users",
-      "label": "Select users to email",
+      "label": "Select users",
       "toolName": "human_request",
       "params": {
-        "title": { "type": "static", "value": "Select Users to Email" },
-        "fields": { "type": "static", "value": [{
+        "title": { "type": "literal", "value": "Select Users" },
+        "fields": { "type": "literal", "value": [{
           "kind": "select_rows",
           "key": "selected",
           "columns": [{ "key": "name", "label": "Name" }, { "key": "email", "label": "Email" }],
-          "data": { "type": "step", "stepKey": "fetch_users" },
+          "data": { "type": "ref", "scope": "step", "key": "fetch_users" },
           "selectionMode": "multiple"
         }]}
       }
     },
     {
-      "stepKey": "send_emails",
-      "label": "Send emails to selected users",
+      "stepKey": "process",
+      "label": "Process selected",
       "toolName": "code_execute",
       "params": {
-        "code": { "type": "static", "value": "return input.selected.map(u => ({ to: u.email, subject: input.subject, body: input.body }))" },
+        "code": { "type": "literal", "value": "return input.users.map(u => u.email)" },
         "input": {
           "type": "object",
           "entries": {
-            "selected": { "type": "step", "stepKey": "select_users", "path": "$.responses.selected.selectedRows" },
-            "subject": { "type": "input", "inputKey": "email_subject" },
-            "body": { "type": "input", "inputKey": "email_body" }
+            "users": { "type": "ref", "scope": "step", "key": "select_users", "path": ["responses", "selected", "selectedRows"] }
           }
         }
       }
     }
-  ],
-  "outputs": []
+  ]
 }
-</extracted_recipe>
 
-<explanation>
-- "active" status is constant (not parameterized - user always wants active users)
-- human_request with select_rows: data binding references fetch_users result
-- User selection accessed via path: $.responses.selected.selectedRows
-- Email content becomes inputs (will vary each run)
-</explanation>
+Key points:
+- select_rows data is a ref binding
+- Access selection via path: ["responses", "<field_key>", "selectedRows"]
 
----
+### Example 4: Template for Markdown
 
-### Example 4: Select Row then Update (select_rows → form → query)
+Conversation: Show user summary report
 
-<conversation_example>
-User: Show users and let me update one
-Tool Call: run_select_query { sql: "SELECT id, name, email FROM users" }
-Tool Result: [{ id: 1, name: "Alice", email: "alice@ex.com" }, { id: 2, name: "Bob", email: "bob@ex.com" }]
-Tool Call: human_request { title: "Select User", fields: [{ kind: "select_rows", key: "user", data: [...], columns: [...], selectionMode: "single" }] }
-Tool Result: { responses: { user: { selectedRows: [{ id: 2, name: "Bob", email: "bob@ex.com" }] } } }
-Tool Call: human_request { title: "Update", fields: [{ kind: "form", key: "updates", schema: {...}, defaults: { name: "Bob", email: "bob@ex.com" } }] }
-Tool Result: { responses: { updates: { values: { name: "Robert", email: "robert@ex.com" } } } }
-Tool Call: run_mutation_query { sql: "UPDATE users SET name = 'Robert', email = 'robert@ex.com' WHERE id = 2" }
-</conversation_example>
-
-<extracted_recipe>
+Recipe:
 {
-  "name": "Update User Record",
-  "description": "Select a user from the list and update their information",
-  "inputs": [],
-  "steps": [
-    {
-      "stepKey": "fetch_users",
-      "label": "Fetch all users",
-      "toolName": "run_select_query",
-      "params": {
-        "sql": { "type": "static", "value": "SELECT id, name, email FROM users" }
-      }
-    },
-    {
-      "stepKey": "select_user",
-      "label": "Select user to update",
-      "toolName": "human_request",
-      "params": {
-        "title": { "type": "static", "value": "Select User to Update" },
-        "fields": { "type": "static", "value": [{
-          "kind": "select_rows",
-          "key": "user",
-          "columns": [{ "key": "id", "label": "ID" }, { "key": "name", "label": "Name" }, { "key": "email", "label": "Email" }],
-          "data": { "type": "step", "stepKey": "fetch_users" },
-          "selectionMode": "single"
-        }]}
-      }
-    },
-    {
-      "stepKey": "get_updates",
-      "label": "Enter new values",
-      "toolName": "human_request",
-      "params": {
-        "title": { "type": "static", "value": "Update User Information" },
-        "description": { "type": "static", "value": "Edit the values below to update the selected user" },
-        "fields": { "type": "static", "value": [{
-          "kind": "form",
-          "key": "updates",
-          "schema": {
-            "type": "object",
-            "properties": {
-              "name": { "type": "string", "description": "Name" },
-              "email": { "type": "string", "description": "Email" }
-            }
-          },
-          "defaults": { "type": "step", "stepKey": "select_user", "path": "$.responses.user.selectedRows[0]" }
-        }]}
-      }
-    },
-    {
-      "stepKey": "build_sql",
-      "label": "Build UPDATE SQL",
-      "toolName": "code_execute",
-      "params": {
-        "code": { "type": "static", "value": "const user = input.selectedUser; const updates = input.newValues; const sets = Object.entries(updates).filter(([k,v]) => v).map(([k,v]) => k + ' = \\'' + String(v).replace(/'/g, '\\'\\'' ) + '\\'').join(', '); return 'UPDATE users SET ' + sets + ' WHERE id = ' + user.id;" },
-        "input": {
-          "type": "object",
-          "entries": {
-            "selectedUser": { "type": "step", "stepKey": "select_user", "path": "$.responses.user.selectedRows[0]" },
-            "newValues": { "type": "step", "stepKey": "get_updates", "path": "$.responses.updates.values" }
-          }
-        }
-      }
-    },
-    {
-      "stepKey": "execute_update",
-      "label": "Execute UPDATE",
-      "toolName": "run_mutation_query",
-      "params": {
-        "sql": { "type": "step", "stepKey": "build_sql" },
-        "description": { "type": "static", "value": "Update user record" }
-      }
-    }
-  ],
-  "outputs": []
-}
-</extracted_recipe>
-
-<explanation>
-- select_rows uses data binding to reference fetch_users result
-- form uses defaults binding to pre-fill with selected user's data (name, email auto-populated)
-- code step combines: select_user result + get_updates result to build SQL
-- Input step results always have structure: { responses: { <field_key>: { selectedRows|values|answers: ... } } }
-</explanation>
-
----
-
-### Example 5: Template Binding for Markdown Output
-
-<conversation_example>
-User: Give me a summary report for user 456
-Tool Call: get_user_stats { user_id: "456" }
-Tool Result: { name: "John", orders: 15, total_spent: 1250.00, member_since: "2024-01-15" }
-Assistant: ## John's Summary
-- Orders: 15
-- Total Spent: $1,250.00
-</conversation_example>
-
-<extracted_recipe>
-{
-  "name": "User Summary Report",
-  "description": "Generate a formatted summary report for a user",
+  "name": "User Summary",
   "inputs": [
     { "key": "user_id", "label": "User ID", "type": "string", "required": true }
   ],
   "steps": [
     {
       "stepKey": "fetch_stats",
-      "label": "Fetch user statistics",
+      "label": "Fetch stats",
       "toolName": "get_user_stats",
       "params": {
-        "user_id": { "type": "input", "inputKey": "user_id" }
+        "user_id": { "type": "ref", "scope": "input", "key": "user_id" }
       }
     },
     {
-      "stepKey": "display_report",
-      "label": "Display summary report",
+      "stepKey": "display",
+      "label": "Display report",
       "toolName": "output_markdown",
       "params": {
         "content": {
           "type": "template",
-          "template": "## {{name}}'s Summary\\n\\n| Metric | Value |\\n|--------|-------|\\n| Orders | {{orders}} |\\n| Total Spent | ${"$"}{{totalSpent}} |\\n| Member Since | {{memberSince}} |",
-          "variables": {
-            "name": { "type": "step", "stepKey": "fetch_stats", "path": "$.name" },
-            "orders": { "type": "step", "stepKey": "fetch_stats", "path": "$.orders" },
-            "totalSpent": { "type": "step", "stepKey": "fetch_stats", "path": "$.total_spent" },
-            "memberSince": { "type": "step", "stepKey": "fetch_stats", "path": "$.member_since" }
-          }
+          "parts": [
+            "## ",
+            { "type": "ref", "scope": "step", "key": "fetch_stats", "path": ["name"] },
+            "\n\n**Orders:** ",
+            { "type": "ref", "scope": "step", "key": "fetch_stats", "path": ["orders"] },
+            "\n**Revenue:** $",
+            { "type": "ref", "scope": "step", "key": "fetch_stats", "path": ["revenue"] }
+          ]
         }
       }
     }
-  ],
-  "outputs": [{ "stepId": "display_report", "kind": "markdown" }]
+  ]
 }
-</extracted_recipe>
 
-<explanation>
-- Template binding for complex string with multiple dynamic values
-- Each variable uses step binding with specific path to extract field
-- Displays ALL data from tool result, not just what assistant showed
-</explanation>
+Key points:
+- template.parts alternates strings and ref bindings
+- Each ref extracts a specific field via path
 </examples>
 
 <common_mistakes>
-## Common Mistakes to Avoid
+## Common Mistakes
 
-### Mistake 1: Using static for dynamic data
-[BAD] \`"customer_id": { "type": "static", "value": "ABC123" }\`
-[GOOD] \`"customer_id": { "type": "input", "inputKey": "customer_id" }\`
+1. Using literal for variable data
+   BAD: { "type": "literal", "value": "ABC123" }
+   GOOD: { "type": "ref", "scope": "input", "key": "customer_id" }
 
-### Mistake 2: Hardcoding tool results
-[BAD] \`"data": { "type": "static", "value": [{"id": 1}, {"id": 2}] }\`
-[GOOD] \`"data": { "type": "step", "stepKey": "fetch_data" }\`
+2. Hardcoding tool results
+   BAD: { "type": "literal", "value": [{"id": 1}] }
+   GOOD: { "type": "ref", "scope": "step", "key": "fetch_data" }
 
-### Mistake 3: Forgetting to define inputs
-[BAD] Using \`{ "type": "input", "inputKey": "foo" }\` without defining "foo" in inputs array
-[GOOD] Always define input in "inputs" array before referencing
+3. Missing input definition
+   BAD: Using ref to input "foo" without defining it in inputs array
+   GOOD: Define input first, then reference
 
-### Mistake 4: Referencing future steps
-[BAD] Step at index 0 referencing step at index 2
-[GOOD] Only reference steps that come BEFORE current step
+4. code_execute with non-object input
+   BAD: "input": { "type": "ref", "scope": "step", "key": "items" }
+   GOOD: "input": { "type": "object", "entries": { "items": { "type": "ref", ... } } }
 
-### Mistake 5: code_execute with non-object input
-[BAD] \`"input": { "type": "step", "stepKey": "items" }\` (if items is array)
-[GOOD] \`"input": { "type": "object", "entries": { "items": { "type": "step", ... } } }\`
-
-### Mistake 6: Including exploration steps
-[BAD] Including debugging queries that were only used to understand the data
-[GOOD] Only include steps that contribute to the final output
-
-### Mistake 7: Not using ALL returned fields in output
-[BAD] output_table with only 2 columns when tool returns 5 fields
-[GOOD] Include all relevant fields the tool returns
-</common_mistakes>
-
-<output_format>
-## Output Format
-
-Call the submit_recipe tool with this structure:
-
-\`\`\`json
-{
-  "name": "Recipe name (concise, describes the workflow)",
-  "description": "What this recipe accomplishes",
-  "inputs": [
-    {
-      "key": "snake_case_key",
-      "label": "Human Readable Label",
-      "type": "string" | "number",
-      "description": "What this input is for",
-      "required": true | false,
-      "defaultValue": "optional default"
-    }
-  ],
-  "steps": [
-    {
-      "stepKey": "snake_case_step_key",
-      "label": "Human readable step description",
-      "toolName": "tool_name",
-      "params": {
-        "param_name": <ParamBinding>
-      }
-    }
-  ],
-  "outputs": [
-    {
-      "stepId": "output_step_key",
-      "kind": "table" | "chart" | "markdown" | "key_value"
-    }
-  ]
-}
-\`\`\`
-
-### Naming Guidelines
-- **stepKey**: snake_case, descriptive (fetch_orders, calculate_total, display_chart)
-- **label**: Human readable, present tense (Fetch customer orders, Calculate totals)
-- **Recipe name**: Short, action-oriented (Customer Orders Report, Revenue Analysis)
-</output_format>`
+5. Referencing future steps
+   BAD: Step 0 references step 2
+   GOOD: Only reference earlier steps
+</common_mistakes>`
 
 export function formatToolsForExtraction(agentTools: AgentTool[]): string {
   const formatTool = (t: { name: string; description: string; params: unknown; returns?: unknown }) => {

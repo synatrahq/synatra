@@ -28,59 +28,90 @@ export interface RecipeExecutionContext {
   resolvedParams: Record<string, unknown>
 }
 
-export function getValueByPath(obj: unknown, path?: string): unknown {
-  if (!path || path === "$") return obj
+export function getValueByPath(obj: unknown, path?: Array<string | number>): unknown {
+  if (!path || path.length === 0) return obj
 
-  const normalizedPath = path.startsWith("$.") ? path.slice(2) : path.startsWith("$") ? path.slice(1) : path
-
-  if (!normalizedPath) return obj
-
-  const parts = normalizedPath.split(/\.|\[|\]/).filter(Boolean)
   let current: unknown = obj
 
-  for (const [i, part] of parts.entries()) {
+  for (const [i, part] of path.entries()) {
     if (current === null || current === undefined) return undefined
 
     if (part === "*") {
       if (!Array.isArray(current)) return undefined
-      const remaining = parts.slice(i + 1).join(".")
-      if (remaining) {
+      const remaining = path.slice(i + 1)
+      if (remaining.length > 0) {
         return current.map((item) => getValueByPath(item, remaining))
       }
       return current
     }
 
-    if (typeof current === "object" && current !== null) {
-      const idx = parseInt(part, 10)
-      if (!isNaN(idx) && Array.isArray(current)) {
-        current = current[idx]
-      } else {
-        current = (current as Record<string, unknown>)[part]
-      }
-    } else {
-      return undefined
+    if (typeof part === "number") {
+      if (!Array.isArray(current)) return undefined
+      current = current[part]
+      continue
     }
+
+    if (typeof current === "object") {
+      current = (current as Record<string, unknown>)[part]
+      continue
+    }
+
+    return undefined
   }
 
   return current
 }
 
+type BindingCast = "string" | "number" | "boolean" | "object" | "array"
+
+function castBindingValue(value: unknown, target: BindingCast): unknown {
+  if (target === "string") return value === null || value === undefined ? "" : String(value)
+  if (target === "number") {
+    if (typeof value === "number") return value
+    if (typeof value === "string" && value.trim() !== "") {
+      const parsed = Number(value)
+      return Number.isNaN(parsed) ? undefined : parsed
+    }
+    return undefined
+  }
+  if (target === "boolean") {
+    if (typeof value === "boolean") return value
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase()
+      if (normalized === "true") return true
+      if (normalized === "false") return false
+      return undefined
+    }
+    if (typeof value === "number") return value !== 0
+    return undefined
+  }
+  if (target === "object") {
+    return value && typeof value === "object" && !Array.isArray(value) ? value : undefined
+  }
+  if (target === "array") {
+    return Array.isArray(value) ? value : undefined
+  }
+  return value
+}
+
 export function resolveBinding(binding: ParamBinding, context: RecipeExecutionContext): unknown {
   switch (binding.type) {
-    case "static":
+    case "literal":
       return binding.value
-    case "input":
-      return context.inputs[binding.inputKey]
-    case "step":
-      return getValueByPath(context.results[binding.stepKey], binding.path)
+    case "ref": {
+      const source = binding.scope === "input" ? context.inputs : context.results
+      const base = source[binding.key]
+      const resolved = binding.path ? getValueByPath(base, binding.path) : base
+      return binding.as ? castBindingValue(resolved, binding.as) : resolved
+    }
     case "template": {
-      let result = binding.template
-      for (const [varName, varBinding] of Object.entries(binding.variables)) {
-        const value = resolveBinding(varBinding, context)
-        const strValue = value === null || value === undefined ? "" : String(value)
-        result = result.replaceAll(`{{${varName}}}`, strValue)
-      }
-      return result
+      return binding.parts
+        .map((part) => {
+          if (typeof part === "string") return part
+          const value = resolveBinding(part, context)
+          return value === null || value === undefined ? "" : String(value)
+        })
+        .join("")
     }
     case "object":
       return Object.fromEntries(Object.entries(binding.entries).map(([key, b]) => [key, resolveBinding(b, context)]))

@@ -17,33 +17,33 @@ import {
 import type { ParamBinding } from "../types"
 
 describe("getValueByPath", () => {
-  test("returns whole object for $ or undefined path", () => {
+  test("returns whole object for empty or undefined path", () => {
     const obj = { a: 1, b: 2 }
     expect(getValueByPath(obj, undefined)).toEqual(obj)
-    expect(getValueByPath(obj, "$")).toEqual(obj)
+    expect(getValueByPath(obj, [])).toEqual(obj)
   })
 
   test("returns nested property", () => {
     const obj = { user: { name: "Alice", email: "alice@example.com" } }
-    expect(getValueByPath(obj, "$.user.name")).toBe("Alice")
-    expect(getValueByPath(obj, "user.email")).toBe("alice@example.com")
+    expect(getValueByPath(obj, ["user", "name"])).toBe("Alice")
+    expect(getValueByPath(obj, ["user", "email"])).toBe("alice@example.com")
   })
 
   test("returns array element", () => {
     const obj = { users: [{ name: "Alice" }, { name: "Bob" }] }
-    expect(getValueByPath(obj, "$.users[0].name")).toBe("Alice")
-    expect(getValueByPath(obj, "$.users[1].name")).toBe("Bob")
+    expect(getValueByPath(obj, ["users", 0, "name"])).toBe("Alice")
+    expect(getValueByPath(obj, ["users", 1, "name"])).toBe("Bob")
   })
 
   test("returns mapped array with wildcard", () => {
     const obj = [{ id: 1 }, { id: 2 }, { id: 3 }]
-    expect(getValueByPath(obj, "$[*].id")).toEqual([1, 2, 3])
+    expect(getValueByPath(obj, ["*", "id"])).toEqual([1, 2, 3])
   })
 
   test("returns undefined for non-existent path", () => {
     const obj = { a: 1 }
-    expect(getValueByPath(obj, "$.b")).toBeUndefined()
-    expect(getValueByPath(obj, "$.a.b.c")).toBeUndefined()
+    expect(getValueByPath(obj, ["b"])).toBeUndefined()
+    expect(getValueByPath(obj, ["a", "b", "c"])).toBeUndefined()
   })
 })
 
@@ -62,34 +62,35 @@ describe("resolveBinding", () => {
     resolvedParams: {},
   }
 
-  test("resolves static binding", () => {
-    const binding: ParamBinding = { type: "static", value: 42 }
+  test("resolves literal binding", () => {
+    const binding: ParamBinding = { type: "literal", value: 42 }
     expect(resolveBinding(binding, context)).toBe(42)
   })
 
-  test("resolves input binding", () => {
-    const binding: ParamBinding = { type: "input", inputKey: "userId" }
+  test("resolves input ref", () => {
+    const binding: ParamBinding = { type: "ref", scope: "input", key: "userId" }
     expect(resolveBinding(binding, context)).toBe("123")
   })
 
-  test("resolves step binding without path", () => {
-    const binding: ParamBinding = { type: "step", stepKey: "step_1" }
+  test("resolves step ref without path", () => {
+    const binding: ParamBinding = { type: "ref", scope: "step", key: "step_1" }
     expect(resolveBinding(binding, context)).toBe("processed")
   })
 
-  test("resolves step binding with path", () => {
-    const binding: ParamBinding = { type: "step", stepKey: "step_0", path: "$.data[0].email" }
+  test("resolves step ref with path", () => {
+    const binding: ParamBinding = { type: "ref", scope: "step", key: "step_0", path: ["data", 0, "email"] }
     expect(resolveBinding(binding, context)).toBe("a@test.com")
   })
 
   test("resolves template binding", () => {
     const binding: ParamBinding = {
       type: "template",
-      template: "Hello {{name}}, your ID is {{id}}",
-      variables: {
-        name: { type: "input", inputKey: "name" },
-        id: { type: "input", inputKey: "userId" },
-      },
+      parts: [
+        "Hello ",
+        { type: "ref", scope: "input", key: "name" },
+        ", your ID is ",
+        { type: "ref", scope: "input", key: "userId" },
+      ],
     }
     expect(resolveBinding(binding, context)).toBe("Hello Alice, your ID is 123")
   })
@@ -98,14 +99,147 @@ describe("resolveBinding", () => {
     const binding: ParamBinding = {
       type: "object",
       entries: {
-        user: { type: "input", inputKey: "name" },
-        email: { type: "step", stepKey: "step_0", path: "$.data[0].email" },
+        user: { type: "ref", scope: "input", key: "name" },
+        email: { type: "ref", scope: "step", key: "step_0", path: ["data", 0, "email"] },
       },
     }
     expect(resolveBinding(binding, context)).toEqual({
       user: "Alice",
       email: "a@test.com",
     })
+  })
+
+  test("resolves array binding", () => {
+    const binding: ParamBinding = {
+      type: "array",
+      items: [
+        { type: "ref", scope: "input", key: "userId" },
+        { type: "ref", scope: "input", key: "name" },
+      ],
+    }
+    expect(resolveBinding(binding, context)).toEqual(["123", "Alice"])
+  })
+})
+
+describe("resolveBinding with cast (as)", () => {
+  test("casts string to number", () => {
+    const context: RecipeExecutionContext = {
+      inputs: { count: "42" },
+      results: {},
+      resolvedParams: {},
+    }
+    const binding: ParamBinding = { type: "ref", scope: "input", key: "count", as: "number" }
+    expect(resolveBinding(binding, context)).toBe(42)
+  })
+
+  test("casts number string with decimals", () => {
+    const context: RecipeExecutionContext = {
+      inputs: { price: "19.99" },
+      results: {},
+      resolvedParams: {},
+    }
+    const binding: ParamBinding = { type: "ref", scope: "input", key: "price", as: "number" }
+    expect(resolveBinding(binding, context)).toBe(19.99)
+  })
+
+  test("returns undefined for invalid number cast", () => {
+    const context: RecipeExecutionContext = {
+      inputs: { value: "not-a-number" },
+      results: {},
+      resolvedParams: {},
+    }
+    const binding: ParamBinding = { type: "ref", scope: "input", key: "value", as: "number" }
+    expect(resolveBinding(binding, context)).toBeUndefined()
+  })
+
+  test("returns undefined for empty string to number", () => {
+    const context: RecipeExecutionContext = {
+      inputs: { value: "   " },
+      results: {},
+      resolvedParams: {},
+    }
+    const binding: ParamBinding = { type: "ref", scope: "input", key: "value", as: "number" }
+    expect(resolveBinding(binding, context)).toBeUndefined()
+  })
+
+  test("casts string 'true' to boolean", () => {
+    const context: RecipeExecutionContext = {
+      inputs: { flag: "true" },
+      results: {},
+      resolvedParams: {},
+    }
+    const binding: ParamBinding = { type: "ref", scope: "input", key: "flag", as: "boolean" }
+    expect(resolveBinding(binding, context)).toBe(true)
+  })
+
+  test("casts string 'false' to boolean", () => {
+    const context: RecipeExecutionContext = {
+      inputs: { flag: "FALSE" },
+      results: {},
+      resolvedParams: {},
+    }
+    const binding: ParamBinding = { type: "ref", scope: "input", key: "flag", as: "boolean" }
+    expect(resolveBinding(binding, context)).toBe(false)
+  })
+
+  test("casts number to boolean", () => {
+    const context: RecipeExecutionContext = {
+      inputs: { zero: 0, one: 1 },
+      results: {},
+      resolvedParams: {},
+    }
+    expect(resolveBinding({ type: "ref", scope: "input", key: "zero", as: "boolean" }, context)).toBe(false)
+    expect(resolveBinding({ type: "ref", scope: "input", key: "one", as: "boolean" }, context)).toBe(true)
+  })
+
+  test("returns undefined for invalid boolean cast", () => {
+    const context: RecipeExecutionContext = {
+      inputs: { value: "yes" },
+      results: {},
+      resolvedParams: {},
+    }
+    const binding: ParamBinding = { type: "ref", scope: "input", key: "value", as: "boolean" }
+    expect(resolveBinding(binding, context)).toBeUndefined()
+  })
+
+  test("casts to string", () => {
+    const context: RecipeExecutionContext = {
+      inputs: { num: 42, flag: true },
+      results: {},
+      resolvedParams: {},
+    }
+    expect(resolveBinding({ type: "ref", scope: "input", key: "num", as: "string" }, context)).toBe("42")
+    expect(resolveBinding({ type: "ref", scope: "input", key: "flag", as: "string" }, context)).toBe("true")
+  })
+
+  test("casts null/undefined to empty string", () => {
+    const context: RecipeExecutionContext = {
+      inputs: { empty: null },
+      results: {},
+      resolvedParams: {},
+    }
+    expect(resolveBinding({ type: "ref", scope: "input", key: "empty", as: "string" }, context)).toBe("")
+    expect(resolveBinding({ type: "ref", scope: "input", key: "missing", as: "string" }, context)).toBe("")
+  })
+
+  test("validates object cast", () => {
+    const context: RecipeExecutionContext = {
+      inputs: {},
+      results: { data: { name: "test" }, arr: [1, 2, 3] },
+      resolvedParams: {},
+    }
+    expect(resolveBinding({ type: "ref", scope: "step", key: "data", as: "object" }, context)).toEqual({ name: "test" })
+    expect(resolveBinding({ type: "ref", scope: "step", key: "arr", as: "object" }, context)).toBeUndefined()
+  })
+
+  test("validates array cast", () => {
+    const context: RecipeExecutionContext = {
+      inputs: {},
+      results: { arr: [1, 2, 3], obj: { a: 1 } },
+      resolvedParams: {},
+    }
+    expect(resolveBinding({ type: "ref", scope: "step", key: "arr", as: "array" }, context)).toEqual([1, 2, 3])
+    expect(resolveBinding({ type: "ref", scope: "step", key: "obj", as: "array" }, context)).toBeUndefined()
   })
 })
 
@@ -123,9 +257,9 @@ describe("resolveStepParams", () => {
         binding: {
           type: "object",
           entries: {
-            to: { type: "step", stepKey: "step_0", path: "$.email" },
-            subject: { type: "static", value: "Hello" },
-            name: { type: "input", inputKey: "userName" },
+            to: { type: "ref", scope: "step", key: "step_0", path: ["email"] },
+            subject: { type: "literal", value: "Hello" },
+            name: { type: "ref", scope: "input", key: "userName" },
           },
         },
       },
@@ -153,19 +287,19 @@ describe("getStepExecutionOrder", () => {
         stepKey: "step_0",
         label: "Step A",
         type: "query",
-        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
+        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "literal", value: {} } },
       },
       {
         stepKey: "step_1",
         label: "Step B",
         type: "query",
-        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
+        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "literal", value: {} } },
       },
       {
         stepKey: "step_2",
         label: "Step C",
         type: "query",
-        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
+        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "literal", value: {} } },
       },
     ]
 
@@ -193,7 +327,7 @@ describe("isInputStep", () => {
       stepKey: "step_0",
       label: "Fetch data",
       type: "query",
-      config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
+      config: { description: "", params: {}, returns: {}, code: "", binding: { type: "literal", value: {} } },
     }
     expect(isInputStep(step)).toBe(false)
   })
@@ -203,7 +337,7 @@ describe("isInputStep", () => {
       stepKey: "step_0",
       label: "Output data",
       type: "output",
-      config: { kind: "table", binding: { type: "static", value: {} } },
+      config: { kind: "table", binding: { type: "literal", value: {} } },
     }
     expect(isInputStep(step)).toBe(false)
   })
@@ -215,19 +349,19 @@ describe("RecipeRunner", () => {
       stepKey: "step_0",
       label: "Fetch data",
       type: "query",
-      config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
+      config: { description: "", params: {}, returns: {}, code: "", binding: { type: "literal", value: {} } },
     },
     {
       stepKey: "step_1",
       label: "Transform data",
       type: "query",
-      config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
+      config: { description: "", params: {}, returns: {}, code: "", binding: { type: "literal", value: {} } },
     },
     {
       stepKey: "step_2",
       label: "Output result",
       type: "output",
-      config: { kind: "table", binding: { type: "static", value: {} } },
+      config: { kind: "table", binding: { type: "literal", value: {} } },
     },
   ]
 

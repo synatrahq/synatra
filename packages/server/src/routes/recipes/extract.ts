@@ -11,7 +11,7 @@ import {
   type RawStep,
 } from "@synatra/core"
 import { getModel } from "../agents/copilot/models"
-import type { RecipeInput, RecipeOutput, ParamBinding } from "@synatra/core/types"
+import type { RecipeInput, RecipeOutput } from "@synatra/core/types"
 import { createError } from "@synatra/util/error"
 
 const ExtractRequestSchema = z.object({
@@ -71,25 +71,32 @@ const RecipeJsonSchema: JSONSchema7 = {
   $defs: {
     binding: {
       oneOf: [
-        { type: "object", properties: { type: { const: "static" }, value: {} }, required: ["type", "value"] },
         {
           type: "object",
-          properties: { type: { const: "input" }, inputKey: { type: "string" } },
-          required: ["type", "inputKey"],
+          properties: { type: { const: "literal" }, value: {} },
+          required: ["type", "value"],
         },
         {
           type: "object",
-          properties: { type: { const: "step" }, stepKey: { type: "string" }, path: { type: "string" } },
-          required: ["type", "stepKey"],
+          properties: {
+            type: { const: "ref" },
+            scope: { type: "string", enum: ["input", "step"] },
+            key: { type: "string" },
+            path: { type: "array", items: { oneOf: [{ type: "string" }, { type: "number" }] } },
+            as: { type: "string", enum: ["string", "number", "boolean", "object", "array"] },
+          },
+          required: ["type", "scope", "key"],
         },
         {
           type: "object",
           properties: {
             type: { const: "template" },
-            template: { type: "string" },
-            variables: { type: "object", additionalProperties: { $ref: "#/$defs/binding" } },
+            parts: {
+              type: "array",
+              items: { oneOf: [{ type: "string" }, { $ref: "#/$defs/binding" }] },
+            },
           },
-          required: ["type", "template", "variables"],
+          required: ["type", "parts"],
         },
         {
           type: "object",

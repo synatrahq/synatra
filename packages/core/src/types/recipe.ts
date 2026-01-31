@@ -3,27 +3,23 @@ import { z } from "zod"
 export const RecipeStepType = ["query", "code", "output", "input"] as const
 export type RecipeStepType = (typeof RecipeStepType)[number]
 
-const StaticBindingSchema = z.object({
-  type: z.literal("static"),
+const LiteralBindingSchema = z.object({
+  type: z.literal("literal"),
   value: z.unknown(),
 })
 
-const InputBindingSchema = z.object({
-  type: z.literal("input"),
-  inputKey: z.string(),
-})
-
-const StepBindingSchema = z.object({
-  type: z.literal("step"),
-  stepKey: z.string(),
-  path: z.string().optional(),
+const RefBindingSchema = z.object({
+  type: z.literal("ref"),
+  scope: z.enum(["input", "step"]),
+  key: z.string(),
+  path: z.array(z.union([z.string(), z.number()])).optional(),
+  as: z.enum(["string", "number", "boolean", "object", "array"]).optional(),
 })
 
 const TemplateBindingSchema: z.ZodType<TemplateBinding> = z.lazy(() =>
   z.object({
     type: z.literal("template"),
-    template: z.string(),
-    variables: z.record(z.string(), ParamBindingSchema),
+    parts: z.array(z.union([z.string(), ParamBindingSchema])),
   }),
 )
 
@@ -42,21 +38,18 @@ const ArrayBindingSchema: z.ZodType<ArrayBinding> = z.lazy(() =>
 )
 
 export const ParamBindingSchema: z.ZodType<ParamBinding> = z.union([
-  StaticBindingSchema,
-  InputBindingSchema,
-  StepBindingSchema,
+  LiteralBindingSchema,
+  RefBindingSchema,
   TemplateBindingSchema,
   ObjectBindingSchema,
   ArrayBindingSchema,
 ])
 
-export type StaticBinding = z.infer<typeof StaticBindingSchema>
-export type InputBinding = z.infer<typeof InputBindingSchema>
-export type StepBinding = z.infer<typeof StepBindingSchema>
+export type LiteralBinding = z.infer<typeof LiteralBindingSchema>
+export type RefBinding = z.infer<typeof RefBindingSchema>
 export type TemplateBinding = {
   type: "template"
-  template: string
-  variables: Record<string, ParamBinding>
+  parts: Array<string | ParamBinding>
 }
 export type ObjectBinding = {
   type: "object"
@@ -67,7 +60,7 @@ export type ArrayBinding = {
   items: ParamBinding[]
 }
 
-export type ParamBinding = StaticBinding | InputBinding | StepBinding | TemplateBinding | ObjectBinding | ArrayBinding
+export type ParamBinding = LiteralBinding | RefBinding | TemplateBinding | ObjectBinding | ArrayBinding
 
 const JsonSchemaSchema = z.record(z.string(), z.unknown())
 

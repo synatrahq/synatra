@@ -111,15 +111,24 @@ type PendingInputConfig = {
   fields: HumanRequestFieldConfig[]
 }
 
+function formatPath(path?: Array<string | number>): string {
+  if (!path || path.length === 0) return ""
+  return path
+    .map((part) => {
+      if (part === "*") return "[*]"
+      if (typeof part === "number") return `[${part}]`
+      return `.${part}`
+    })
+    .join("")
+}
+
 function formatBindingRef(binding: ParamBinding): string {
   switch (binding.type) {
-    case "static":
+    case "literal":
       return JSON.stringify(binding.value)
-    case "input":
-      return `input.${binding.inputKey}`
-    case "step": {
-      const path = binding.path?.replace(/^\$\.?/, "") ?? ""
-      return path ? `${binding.stepKey}.${path}` : binding.stepKey
+    case "ref": {
+      const base = binding.scope === "input" ? `input.${binding.key}` : binding.key
+      return `${base}${formatPath(binding.path)}`
     }
     default:
       return "[complex]"
@@ -128,21 +137,14 @@ function formatBindingRef(binding: ParamBinding): string {
 
 function resolveBinding(binding: ParamBinding): unknown {
   switch (binding.type) {
-    case "static":
+    case "literal":
       return binding.value
-    case "input":
-      return `$input.${binding.inputKey}`
-    case "step": {
-      const path = binding.path?.replace(/^\$\.?/, "") ?? ""
-      return path ? `$step.${binding.stepKey}.${path}` : `$step.${binding.stepKey}`
+    case "ref": {
+      const base = binding.scope === "input" ? `$input.${binding.key}` : `$step.${binding.key}`
+      return `${base}${formatPath(binding.path)}`
     }
-    case "template": {
-      let result = binding.template
-      for (const [k, v] of Object.entries(binding.variables)) {
-        result = result.replace(new RegExp(`\\{\\{${k}\\}\\}`, "g"), `{{ ${formatBindingRef(v)} }}`)
-      }
-      return result
-    }
+    case "template":
+      return binding.parts.map((part) => (typeof part === "string" ? part : `{{ ${formatBindingRef(part)} }}`)).join("")
     case "object":
       return Object.fromEntries(Object.entries(binding.entries).map(([k, v]) => [k, resolveBinding(v)]))
     case "array":
@@ -152,6 +154,30 @@ function resolveBinding(binding: ParamBinding): unknown {
 
 function resolveParams(params: Record<string, ParamBinding>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(params).map(([key, binding]) => [key, resolveBinding(binding)]))
+}
+
+function isParamBinding(value: unknown): value is ParamBinding {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "type" in value &&
+    ["literal", "ref", "template", "object", "array"].includes((value as { type: string }).type)
+  )
+}
+
+function resolveInputFields(fields: unknown[]): unknown[] {
+  return fields.map((field) => {
+    if (typeof field !== "object" || field === null) return field
+    const f = field as Record<string, unknown>
+    const resolved: Record<string, unknown> = { ...f }
+    if (f.kind === "select_rows" && isParamBinding(f.data)) {
+      resolved.data = resolveBinding(f.data)
+    }
+    if (f.kind === "form" && isParamBinding(f.defaults)) {
+      resolved.defaults = resolveBinding(f.defaults)
+    }
+    return resolved
+  })
 }
 
 type ToolDef = { name: string; description?: string; code: string }
@@ -282,7 +308,7 @@ function StepItem(props: {
                 <span class="text-2xs font-medium text-text-muted">Fields</span>
               </div>
               <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2">
-                {JSON.stringify(inputConfig()!.fields, null, 2)}
+                {JSON.stringify(resolveInputFields(inputConfig()!.fields as unknown[]), null, 2)}
               </pre>
             </div>
           </Show>

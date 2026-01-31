@@ -196,21 +196,21 @@ export function validateRecipeSteps(
 
   function validateBinding(binding: ParamBinding, stepKey: string, paramPath: string): void {
     switch (binding.type) {
-      case "step":
-        if (!precedingKeys.has(binding.stepKey)) {
+      case "ref":
+        if (binding.scope === "step" && !precedingKeys.has(binding.key)) {
           errors.push(
-            `Step "${stepKey}" param "${paramPath}" references "${binding.stepKey}" which is not a preceding step`,
+            `Step "${stepKey}" param "${paramPath}" references "${binding.key}" which is not a preceding step`,
           )
         }
-        break
-      case "input":
-        if (!inputKeys.has(binding.inputKey)) {
-          errors.push(`Step "${stepKey}" param "${paramPath}" references non-existent input "${binding.inputKey}"`)
+        if (binding.scope === "input" && !inputKeys.has(binding.key)) {
+          errors.push(`Step "${stepKey}" param "${paramPath}" references non-existent input "${binding.key}"`)
         }
         break
       case "template":
-        for (const [varName, varBinding] of Object.entries(binding.variables)) {
-          validateBinding(varBinding, stepKey, `${paramPath}.variables.${varName}`)
+        for (const [index, part] of binding.parts.entries()) {
+          if (typeof part !== "string") {
+            validateBinding(part, stepKey, `${paramPath}.parts[${index}]`)
+          }
         }
         break
       case "object":
@@ -300,17 +300,17 @@ export function formatConversationForLLM(context: ConversationContext): string {
   return ["# Conversation Log", "", ...context.messages.flatMap(formatMessage)].join("\n")
 }
 
-export const RECIPE_EXTRACTION_PROMPT = `You are a recipe extraction assistant. Your goal is to create a **generalized, reusable workflow** from a conversation log.
+export const RECIPE_EXTRACTION_PROMPT = `You are a recipe extraction assistant. Your goal is to create a generalized, reusable workflow from a conversation log.
 
 IMPORTANT: The conversation is just ONE example use case. Your recipe should be flexible enough for future runs with different data.
 
 Generalization principles:
-- **Parameterize magic values** - Concrete values in the conversation (IDs, names, dates) are magic numbers; define them in inputs array AND reference them in step params using { "type": "input", "inputKey": "..." } bindings. Set defaultValue unless the user must always provide their own value based on the task intent
-- **Don't hardcode data values** - Use bindings to pass data from previous steps
-- **Let tools determine output structure** - If a query returns columns, display ALL returned columns, not just the ones shown in this conversation
-- **Derive display data from source** - Chart labels/values, table columns should come from actual query results
-- **Analyze tool capabilities** - Understand what each tool can return and build flexible data flows
-- **Every step must be consumed** - A step is only valid if its output is either: (1) used by another step via binding, or (2) displayed as a final output. If a step's result isn't referenced anywhere, EXCLUDE it. Exploration, debugging, and intermediate analysis steps from the conversation should not appear in the recipe
+- Parameterize magic values - Concrete values in the conversation (IDs, names, dates) are magic values; define them in inputs array AND reference them using a ref binding with scope=input.
+- Don't hardcode data values - Use ref bindings to pass data from previous steps.
+- Let tools determine output structure - If a query returns columns, display ALL returned columns, not just the ones shown in this conversation.
+- Derive display data from source - Chart labels/values, table columns should come from actual query results.
+- Analyze tool capabilities - Understand what each tool can return and build flexible data flows.
+- Every step must be consumed - A step is only valid if its output is either: (1) used by another step via ref binding, or (2) displayed as a final output. If a step's result isn't referenced anywhere, EXCLUDE it.
 
 Your task:
 1. Identify the user's INTENT (not just the specific actions)
@@ -341,183 +341,50 @@ Output kinds: "table" | "chart" | "markdown" | "key_value"
 
 Each parameter in a step uses a ParamBinding to determine its value at runtime.
 
-**Valid binding types: static | input | step | template | object | array**
+Valid binding types: literal | ref | template | object | array
 
-Note: code_execute is a STEP toolName, NOT a binding type. If you need data transformation, create a code_execute step and reference its result with a step binding.
+Note: code_execute is a STEP toolName, NOT a binding type. If you need data transformation, create a code_execute step and reference its result with a ref binding.
 
 ### Choosing the Right Binding Type
 
-\`\`\`
 Is the value always the same?
-├─ YES → static
-└─ NO → Should user provide it each run?
-         ├─ YES → input
-         └─ NO → Does it come from a previous step?
-                  ├─ YES → Can you get it with a simple path?
-                  │         ├─ YES → step (with optional path)
-                  │         └─ NO (needs filter/map/logic) → Create a code_execute STEP, then use step binding
-                  └─ NO → Are you combining multiple values?
-                           ├─ Into a string → template
-                           ├─ Into an object → object
-                           └─ Into an array → array
-\`\`\`
+- YES → literal
+- NO → Should user provide it each run?
+  - YES → ref (scope=input)
+  - NO → Does it come from a previous step?
+    - YES → Can you get it with a simple path?
+      - YES → ref (scope=step, with optional path)
+      - NO (needs filter/map/logic) → Create a code_execute STEP, then ref to its output
+    - NO → Are you combining multiple values?
+      - Into a string → template
+      - Into an object → object
+      - Into an array → array
 
-### 1. static - Fixed values
+### literal - Fixed values
 
 Use for: Constants, SQL queries, configuration values
-{ "type": "static", "value": any }
+Example: { "type": "literal", "value": "SELECT * FROM users WHERE active = true" }
 
-Example:
-{ "type": "static", "value": "SELECT * FROM users WHERE active = true" }
+### ref - Input or step output
 
-### 2. input - User-provided values
+Use for: Inputs and previous step outputs
+Example input: { "type": "ref", "scope": "input", "key": "user_id" }
+Example step: { "type": "ref", "scope": "step", "key": "fetch_users", "path": ["data", 0, "id"] }
 
-Use for: Values that change each time the recipe runs. First define the input in the "inputs" array, then reference it here.
-{ "type": "input", "inputKey": "string" }
+### template - Build a string
 
-Example:
-If inputs array contains { "key": "user_id", ... }, reference it as:
-{ "type": "input", "inputKey": "user_id" }
+Use for: Strings that combine multiple values
+Example: { "type": "template", "parts": ["User ", { "type": "ref", "scope": "input", "key": "user_id" }] }
 
-### 3. step - Previous step results
+### object - Build an object
 
-Use for: Passing data from one step to another
-{ "type": "step", "stepKey": "string", "path": "$.jsonpath" (optional) }
+Use for: Structured inputs
+Example: { "type": "object", "entries": { "userId": { "type": "ref", "scope": "input", "key": "user_id" } } }
 
-Path examples:
-- Whole result: { "type": "step", "stepKey": "fetch_users" }
-- Nested field: { "type": "step", "stepKey": "fetch_users", "path": "$.data[0].email" }
-- Map array: { "type": "step", "stepKey": "fetch_users", "path": "$[*].id" }
+### array - Build an array
 
-### 4. template - String interpolation
-
-Use for: Building strings from multiple dynamic values (markdown output, messages, file paths)
-{ "type": "template", "template": "string with {{var}}", "variables": { "var": ParamBinding } }
-
-The {{varName}} placeholders are replaced with resolved variable values.
-
-Example - output_markdown with dynamic content (common pattern):
-{
-  "stepKey": "show_report",
-  "label": "Display user report",
-  "toolName": "output_markdown",
-  "params": {
-    "content": {
-      "type": "template",
-      "template": "# Report for {{userName}}\\n\\n**Total Orders:** {{orderCount}}\\n**Revenue:** {{revenue}} USD\\n\\n{{summary}}",
-      "variables": {
-        "userName": { "type": "input", "inputKey": "user_name" },
-        "orderCount": { "type": "step", "stepKey": "fetch_stats", "path": "$.orderCount" },
-        "revenue": { "type": "step", "stepKey": "fetch_stats", "path": "$.totalRevenue" },
-        "summary": { "type": "step", "stepKey": "generate_summary" }
-      }
-    }
-  }
-}
-
-Example - Dynamic file path:
-{
-  "type": "template",
-  "template": "/reports/{{year}}/{{month}}/summary.csv",
-  "variables": {
-    "year": { "type": "input", "inputKey": "year" },
-    "month": { "type": "input", "inputKey": "month" }
-  }
-}
-
-### 5. object - Construct objects
-
-Use for: Building objects from multiple bindings, wrapping data for code_execute
-{ "type": "object", "entries": { "key": ParamBinding } }
-
-Example - Combining data from multiple sources:
-{
-  "type": "object",
-  "entries": {
-    "userId": { "type": "input", "inputKey": "user_id" },
-    "orders": { "type": "step", "stepKey": "fetch_orders" },
-    "timestamp": { "type": "static", "value": "2024-01-01" }
-  }
-}
-
-### 6. array - Construct arrays
-
-Use for: Building arrays from multiple bindings (e.g., SQL parameters)
-{ "type": "array", "items": [ParamBinding, ...] }
-
-Example - SQL parameters:
-{
-  "type": "array",
-  "items": [
-    { "type": "input", "inputKey": "name" },
-    { "type": "input", "inputKey": "email" }
-  ]
-}
-
----
-
-## code_execute - Data Transformation
-
-Use code_execute when you need transformations that bindings cannot express:
-- Filtering: \`input.items.filter(x => x.active)\`
-- Mapping with logic: \`input.items.map(x => ({ ...x, total: x.price * x.qty }))\`
-- Conditional: \`input.count > 0 ? input.items[0] : null\`
-- Aggregation: \`input.items.reduce((sum, x) => sum + x.amount, 0)\`
-
-IMPORTANT: The input parameter MUST be an object. Wrap arrays using object binding:
-
-{
-  "stepKey": "filter_active",
-  "label": "Filter active users",
-  "toolName": "code_execute",
-  "params": {
-    "code": { "type": "static", "value": "return input.users.filter(u => u.active)" },
-    "input": {
-      "type": "object",
-      "entries": {
-        "users": { "type": "step", "stepKey": "fetch_users" }
-      }
-    }
-  }
-}
-
----
-
-## System Tools
-
-Include as steps:
-- output_table, output_chart, output_markdown, output_key_value: Display results to user
-- human_request: Pause for user input (form/question/select_rows only)
-
-Do NOT include:
-- task_complete: Recipe completes automatically after last step
-- human_request with confirm/approval fields: These are for one-time conversational decisions, not reusable recipes
-
----
-
-## Step Design
-
-**stepKey**: Unique snake_case identifier describing purpose
-- Good: "fetch_active_users", "calculate_total", "send_email"
-- Bad: "step_0", "step_1", "s1"
-
-**label**: Human-readable description for UI
-- Good: "Fetch active users", "Calculate order total"
-
-**Step ordering**: Steps are executed in array order. A step can only reference previous steps via bindings.
-
----
-
-## Extraction Process
-
-1. **Understand user intent** - What is the user trying to accomplish? (not just what they did)
-2. **Analyze tool capabilities** - What can each tool return? What columns/fields are available?
-3. **Design flexible data flow** - Connect steps with bindings so data flows dynamically
-4. **Generalize outputs** - Display all relevant data from previous steps, not just what was shown in this conversation
-5. **Avoid hardcoding** - If a value came from a previous step, use a binding to get it
-6. **Verify references** - Ensure all step references exist and no circular dependencies
-
-Remember: This conversation is ONE example. The recipe should work when the underlying data changes.
+Use for: Ordered lists
+Example: { "type": "array", "items": [{ "type": "ref", "scope": "step", "key": "fetch_users" }] }
 `
 
 export function buildRecipeExtractionPrompt(context: ConversationContext): string {
@@ -621,10 +488,10 @@ function convertRawStepToExtractedStep(
     const descBinding = normalizedParams.description
     const fieldsBinding = normalizedParams.fields
 
-    const title = titleBinding?.type === "static" ? String(titleBinding.value) : "User Input"
-    const description = descBinding?.type === "static" ? String(descBinding.value) : undefined
+    const title = titleBinding?.type === "literal" ? String(titleBinding.value) : "User Input"
+    const description = descBinding?.type === "literal" ? String(descBinding.value) : undefined
     const fields =
-      fieldsBinding?.type === "static" && Array.isArray(fieldsBinding.value)
+      fieldsBinding?.type === "literal" && Array.isArray(fieldsBinding.value)
         ? (fieldsBinding.value as Array<Record<string, unknown>>)
         : []
 
@@ -635,10 +502,10 @@ function convertRawStepToExtractedStep(
           dataValue &&
           typeof dataValue === "object" &&
           "type" in dataValue &&
-          ["static", "input", "step", "template", "object", "array"].includes((dataValue as { type: string }).type)
+          ["literal", "ref", "template", "object", "array"].includes((dataValue as { type: string }).type)
         const data: ParamBinding = isBinding
           ? updateBindingRef(dataValue as ParamBinding, keyMap)
-          : { type: "static" as const, value: dataValue ?? [] }
+          : { type: "literal" as const, value: dataValue ?? [] }
 
         return {
           kind: "select_rows" as const,
@@ -654,11 +521,11 @@ function convertRawStepToExtractedStep(
           defaultsValue &&
           typeof defaultsValue === "object" &&
           "type" in defaultsValue &&
-          ["static", "input", "step", "template", "object", "array"].includes((defaultsValue as { type: string }).type)
+          ["literal", "ref", "template", "object", "array"].includes((defaultsValue as { type: string }).type)
         const defaults: ParamBinding | undefined = isBinding
           ? updateBindingRef(defaultsValue as ParamBinding, keyMap)
           : defaultsValue
-            ? { type: "static" as const, value: defaultsValue }
+            ? { type: "literal" as const, value: defaultsValue }
             : undefined
 
         return {
@@ -704,9 +571,9 @@ function convertRawStepToExtractedStep(
     const codeBinding = normalizedParams.code
     const inputBinding = normalizedParams.input
     const timeoutBinding = normalizedParams.timeout
-    const code = codeBinding?.type === "static" ? String(codeBinding.value) : ""
+    const code = codeBinding?.type === "literal" ? String(codeBinding.value) : ""
     const binding = inputBinding ?? { type: "object" as const, entries: {} }
-    const timeoutMs = timeoutBinding?.type === "static" ? Number(timeoutBinding.value) : undefined
+    const timeoutMs = timeoutBinding?.type === "literal" ? Number(timeoutBinding.value) : undefined
 
     return {
       stepKey,
@@ -785,11 +652,14 @@ export function updateParamBindingRefs(
 }
 
 export function updateBindingRef(binding: ParamBinding, idMap: Map<string, string>): ParamBinding {
-  if (binding.type === "step") {
-    return { ...binding, stepKey: idMap.get(binding.stepKey) ?? binding.stepKey }
+  if (binding.type === "ref" && binding.scope === "step") {
+    return { ...binding, key: idMap.get(binding.key) ?? binding.key }
   }
   if (binding.type === "template") {
-    return { ...binding, variables: updateParamBindingRefs(binding.variables, idMap) }
+    return {
+      ...binding,
+      parts: binding.parts.map((part) => (typeof part === "string" ? part : updateBindingRef(part, idMap))),
+    }
   }
   if (binding.type === "object") {
     return { ...binding, entries: updateParamBindingRefs(binding.entries, idMap) }

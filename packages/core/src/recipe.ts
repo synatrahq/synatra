@@ -51,8 +51,12 @@ function hashConfig(config: Record<string, unknown>): string {
 export function extractBindingRefs(binding: ParamBinding): string[] {
   const refs: string[] = []
   function walk(b: ParamBinding): void {
-    if (b.type === "step") refs.push(b.stepKey)
-    if (b.type === "template") Object.values(b.variables).forEach(walk)
+    if (b.type === "ref" && b.scope === "step") refs.push(b.key)
+    if (b.type === "template") {
+      for (const part of b.parts) {
+        if (typeof part !== "string") walk(part)
+      }
+    }
     if (b.type === "object") Object.values(b.entries).forEach(walk)
     if (b.type === "array") b.items.forEach(walk)
   }
