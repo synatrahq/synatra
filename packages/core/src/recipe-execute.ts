@@ -74,7 +74,7 @@ export function resolveBinding(binding: ParamBinding, context: RecipeExecutionCo
     case "input":
       return context.inputs[binding.inputKey]
     case "step":
-      return getValueByPath(context.results[binding.stepId], binding.path)
+      return getValueByPath(context.results[binding.stepKey], binding.path)
     case "template": {
       let result = binding.template
       for (const [varName, varBinding] of Object.entries(binding.variables)) {
@@ -104,11 +104,16 @@ export function resolveStepParams(step: NormalizedStep, context: RecipeExecution
 }
 
 export function buildNormalizedSteps(steps: RecipeStepDb[], edges: RecipeEdge[]): NormalizedStep[] {
+  const stepIdToKey = new Map(steps.map((s) => [s.id, s.stepKey]))
+
   const edgeMap = new Map<string, string[]>()
   for (const edge of edges) {
-    const deps = edgeMap.get(edge.toStepKey) ?? []
-    deps.push(edge.fromStepKey)
-    edgeMap.set(edge.toStepKey, deps)
+    const toKey = stepIdToKey.get(edge.toStepId)
+    const fromKey = stepIdToKey.get(edge.fromStepId)
+    if (!toKey || !fromKey) continue
+    const deps = edgeMap.get(toKey) ?? []
+    deps.push(fromKey)
+    edgeMap.set(toKey, deps)
   }
 
   return steps.map((step) => {

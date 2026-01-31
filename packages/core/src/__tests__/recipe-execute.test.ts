@@ -73,12 +73,12 @@ describe("resolveBinding", () => {
   })
 
   test("resolves step binding without path", () => {
-    const binding: ParamBinding = { type: "step", stepId: "step_1" }
+    const binding: ParamBinding = { type: "step", stepKey: "step_1" }
     expect(resolveBinding(binding, context)).toBe("processed")
   })
 
   test("resolves step binding with path", () => {
-    const binding: ParamBinding = { type: "step", stepId: "step_0", path: "$.data[0].email" }
+    const binding: ParamBinding = { type: "step", stepKey: "step_0", path: "$.data[0].email" }
     expect(resolveBinding(binding, context)).toBe("a@test.com")
   })
 
@@ -99,7 +99,7 @@ describe("resolveBinding", () => {
       type: "object",
       entries: {
         user: { type: "input", inputKey: "name" },
-        email: { type: "step", stepId: "step_0", path: "$.data[0].email" },
+        email: { type: "step", stepKey: "step_0", path: "$.data[0].email" },
       },
     }
     expect(resolveBinding(binding, context)).toEqual({
@@ -123,7 +123,7 @@ describe("resolveStepParams", () => {
         binding: {
           type: "object",
           entries: {
-            to: { type: "step", stepId: "step_0", path: "$.email" },
+            to: { type: "step", stepKey: "step_0", path: "$.email" },
             subject: { type: "static", value: "Hello" },
             name: { type: "input", inputKey: "userName" },
           },

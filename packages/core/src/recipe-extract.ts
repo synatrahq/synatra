@@ -197,8 +197,8 @@ export function validateRecipeSteps(
   function validateBinding(binding: ParamBinding, stepKey: string, paramPath: string): void {
     switch (binding.type) {
       case "step":
-        if (!stepKeys.has(binding.stepId)) {
-          errors.push(`Step "${stepKey}" param "${paramPath}" references non-existent step "${binding.stepId}"`)
+        if (!stepKeys.has(binding.stepKey)) {
+          errors.push(`Step "${stepKey}" param "${paramPath}" references non-existent step "${binding.stepKey}"`)
         }
         break
       case "input":
@@ -405,12 +405,12 @@ If inputs array contains { "key": "user_id", ... }, reference it as:
 ### 3. step - Previous step results
 
 Use for: Passing data from one step to another
-{ "type": "step", "stepId": "string", "path": "$.jsonpath" (optional) }
+{ "type": "step", "stepKey": "string", "path": "$.jsonpath" (optional) }
 
 Path examples:
-- Whole result: { "type": "step", "stepId": "fetch_users" }
-- Nested field: { "type": "step", "stepId": "fetch_users", "path": "$.data[0].email" }
-- Map array: { "type": "step", "stepId": "fetch_users", "path": "$[*].id" }
+- Whole result: { "type": "step", "stepKey": "fetch_users" }
+- Nested field: { "type": "step", "stepKey": "fetch_users", "path": "$.data[0].email" }
+- Map array: { "type": "step", "stepKey": "fetch_users", "path": "$[*].id" }
 
 ### 4. template - String interpolation
 
@@ -430,9 +430,9 @@ Example - output_markdown with dynamic content (common pattern):
       "template": "# Report for {{userName}}\\n\\n**Total Orders:** {{orderCount}}\\n**Revenue:** {{revenue}} USD\\n\\n{{summary}}",
       "variables": {
         "userName": { "type": "input", "inputKey": "user_name" },
-        "orderCount": { "type": "step", "stepId": "fetch_stats", "path": "$.orderCount" },
-        "revenue": { "type": "step", "stepId": "fetch_stats", "path": "$.totalRevenue" },
-        "summary": { "type": "step", "stepId": "generate_summary" }
+        "orderCount": { "type": "step", "stepKey": "fetch_stats", "path": "$.orderCount" },
+        "revenue": { "type": "step", "stepKey": "fetch_stats", "path": "$.totalRevenue" },
+        "summary": { "type": "step", "stepKey": "generate_summary" }
       }
     }
   },
@@ -459,7 +459,7 @@ Example - Combining data from multiple sources:
   "type": "object",
   "entries": {
     "userId": { "type": "input", "inputKey": "user_id" },
-    "orders": { "type": "step", "stepId": "fetch_orders" },
+    "orders": { "type": "step", "stepKey": "fetch_orders" },
     "timestamp": { "type": "static", "value": "2024-01-01" }
   }
 }
@@ -499,7 +499,7 @@ IMPORTANT: The input parameter MUST be an object. Wrap arrays using object bindi
     "input": {
       "type": "object",
       "entries": {
-        "users": { "type": "step", "stepId": "fetch_users" }
+        "users": { "type": "step", "stepKey": "fetch_users" }
       }
     }
   },
@@ -783,7 +783,7 @@ export function updateParamBindingRefs(
 
 export function updateBindingRef(binding: ParamBinding, idMap: Map<string, string>): ParamBinding {
   if (binding.type === "step") {
-    return { ...binding, stepId: idMap.get(binding.stepId) ?? binding.stepId }
+    return { ...binding, stepKey: idMap.get(binding.stepKey) ?? binding.stepKey }
   }
   if (binding.type === "template") {
     return { ...binding, variables: updateParamBindingRefs(binding.variables, idMap) }

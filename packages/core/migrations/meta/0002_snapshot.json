@@ -1,5 +1,5 @@
 {
-  "id": "2703d0f3-6b4a-44fe-9883-8451e85ef036",
+  "id": "c154f0f4-afec-411a-a6d0-446ff91a835b",
   "prevId": "9a5cd05c-1415-434d-8e80-7c1cd69aad55",
   "version": "7",
   "dialect": "postgresql",
@@ -3823,15 +3823,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "from_step_key": {
-          "name": "from_step_key",
-          "type": "text",
+        "from_step_id": {
+          "name": "from_step_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "to_step_key": {
-          "name": "to_step_key",
-          "type": "text",
+        "to_step_id": {
+          "name": "to_step_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -3884,13 +3884,13 @@
               "nulls": "last"
             },
             {
-              "expression": "from_step_key",
+              "expression": "from_step_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "to_step_key",
+              "expression": "to_step_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3912,13 +3912,13 @@
               "nulls": "last"
             },
             {
-              "expression": "from_step_key",
+              "expression": "from_step_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "to_step_key",
+              "expression": "to_step_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3951,6 +3951,32 @@
           "tableTo": "recipe_release",
           "columnsFrom": [
             "release_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "recipe_edge_from_step_id_recipe_step_id_fk": {
+          "name": "recipe_edge_from_step_id_recipe_step_id_fk",
+          "tableFrom": "recipe_edge",
+          "tableTo": "recipe_step",
+          "columnsFrom": [
+            "from_step_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "recipe_edge_to_step_id_recipe_step_id_fk": {
+          "name": "recipe_edge_to_step_id_recipe_step_id_fk",
+          "tableFrom": "recipe_edge",
+          "tableTo": "recipe_step",
+          "columnsFrom": [
+            "to_step_id"
           ],
           "columnsTo": [
             "id"

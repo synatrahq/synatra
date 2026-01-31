@@ -79,8 +79,8 @@ const RecipeJsonSchema: JSONSchema7 = {
         },
         {
           type: "object",
-          properties: { type: { const: "step" }, stepId: { type: "string" }, path: { type: "string" } },
-          required: ["type", "stepId"],
+          properties: { type: { const: "step" }, stepKey: { type: "string" }, path: { type: "string" } },
+          required: ["type", "stepKey"],
         },
         {
           type: "object",

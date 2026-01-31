@@ -138,18 +138,22 @@ export const RecipeEdgeTable = pgTable(
       onDelete: "cascade",
     }),
     releaseId: uuid("release_id").references(() => RecipeReleaseTable.id, { onDelete: "cascade" }),
-    fromStepKey: text("from_step_key").notNull(),
-    toStepKey: text("to_step_key").notNull(),
+    fromStepId: uuid("from_step_id")
+      .notNull()
+      .references(() => RecipeStepTable.id, { onDelete: "cascade" }),
+    toStepId: uuid("to_step_id")
+      .notNull()
+      .references(() => RecipeStepTable.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("recipe_edge_working_copy_idx").on(table.workingCopyRecipeId),
     index("recipe_edge_release_idx").on(table.releaseId),
     uniqueIndex("recipe_edge_working_copy_unique_idx")
-      .on(table.workingCopyRecipeId, table.fromStepKey, table.toStepKey)
+      .on(table.workingCopyRecipeId, table.fromStepId, table.toStepId)
       .where(sql`working_copy_recipe_id IS NOT NULL`),
     uniqueIndex("recipe_edge_release_unique_idx")
-      .on(table.releaseId, table.fromStepKey, table.toStepKey)
+      .on(table.releaseId, table.fromStepId, table.toStepId)
       .where(sql`release_id IS NOT NULL`),
     check(
       "recipe_edge_parent_check",

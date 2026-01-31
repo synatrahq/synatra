@@ -119,7 +119,7 @@ function formatBindingRef(binding: ParamBinding): string {
       return `input.${binding.inputKey}`
     case "step": {
       const path = binding.path?.replace(/^\$\.?/, "") ?? ""
-      return path ? `${binding.stepId}.${path}` : binding.stepId
+      return path ? `${binding.stepKey}.${path}` : binding.stepKey
     }
     default:
       return "[complex]"
@@ -134,7 +134,7 @@ function resolveBinding(binding: ParamBinding): unknown {
       return `$input.${binding.inputKey}`
     case "step": {
       const path = binding.path?.replace(/^\$\.?/, "") ?? ""
-      return path ? `$step.${binding.stepId}.${path}` : `$step.${binding.stepId}`
+      return path ? `$step.${binding.stepKey}.${path}` : `$step.${binding.stepKey}`
     }
     case "template": {
       let result = binding.template

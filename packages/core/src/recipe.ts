@@ -219,16 +219,37 @@ export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
           })),
         )
 
+        const releaseSteps = await db
+          .select({ id: RecipeStepTable.id, stepKey: RecipeStepTable.stepKey })
+          .from(RecipeStepTable)
+          .where(eq(RecipeStepTable.releaseId, release.id))
+
+        const workingSteps = await db
+          .select({ id: RecipeStepTable.id, stepKey: RecipeStepTable.stepKey })
+          .from(RecipeStepTable)
+          .where(eq(RecipeStepTable.workingCopyRecipeId, recipe.id))
+
+        const releaseKeyToId = new Map(releaseSteps.map((s) => [s.stepKey, s.id]))
+        const workingKeyToId = new Map(workingSteps.map((s) => [s.stepKey, s.id]))
+
         const edges: Array<{
           releaseId?: string
           workingCopyRecipeId?: string
-          fromStepKey: string
-          toStepKey: string
+          fromStepId: string
+          toStepId: string
         }> = []
         for (const step of input.steps) {
           for (const depKey of step.dependsOn) {
-            edges.push({ releaseId: release.id, fromStepKey: depKey, toStepKey: step.stepKey })
-            edges.push({ workingCopyRecipeId: recipe.id, fromStepKey: depKey, toStepKey: step.stepKey })
+            const releaseFromId = releaseKeyToId.get(depKey)
+            const releaseToId = releaseKeyToId.get(step.stepKey)
+            const workingFromId = workingKeyToId.get(depKey)
+            const workingToId = workingKeyToId.get(step.stepKey)
+            if (releaseFromId && releaseToId) {
+              edges.push({ releaseId: release.id, fromStepId: releaseFromId, toStepId: releaseToId })
+            }
+            if (workingFromId && workingToId) {
+              edges.push({ workingCopyRecipeId: recipe.id, fromStepId: workingFromId, toStepId: workingToId })
+            }
           }
         }
         if (edges.length > 0) {
@@ -501,10 +522,21 @@ export async function saveRecipeWorkingCopy(raw: z.input<typeof SaveRecipeWorkin
           })),
         )
 
-        const edges: Array<{ workingCopyRecipeId: string; fromStepKey: string; toStepKey: string }> = []
+        const insertedSteps = await db
+          .select({ id: RecipeStepTable.id, stepKey: RecipeStepTable.stepKey })
+          .from(RecipeStepTable)
+          .where(eq(RecipeStepTable.workingCopyRecipeId, input.recipeId))
+
+        const keyToId = new Map(insertedSteps.map((s) => [s.stepKey, s.id]))
+
+        const edges: Array<{ workingCopyRecipeId: string; fromStepId: string; toStepId: string }> = []
         for (const step of input.steps) {
           for (const depKey of step.dependsOn) {
-            edges.push({ workingCopyRecipeId: input.recipeId, fromStepKey: depKey, toStepKey: step.stepKey })
+            const fromId = keyToId.get(depKey)
+            const toId = keyToId.get(step.stepKey)
+            if (fromId && toId) {
+              edges.push({ workingCopyRecipeId: input.recipeId, fromStepId: fromId, toStepId: toId })
+            }
           }
         }
         if (edges.length > 0) {
@@ -630,13 +662,34 @@ export async function deployRecipe(raw: z.input<typeof DeployRecipeSchema>) {
       .where(eq(RecipeEdgeTable.workingCopyRecipeId, input.recipeId))
 
     if (workingEdges.length > 0) {
-      await db.insert(RecipeEdgeTable).values(
-        workingEdges.map((edge) => ({
-          releaseId: created.id,
-          fromStepKey: edge.fromStepKey,
-          toStepKey: edge.toStepKey,
-        })),
-      )
+      const workingSteps = await db
+        .select({ id: RecipeStepTable.id, stepKey: RecipeStepTable.stepKey })
+        .from(RecipeStepTable)
+        .where(eq(RecipeStepTable.workingCopyRecipeId, input.recipeId))
+
+      const releaseSteps = await db
+        .select({ id: RecipeStepTable.id, stepKey: RecipeStepTable.stepKey })
+        .from(RecipeStepTable)
+        .where(eq(RecipeStepTable.releaseId, created.id))
+
+      const workingIdToKey = new Map(workingSteps.map((s) => [s.id, s.stepKey]))
+      const releaseKeyToId = new Map(releaseSteps.map((s) => [s.stepKey, s.id]))
+
+      const releaseEdges = workingEdges
+        .map((edge) => {
+          const fromKey = workingIdToKey.get(edge.fromStepId)
+          const toKey = workingIdToKey.get(edge.toStepId)
+          if (!fromKey || !toKey) return null
+          const fromId = releaseKeyToId.get(fromKey)
+          const toId = releaseKeyToId.get(toKey)
+          if (!fromId || !toId) return null
+          return { releaseId: created.id, fromStepId: fromId, toStepId: toId }
+        })
+        .filter((e): e is NonNullable<typeof e> => e !== null)
+
+      if (releaseEdges.length > 0) {
+        await db.insert(RecipeEdgeTable).values(releaseEdges)
+      }
     }
 
     await db
@@ -750,13 +803,34 @@ export async function checkoutRecipe(raw: z.input<typeof CheckoutRecipeSchema>) 
     const releaseEdges = await db.select().from(RecipeEdgeTable).where(eq(RecipeEdgeTable.releaseId, input.releaseId))
 
     if (releaseEdges.length > 0) {
-      await db.insert(RecipeEdgeTable).values(
-        releaseEdges.map((edge) => ({
-          workingCopyRecipeId: input.recipeId,
-          fromStepKey: edge.fromStepKey,
-          toStepKey: edge.toStepKey,
-        })),
-      )
+      const releaseStepsForEdges = await db
+        .select({ id: RecipeStepTable.id, stepKey: RecipeStepTable.stepKey })
+        .from(RecipeStepTable)
+        .where(eq(RecipeStepTable.releaseId, input.releaseId))
+
+      const workingStepsForEdges = await db
+        .select({ id: RecipeStepTable.id, stepKey: RecipeStepTable.stepKey })
+        .from(RecipeStepTable)
+        .where(eq(RecipeStepTable.workingCopyRecipeId, input.recipeId))
+
+      const releaseIdToKey = new Map(releaseStepsForEdges.map((s) => [s.id, s.stepKey]))
+      const workingKeyToId = new Map(workingStepsForEdges.map((s) => [s.stepKey, s.id]))
+
+      const workingEdges = releaseEdges
+        .map((edge) => {
+          const fromKey = releaseIdToKey.get(edge.fromStepId)
+          const toKey = releaseIdToKey.get(edge.toStepId)
+          if (!fromKey || !toKey) return null
+          const fromId = workingKeyToId.get(fromKey)
+          const toId = workingKeyToId.get(toKey)
+          if (!fromId || !toId) return null
+          return { workingCopyRecipeId: input.recipeId, fromStepId: fromId, toStepId: toId }
+        })
+        .filter((e): e is NonNullable<typeof e> => e !== null)
+
+      if (workingEdges.length > 0) {
+        await db.insert(RecipeEdgeTable).values(workingEdges)
+      }
     }
   })
 

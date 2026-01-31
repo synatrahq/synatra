@@ -11,8 +11,8 @@ CREATE TABLE "recipe_edge" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"working_copy_recipe_id" uuid,
 	"release_id" uuid,
-	"from_step_key" text NOT NULL,
-	"to_step_key" text NOT NULL,
+	"from_step_id" uuid NOT NULL,
+	"to_step_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "recipe_edge_parent_check" CHECK ((working_copy_recipe_id IS NOT NULL AND release_id IS NULL) OR (working_copy_recipe_id IS NULL AND release_id IS NOT NULL))
 );
@@ -96,6 +96,8 @@ ALTER TABLE "channel_recipe" ADD CONSTRAINT "channel_recipe_recipe_id_recipe_id_
 ALTER TABLE "channel_recipe" ADD CONSTRAINT "channel_recipe_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_edge" ADD CONSTRAINT "recipe_edge_working_copy_recipe_id_recipe_working_copy_recipe_id_fk" FOREIGN KEY ("working_copy_recipe_id") REFERENCES "public"."recipe_working_copy"("recipe_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_edge" ADD CONSTRAINT "recipe_edge_release_id_recipe_release_id_fk" FOREIGN KEY ("release_id") REFERENCES "public"."recipe_release"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "recipe_edge" ADD CONSTRAINT "recipe_edge_from_step_id_recipe_step_id_fk" FOREIGN KEY ("from_step_id") REFERENCES "public"."recipe_step"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "recipe_edge" ADD CONSTRAINT "recipe_edge_to_step_id_recipe_step_id_fk" FOREIGN KEY ("to_step_id") REFERENCES "public"."recipe_step"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_execution" ADD CONSTRAINT "recipe_execution_recipe_id_recipe_id_fk" FOREIGN KEY ("recipe_id") REFERENCES "public"."recipe"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_execution" ADD CONSTRAINT "recipe_execution_release_id_recipe_release_id_fk" FOREIGN KEY ("release_id") REFERENCES "public"."recipe_release"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_execution" ADD CONSTRAINT "recipe_execution_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -119,8 +121,8 @@ CREATE UNIQUE INDEX "channel_recipe_unique" ON "channel_recipe" USING btree ("ch
 CREATE INDEX "channel_recipe_recipe_idx" ON "channel_recipe" USING btree ("recipe_id");--> statement-breakpoint
 CREATE INDEX "recipe_edge_working_copy_idx" ON "recipe_edge" USING btree ("working_copy_recipe_id");--> statement-breakpoint
 CREATE INDEX "recipe_edge_release_idx" ON "recipe_edge" USING btree ("release_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "recipe_edge_working_copy_unique_idx" ON "recipe_edge" USING btree ("working_copy_recipe_id","from_step_key","to_step_key") WHERE working_copy_recipe_id IS NOT NULL;--> statement-breakpoint
-CREATE UNIQUE INDEX "recipe_edge_release_unique_idx" ON "recipe_edge" USING btree ("release_id","from_step_key","to_step_key") WHERE release_id IS NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "recipe_edge_working_copy_unique_idx" ON "recipe_edge" USING btree ("working_copy_recipe_id","from_step_id","to_step_id") WHERE working_copy_recipe_id IS NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "recipe_edge_release_unique_idx" ON "recipe_edge" USING btree ("release_id","from_step_id","to_step_id") WHERE release_id IS NOT NULL;--> statement-breakpoint
 CREATE INDEX "recipe_execution_recipe_idx" ON "recipe_execution" USING btree ("recipe_id");--> statement-breakpoint
 CREATE INDEX "recipe_execution_org_idx" ON "recipe_execution" USING btree ("organization_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "recipe_release_unique_idx" ON "recipe_release" USING btree ("recipe_id","version");--> statement-breakpoint

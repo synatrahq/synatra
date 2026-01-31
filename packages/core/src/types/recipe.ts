@@ -15,7 +15,7 @@ const InputBindingSchema = z.object({
 
 const StepBindingSchema = z.object({
   type: z.literal("step"),
-  stepId: z.string(),
+  stepKey: z.string(),
   path: z.string().optional(),
 })
 
