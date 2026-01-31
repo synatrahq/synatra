@@ -488,7 +488,7 @@ export default function InboxPage() {
       })
       setRecipeExecuteStartedAt(null)
       if (result.status === "waiting_input") {
-        queryClient.invalidateQueries({ queryKey: ["recipe-executions", id, activeOrg()?.id] })
+        queryClient.invalidateQueries({ queryKey: ["pending-execution", id, activeOrg()?.id] })
       }
     },
   }))
@@ -541,7 +541,7 @@ export default function InboxPage() {
         pendingInputConfig: data.pendingInputConfig,
       })
       if (data.status === "waiting_input") {
-        queryClient.invalidateQueries({ queryKey: ["recipe-executions", recipe.id, activeOrg()?.id] })
+        queryClient.invalidateQueries({ queryKey: ["pending-execution", recipe.id, activeOrg()?.id] })
       }
     } finally {
       setRecipeResponding(false)
