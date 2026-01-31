@@ -390,37 +390,41 @@ export default function InboxPage() {
 
   const channelView = (): ChannelView => (searchParams.view === "recipes" ? "recipes" : "threads")
 
-  const selectedRecipe = createMemo(() => {
-    const id = searchParams.recipe
+  const selectedRecipeId = createMemo(() => (searchParams.recipe ? searchParams.recipe : null))
+
+  const selectedRecipeFromList = createMemo(() => {
+    const id = selectedRecipeId()
     if (!id || !recipesQuery.data) return null
     return recipesQuery.data.items.find((r) => r.id === id) ?? null
   })
 
   const recipeDetailQuery = useQuery(() => {
-    const recipe = selectedRecipe()
+    const id = selectedRecipeId()
     return {
-      queryKey: ["recipe", recipe?.id ?? "", activeOrg()?.id],
+      queryKey: ["recipe", id ?? "", activeOrg()?.id],
       queryFn: async (): Promise<Recipe | null> => {
-        if (!recipe) return null
-        const res = await api.api.recipes[":id"].$get({ param: { id: recipe.id } })
+        if (!id) return null
+        const res = await api.api.recipes[":id"].$get({ param: { id } })
         return res.json()
       },
-      enabled: !!recipe,
+      enabled: !!id && !!activeOrg()?.id,
     }
   })
 
   const pendingExecutionQuery = useQuery(() => {
-    const recipe = selectedRecipe()
+    const id = selectedRecipeId()
     return {
-      queryKey: ["pending-execution", recipe?.id ?? "", activeOrg()?.id],
+      queryKey: ["pending-execution", id ?? "", activeOrg()?.id],
       queryFn: async (): Promise<RecipeExecution | null> => {
-        if (!recipe) return null
-        const res = await api.api.recipes[":id"]["pending-execution"].$get({ param: { id: recipe.id } })
+        if (!id) return null
+        const res = await api.api.recipes[":id"]["pending-execution"].$get({ param: { id } })
         return res.json()
       },
-      enabled: !!recipe,
+      enabled: !!id && !!activeOrg()?.id,
     }
   })
+
+  const selectedRecipe = createMemo(() => recipeDetailQuery.data ?? selectedRecipeFromList())
 
   const recipeUpdateMutation = useMutation(() => ({
     mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string }) => {
