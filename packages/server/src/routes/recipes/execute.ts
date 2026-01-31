@@ -7,8 +7,6 @@ import {
   deleteRecipeExecution,
   getRecipeById,
   getRecipeRelease,
-  getAgentById,
-  getAgentRelease,
   getEnvironmentById,
   listResources,
   createOutputItemAndIncrementSeq,
@@ -65,16 +63,7 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
     }
   }
 
-  const agent = await getAgentById(recipe.agentId)
   await getEnvironmentById(body.environmentId)
-
-  let agentRuntimeConfig: { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
-  if (release.agentVersionMode === "fixed" && release.agentReleaseId) {
-    const agentRelease = await getAgentRelease(release.agentReleaseId)
-    agentRuntimeConfig = agentRelease.runtimeConfig
-  } else {
-    agentRuntimeConfig = agent.runtimeConfig as { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
-  }
 
   const execution = await createRecipeExecution({
     recipeId,
@@ -95,7 +84,6 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
   const result = await executeStepLoop(sortedSteps, 0, { inputs: body.inputs, results: {}, resolvedParams: {} }, [], {
     organizationId,
     environmentId: body.environmentId,
-    agentTools: agentRuntimeConfig?.tools ?? [],
     resources: resources.map((r) => ({ slug: r.slug, id: r.id, type: r.type })),
     recipeOutputs: release.outputs,
     threadId: body.threadId,

@@ -6,18 +6,29 @@ export const get = new Hono().get("/:id", async (c) => {
 
   if (recipe.currentReleaseId) {
     const release = await getRecipeRelease(recipe.id, recipe.currentReleaseId)
+    const steps = release.steps.map((s) => {
+      const base = {
+        stepKey: s.stepKey,
+        label: s.label,
+        dependsOn: release.edges.filter((e) => e.toStepKey === s.stepKey).map((e) => e.fromStepKey),
+      }
+      if (s.type === "query") {
+        return { ...base, type: "query" as const, config: s.config }
+      }
+      if (s.type === "code") {
+        return { ...base, type: "code" as const, config: s.config }
+      }
+      if (s.type === "output") {
+        return { ...base, type: "output" as const, config: s.config }
+      }
+      return { ...base, type: "input" as const, config: s.config }
+    })
     return c.json({
       ...recipe,
       version: release.version,
       inputs: release.inputs,
       outputs: release.outputs,
-      steps: release.steps.map((s) => ({
-        stepKey: s.stepKey,
-        label: s.label,
-        type: s.type,
-        config: s.config,
-        dependsOn: release.edges.filter((e) => e.toStepKey === s.stepKey).map((e) => e.fromStepKey),
-      })),
+      steps,
     })
   }
 

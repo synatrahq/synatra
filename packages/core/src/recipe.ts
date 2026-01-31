@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { eq, and, desc, lt, or, getTableColumns, sql, inArray, isNull } from "drizzle-orm"
+import { eq, and, desc, lt, or, getTableColumns, sql, inArray } from "drizzle-orm"
 import { createHash } from "crypto"
 import { principal } from "./principal"
 import { withDb, withTx, first } from "./database"
@@ -11,6 +11,7 @@ import {
   RecipeEdgeTable,
   RecipeExecutionTable,
 } from "./schema/recipe.sql"
+import { ChannelRecipeTable } from "./schema/channel-recipe.sql"
 import { UserTable } from "./schema/user.sql"
 import { MemberTable } from "./schema/member.sql"
 import { ChannelMemberTable } from "./schema/channel-member.sql"
@@ -23,7 +24,7 @@ import {
   RecipeOutputSchema,
   PendingInputConfigSchema,
   RecipeStepType,
-  ToolStepConfigSchema,
+  RecipeStepConfigSchema,
   type RecipeInput,
   type RecipeOutput,
 } from "./types"
@@ -71,16 +72,40 @@ async function getAccessibleChannelIds(): Promise<string[] | null> {
   return channelMembers.map((cm) => cm.channelId)
 }
 
-async function canAccessRecipeChannel(channelId: string | null): Promise<boolean> {
-  if (!channelId) return true
+async function canAccessRecipeViaChannel(recipeId: string): Promise<boolean> {
   const accessibleChannels = await getAccessibleChannelIds()
   if (accessibleChannels === null) return true
-  return accessibleChannels.includes(channelId)
+
+  const channelRecipes = await withDb((db) =>
+    db
+      .select({ channelId: ChannelRecipeTable.channelId })
+      .from(ChannelRecipeTable)
+      .where(eq(ChannelRecipeTable.recipeId, recipeId)),
+  )
+
+  if (channelRecipes.length === 0) return true
+
+  return channelRecipes.some((cr) => accessibleChannels.includes(cr.channelId))
 }
 
+const RecipeStepInputSchema = z
+  .object({
+    stepKey: z.string(),
+    label: z.string(),
+    dependsOn: z.array(z.string()),
+  })
+  .and(
+    z.union([
+      z.object({ type: z.literal("query"), config: RecipeStepConfigSchema }),
+      z.object({ type: z.literal("code"), config: RecipeStepConfigSchema }),
+      z.object({ type: z.literal("output"), config: RecipeStepConfigSchema }),
+      z.object({ type: z.literal("input"), config: RecipeStepConfigSchema }),
+    ]),
+  )
+
 export const CreateRecipeSchema = z.object({
-  agentId: z.string(),
-  channelId: z.string().optional(),
+  agentId: z.string().optional(),
+  channelIds: z.array(z.string()).optional(),
   sourceThreadId: z.string().optional(),
   sourceRunId: z.string().optional(),
   name: z.string().min(1),
@@ -90,15 +115,7 @@ export const CreateRecipeSchema = z.object({
   agentVersionMode: z.enum(["current", "fixed"]).default("current"),
   inputs: z.array(RecipeInputSchema),
   outputs: z.array(RecipeOutputSchema),
-  steps: z.array(
-    z.object({
-      stepKey: z.string(),
-      label: z.string(),
-      type: z.enum(RecipeStepType).default("tool"),
-      config: ToolStepConfigSchema,
-      dependsOn: z.array(z.string()),
-    }),
-  ),
+  steps: z.array(RecipeStepInputSchema),
 })
 
 export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
@@ -129,8 +146,7 @@ export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
         .insert(RecipeTable)
         .values({
           organizationId,
-          agentId: input.agentId,
-          channelId: input.channelId,
+          agentId: input.agentId ?? null,
           sourceThreadId: input.sourceThreadId,
           sourceRunId: input.sourceRunId,
           name: input.name,
@@ -140,6 +156,16 @@ export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
           updatedBy: userId,
         })
         .returning()
+
+      if (input.channelIds && input.channelIds.length > 0) {
+        await db.insert(ChannelRecipeTable).values(
+          input.channelIds.map((channelId) => ({
+            channelId,
+            recipeId: recipe.id,
+            createdBy: userId,
+          })),
+        )
+      }
 
       const [release] = await db
         .insert(RecipeReleaseTable)
@@ -278,7 +304,7 @@ export async function getRecipeById(id: string) {
 
   if (!recipe) throw createError("NotFoundError", { type: "Recipe", id })
 
-  if (!(await canAccessRecipeChannel(recipe.channelId))) {
+  if (!(await canAccessRecipeViaChannel(recipe.id))) {
     throw createError("ForbiddenError", { message: "Access denied to this recipe" })
   }
 
@@ -297,7 +323,7 @@ export async function findRecipeById(id: string) {
 
   if (!recipe) return null
 
-  if (!(await canAccessRecipeChannel(recipe.channelId))) {
+  if (!(await canAccessRecipeViaChannel(recipe.id))) {
     return null
   }
 
@@ -322,28 +348,15 @@ export async function listRecipes(raw?: z.input<typeof ListRecipesSchema>) {
 
   const conditions = [eq(RecipeTable.organizationId, organizationId)]
 
-  if (accessibleChannels !== null) {
-    if (accessibleChannels.length === 0) {
-      conditions.push(isNull(RecipeTable.channelId))
-    } else {
-      conditions.push(or(isNull(RecipeTable.channelId), inArray(RecipeTable.channelId, accessibleChannels))!)
-    }
-  }
   if (filters?.agentId) {
     conditions.push(eq(RecipeTable.agentId, filters.agentId))
-  }
-  if (filters?.channelId) {
-    if (accessibleChannels !== null && !accessibleChannels.includes(filters.channelId)) {
-      return { items: [], nextCursor: null }
-    }
-    conditions.push(eq(RecipeTable.channelId, filters.channelId))
   }
   if (filters?.cursor) {
     const { date, id } = parseCursor(filters.cursor)
     conditions.push(or(lt(RecipeTable.createdAt, date), and(eq(RecipeTable.createdAt, date), lt(RecipeTable.id, id)))!)
   }
 
-  const recipes = await withDb((db) =>
+  let recipes = await withDb((db) =>
     db
       .select({
         ...getTableColumns(RecipeTable),
@@ -355,8 +368,48 @@ export async function listRecipes(raw?: z.input<typeof ListRecipesSchema>) {
       .leftJoin(RecipeReleaseTable, eq(RecipeTable.currentReleaseId, RecipeReleaseTable.id))
       .where(and(...conditions))
       .orderBy(desc(RecipeTable.createdAt), desc(RecipeTable.id))
-      .limit(limit + 1),
+      .limit(limit * 2 + 1),
   )
+
+  if (filters?.channelId) {
+    if (accessibleChannels !== null && !accessibleChannels.includes(filters.channelId)) {
+      return { items: [], nextCursor: null }
+    }
+
+    const channelRecipes = await withDb((db) =>
+      db
+        .select({ recipeId: ChannelRecipeTable.recipeId })
+        .from(ChannelRecipeTable)
+        .where(eq(ChannelRecipeTable.channelId, filters.channelId!)),
+    )
+    const channelRecipeIds = new Set(channelRecipes.map((cr) => cr.recipeId))
+    recipes = recipes.filter((r) => channelRecipeIds.has(r.id))
+  }
+
+  if (accessibleChannels !== null) {
+    const recipeIds = recipes.map((r) => r.id)
+    if (recipeIds.length > 0) {
+      const channelRecipes = await withDb((db) =>
+        db
+          .select({ recipeId: ChannelRecipeTable.recipeId, channelId: ChannelRecipeTable.channelId })
+          .from(ChannelRecipeTable)
+          .where(inArray(ChannelRecipeTable.recipeId, recipeIds)),
+      )
+
+      const recipeChannelMap = new Map<string, string[]>()
+      for (const cr of channelRecipes) {
+        const channels = recipeChannelMap.get(cr.recipeId) ?? []
+        channels.push(cr.channelId)
+        recipeChannelMap.set(cr.recipeId, channels)
+      }
+
+      recipes = recipes.filter((r) => {
+        const channels = recipeChannelMap.get(r.id)
+        if (!channels || channels.length === 0) return true
+        return channels.some((ch) => accessibleChannels.includes(ch))
+      })
+    }
+  }
 
   const hasMore = recipes.length > limit
   const items = hasMore ? recipes.slice(0, limit) : recipes
@@ -387,17 +440,7 @@ export const SaveRecipeWorkingCopySchema = z.object({
   agentVersionMode: z.enum(["current", "fixed"]).optional(),
   inputs: z.array(RecipeInputSchema).optional(),
   outputs: z.array(RecipeOutputSchema).optional(),
-  steps: z
-    .array(
-      z.object({
-        stepKey: z.string(),
-        label: z.string(),
-        type: z.enum(RecipeStepType).default("tool"),
-        config: ToolStepConfigSchema,
-        dependsOn: z.array(z.string()),
-      }),
-    )
-    .optional(),
+  steps: z.array(RecipeStepInputSchema).optional(),
 })
 
 export async function saveRecipeWorkingCopy(raw: z.input<typeof SaveRecipeWorkingCopySchema>) {
@@ -982,4 +1025,59 @@ export async function respondToRecipeExecution(raw: z.input<typeof RespondToReci
   }
 
   return { execution, response: input.response }
+}
+
+export const AddRecipeToChannelSchema = z.object({
+  recipeId: z.string(),
+  channelId: z.string(),
+})
+
+export async function addRecipeToChannel(raw: z.input<typeof AddRecipeToChannelSchema>) {
+  const input = AddRecipeToChannelSchema.parse(raw)
+  await getRecipeById(input.recipeId)
+  const userId = principal.userId()
+
+  try {
+    const [channelRecipe] = await withDb((db) =>
+      db
+        .insert(ChannelRecipeTable)
+        .values({
+          recipeId: input.recipeId,
+          channelId: input.channelId,
+          createdBy: userId,
+        })
+        .returning(),
+    )
+    return channelRecipe
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("channel_recipe_unique")) {
+      throw createError("ConflictError", { message: "Recipe already assigned to this channel" })
+    }
+    throw err
+  }
+}
+
+export const RemoveRecipeFromChannelSchema = z.object({
+  recipeId: z.string(),
+  channelId: z.string(),
+})
+
+export async function removeRecipeFromChannel(raw: z.input<typeof RemoveRecipeFromChannelSchema>) {
+  const input = RemoveRecipeFromChannelSchema.parse(raw)
+  await getRecipeById(input.recipeId)
+
+  const [deleted] = await withDb((db) =>
+    db
+      .delete(ChannelRecipeTable)
+      .where(and(eq(ChannelRecipeTable.recipeId, input.recipeId), eq(ChannelRecipeTable.channelId, input.channelId)))
+      .returning({ id: ChannelRecipeTable.id }),
+  )
+
+  return deleted ?? null
+}
+
+export async function listRecipeChannels(recipeId: string) {
+  await getRecipeById(recipeId)
+
+  return withDb((db) => db.select().from(ChannelRecipeTable).where(eq(ChannelRecipeTable.recipeId, recipeId)))
 }

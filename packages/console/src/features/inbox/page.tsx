@@ -233,9 +233,9 @@ export default function InboxPage() {
   const [lastRecipeResult, setLastRecipeResult] = createSignal<{
     status: "completed" | "failed" | "waiting_input"
     stepResults?: Record<string, unknown>
-    resolvedParams?: Record<string, Record<string, unknown>>
+    resolvedParams?: Record<string, unknown>
     outputItemIds?: string[]
-    error?: { stepKey: string; toolName: string; message: string }
+    error?: { stepKey: string; stepType: string; message: string }
     executionId?: string
     pendingInputConfig?: unknown
     durationMs?: number
@@ -466,9 +466,9 @@ export default function InboxPage() {
         ok: boolean
         status: "completed" | "failed" | "waiting_input"
         stepResults?: Record<string, unknown>
-        resolvedParams?: Record<string, Record<string, unknown>>
+        resolvedParams?: Record<string, unknown>
         outputItemIds?: string[]
-        error?: { stepKey: string; toolName: string; message: string }
+        error?: { stepKey: string; stepType: string; message: string }
         executionId?: string
         pendingInputConfig?: unknown
       }
@@ -521,9 +521,9 @@ export default function InboxPage() {
         ok: boolean
         status: "completed" | "failed" | "waiting_input"
         stepResults?: Record<string, unknown>
-        resolvedParams?: Record<string, Record<string, unknown>>
+        resolvedParams?: Record<string, unknown>
         outputItemIds?: string[]
-        error?: { stepKey: string; toolName: string; message: string }
+        error?: { stepKey: string; stepType: string; message: string }
         executionId?: string
         pendingInputConfig?: unknown
       }
@@ -1318,7 +1318,7 @@ export default function InboxPage() {
       const res = await api.api.recipes.$post({
         json: {
           agentId: context.agentId,
-          channelId: context.channelId,
+          channelIds: context.channelId ? [context.channelId] : [],
           name: data.name,
           description: data.description || undefined,
           inputs: result.inputs,

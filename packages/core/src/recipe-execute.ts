@@ -1,21 +1,33 @@
-import type { ParamBinding, PendingInputConfig, RecipeOutput, ToolStepConfig } from "./types"
-import type { RecipeStep as RecipeStepDb, RecipeEdge } from "./schema/recipe.sql"
-import { isOutputTool, isHumanTool, isComputeTool } from "./system-tools"
+import type {
+  ParamBinding,
+  PendingInputConfig,
+  RecipeOutput,
+  RecipeStepConfig,
+  QueryStepConfig,
+  CodeStepConfig,
+  OutputStepConfig,
+  InputStepConfig,
+  RecipeStepType,
+} from "./types"
+import type { RecipeStepDb, RecipeEdge } from "./schema/recipe.sql"
 import type { ProblemDetails } from "@synatra/util/error"
 
-export interface NormalizedStep {
+export type NormalizedStep = {
   stepKey: string
   label: string
-  type: "tool"
-  config: ToolStepConfig
   position: number
   dependsOn: string[]
-}
+} & (
+  | { type: "query"; config: QueryStepConfig }
+  | { type: "code"; config: CodeStepConfig }
+  | { type: "output"; config: OutputStepConfig }
+  | { type: "input"; config: InputStepConfig }
+)
 
 export interface RecipeExecutionContext {
   inputs: Record<string, unknown>
   results: Record<string, unknown>
-  resolvedParams: Record<string, Record<string, unknown>>
+  resolvedParams: Record<string, unknown>
 }
 
 export function getValueByPath(obj: unknown, path?: string): unknown {
@@ -81,10 +93,14 @@ export function resolveBinding(binding: ParamBinding, context: RecipeExecutionCo
   }
 }
 
-export function resolveStepParams(step: NormalizedStep, context: RecipeExecutionContext): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(step.config.params).map(([name, binding]) => [name, resolveBinding(binding, context)]),
-  )
+export function resolveStepParams(step: NormalizedStep, context: RecipeExecutionContext): unknown {
+  if (step.type === "query" || step.type === "code") {
+    return resolveBinding(step.config.binding, context)
+  }
+  if (step.type === "output") {
+    return resolveBinding(step.config.binding, context)
+  }
+  return {}
 }
 
 export function buildNormalizedSteps(steps: RecipeStepDb[], edges: RecipeEdge[]): NormalizedStep[] {
@@ -95,22 +111,19 @@ export function buildNormalizedSteps(steps: RecipeStepDb[], edges: RecipeEdge[])
     edgeMap.set(edge.toStepKey, deps)
   }
 
-  return steps.map((step) => ({
-    stepKey: step.stepKey,
-    label: step.label,
-    type: step.type,
-    config: step.config,
-    position: step.position,
-    dependsOn: edgeMap.get(step.stepKey) ?? [],
-  }))
+  return steps.map((step) => {
+    const base = {
+      stepKey: step.stepKey,
+      label: step.label,
+      position: step.position,
+      dependsOn: edgeMap.get(step.stepKey) ?? [],
+    }
+    return { ...base, type: step.type, config: step.config } as NormalizedStep
+  })
 }
 
-export function getStepToolName(step: NormalizedStep): string {
-  return step.config.toolName
-}
-
-export function getStepParams(step: NormalizedStep): Record<string, ParamBinding> {
-  return step.config.params
+export function getStepType(step: NormalizedStep): RecipeStepType {
+  return step.type
 }
 
 export function getStepExecutionOrder(steps: NormalizedStep[]): NormalizedStep[] {
@@ -138,26 +151,29 @@ export function getStepExecutionOrder(steps: NormalizedStep[]): NormalizedStep[]
   return order
 }
 
-export function isHumanInputStep(step: NormalizedStep): boolean {
-  const toolName = getStepToolName(step)
-  if (toolName !== "human_request") return false
-
-  const params = getStepParams(step)
-  const fieldsBinding = params.fields
-  if (!fieldsBinding || fieldsBinding.type !== "static") return false
-
-  const fields = fieldsBinding.value as Array<{ kind: string }>
-  if (!Array.isArray(fields)) return false
-
-  return fields.some((f) => f.kind === "form" || f.kind === "question" || f.kind === "select_rows")
+export function isInputStep(step: NormalizedStep): step is NormalizedStep & { type: "input"; config: InputStepConfig } {
+  return step.type === "input"
 }
 
-export function buildPendingInputConfig(step: NormalizedStep, params: Record<string, unknown>): PendingInputConfig {
+export function buildPendingInputConfig(
+  step: NormalizedStep & { type: "input"; config: InputStepConfig },
+  context: RecipeExecutionContext,
+): PendingInputConfig {
+  const resolvedFields = step.config.fields.map((field) => {
+    if (field.kind === "select_rows") {
+      return {
+        ...field,
+        data: resolveBinding(field.dataBinding, context) as Array<Record<string, unknown>>,
+      }
+    }
+    return field
+  })
+
   return {
     stepKey: step.stepKey,
-    title: (params.title as string) ?? "Input Required",
-    description: params.description as string | undefined,
-    fields: (params.fields as Array<Record<string, unknown>>) ?? [],
+    title: step.config.title,
+    description: step.config.description,
+    fields: resolvedFields as Array<Record<string, unknown>>,
   }
 }
 
@@ -166,68 +182,6 @@ export type StepExecutionResult =
   | { type: "waiting_input"; config: PendingInputConfig }
   | { type: "output"; outputItemId: string }
   | { type: "error"; error: string }
-
-export interface ExecuteStepOptions {
-  step: NormalizedStep
-  params: Record<string, unknown>
-  executeFunction: (
-    toolName: string,
-    params: Record<string, unknown>,
-  ) => Promise<{ ok: boolean; result?: unknown; error?: string }>
-  executeCodePure: (code: string, input?: unknown) => Promise<{ success: boolean; result?: unknown; error?: string }>
-  createOutputItem: (kind: string, name: string | undefined, payload: Record<string, unknown>) => Promise<string>
-}
-
-export async function executeRecipeStep(options: ExecuteStepOptions): Promise<StepExecutionResult> {
-  const { step, params, executeFunction, executeCodePure, createOutputItem } = options
-  const toolName = getStepToolName(step)
-
-  if (toolName === "code_execute") {
-    const code = params.code as string
-    const input = params.input
-    const result = await executeCodePure(code, input)
-
-    if (!result.success) {
-      return { type: "error", error: result.error ?? "Code execution failed" }
-    }
-    return { type: "success", result: result.result }
-  }
-
-  if (isHumanTool(toolName)) {
-    if (isHumanInputStep(step)) {
-      const config = buildPendingInputConfig(step, params)
-      return { type: "waiting_input", config }
-    }
-    return { type: "success", result: { skipped: true, reason: "approval_not_supported" } }
-  }
-
-  if (isOutputTool(toolName)) {
-    const kindMap: Record<string, string> = {
-      output_table: "table",
-      output_chart: "chart",
-      output_markdown: "markdown",
-      output_key_value: "key_value",
-    }
-    const kind = kindMap[toolName] ?? "markdown"
-    const name = params.name as string | undefined
-    const { name: _, ...payload } = params
-
-    const outputItemId = await createOutputItem(kind, name, payload as Record<string, unknown>)
-    return { type: "output", outputItemId }
-  }
-
-  if (isComputeTool(toolName)) {
-    return { type: "error", error: `Unknown compute tool: ${toolName}` }
-  }
-
-  const result = await executeFunction(toolName, params)
-
-  if (!result.ok) {
-    return { type: "error", error: result.error ?? "Function execution failed" }
-  }
-
-  return { type: "success", result: result.result }
-}
 
 export interface RecipeRunner {
   steps: NormalizedStep[]
@@ -321,7 +275,6 @@ export type ExecuteCodeResult =
 export interface StepExecutorDependencies {
   organizationId: string
   environmentId: string
-  agentTools: Array<{ name: string; code: string; timeoutMs?: number }>
   resources: Array<{ slug: string; id: string; type: string }>
   recipeOutputs: RecipeOutput[]
   threadId?: string
@@ -329,7 +282,7 @@ export interface StepExecutorDependencies {
     organizationId: string,
     input: {
       code: string
-      params: Record<string, unknown>
+      params: unknown
       paramAlias?: "payload" | "input"
       context: { resources: Array<{ name: string; resourceId: string; type: string }> }
       environmentId: string
@@ -348,7 +301,7 @@ export type StepLoopResult =
   | {
       status: "completed"
       stepResults: Record<string, unknown>
-      resolvedParams: Record<string, Record<string, unknown>>
+      resolvedParams: Record<string, unknown>
       outputItemIds: string[]
     }
   | {
@@ -356,15 +309,15 @@ export type StepLoopResult =
       currentStepKey: string
       pendingInputConfig: PendingInputConfig
       stepResults: Record<string, unknown>
-      resolvedParams: Record<string, Record<string, unknown>>
+      resolvedParams: Record<string, unknown>
       outputItemIds: string[]
     }
   | {
       status: "failed"
-      error: { stepKey: string; toolName: string; message: string }
+      error: { stepKey: string; stepType: RecipeStepType; message: string }
       currentStepKey: string
       stepResults: Record<string, unknown>
-      resolvedParams: Record<string, Record<string, unknown>>
+      resolvedParams: Record<string, unknown>
     }
 
 function toErrorMessage(error: ProblemDetails): string {
@@ -379,18 +332,17 @@ export async function executeStepLoop(
   deps: StepExecutorDependencies,
 ): Promise<StepLoopResult> {
   const stepResults = { ...initialContext.results }
-  const resolvedParams = { ...initialContext.resolvedParams }
+  const resolvedParams: Record<string, unknown> = { ...initialContext.resolvedParams }
   const outputItemIds = [...initialOutputItemIds]
   const context = { inputs: initialContext.inputs, results: stepResults, resolvedParams }
 
   for (let i = startIndex; i < steps.length; i++) {
     const step = steps[i]
-    const toolName = getStepToolName(step)
     const params = resolveStepParams(step, context)
     resolvedParams[step.stepKey] = params
 
-    if (isHumanInputStep(step)) {
-      const pendingInputConfig = buildPendingInputConfig(step, params)
+    if (step.type === "input") {
+      const pendingInputConfig = buildPendingInputConfig(step, context)
       return {
         status: "waiting_input",
         currentStepKey: step.stepKey,
@@ -401,7 +353,7 @@ export async function executeStepLoop(
       }
     }
 
-    if (isOutputTool(toolName)) {
+    if (step.type === "output") {
       stepResults[step.stepKey] = params
       if (deps.threadId && deps.createOutputItem) {
         const output = deps.recipeOutputs.find((o) => o.stepId === step.stepKey)
@@ -418,26 +370,23 @@ export async function executeStepLoop(
       continue
     }
 
-    if (isComputeTool(toolName)) {
-      const code = params.code as string
-      const input = params.input as Record<string, unknown> | undefined
-      const timeout =
-        typeof params.timeout === "number" && params.timeout >= 100 && params.timeout <= 30000 ? params.timeout : 10000
+    if (step.type === "query") {
+      const { code, timeoutMs } = step.config
+      const timeout = typeof timeoutMs === "number" && timeoutMs >= 100 && timeoutMs <= 60000 ? timeoutMs : 30000
 
       const result = await deps.executeCode(deps.organizationId, {
         code,
-        params: input ?? {},
-        paramAlias: input !== undefined ? "input" : undefined,
+        params,
         context: { resources: deps.resources.map((r) => ({ name: r.slug, resourceId: r.id, type: r.type })) },
         environmentId: deps.environmentId,
         timeout,
       })
 
       if (!result.ok || !result.data.success) {
-        const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Compute execution failed")
+        const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Query execution failed")
         return {
           status: "failed",
-          error: { stepKey: step.stepKey, toolName, message },
+          error: { stepKey: step.stepKey, stepType: step.type, message },
           currentStepKey: step.stepKey,
           stepResults,
           resolvedParams,
@@ -445,43 +394,34 @@ export async function executeStepLoop(
       }
 
       stepResults[step.stepKey] = result.data.result
-      continue
     }
 
-    const tool = deps.agentTools.find((t) => t.name === toolName)
-    if (!tool) {
-      return {
-        status: "failed",
-        error: { stepKey: step.stepKey, toolName, message: "Tool not found" },
-        currentStepKey: step.stepKey,
-        stepResults,
-        resolvedParams,
+    if (step.type === "code") {
+      const { code, timeoutMs } = step.config
+      const timeout = typeof timeoutMs === "number" && timeoutMs >= 100 && timeoutMs <= 30000 ? timeoutMs : 10000
+
+      const result = await deps.executeCode(deps.organizationId, {
+        code,
+        params,
+        paramAlias: "input",
+        context: { resources: [] },
+        environmentId: deps.environmentId,
+        timeout,
+      })
+
+      if (!result.ok || !result.data.success) {
+        const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Code execution failed")
+        return {
+          status: "failed",
+          error: { stepKey: step.stepKey, stepType: step.type, message },
+          currentStepKey: step.stepKey,
+          stepResults,
+          resolvedParams,
+        }
       }
+
+      stepResults[step.stepKey] = result.data.result
     }
-
-    const timeout =
-      typeof tool.timeoutMs === "number" && tool.timeoutMs >= 100 && tool.timeoutMs <= 60000 ? tool.timeoutMs : 30000
-
-    const result = await deps.executeCode(deps.organizationId, {
-      code: tool.code,
-      params,
-      context: { resources: deps.resources.map((r) => ({ name: r.slug, resourceId: r.id, type: r.type })) },
-      environmentId: deps.environmentId,
-      timeout,
-    })
-
-    if (!result.ok || !result.data.success) {
-      const message = !result.ok ? toErrorMessage(result.error) : (result.data.error ?? "Code execution failed")
-      return {
-        status: "failed",
-        error: { stepKey: step.stepKey, toolName, message },
-        currentStepKey: step.stepKey,
-        stepResults,
-        resolvedParams,
-      }
-    }
-
-    stepResults[step.stepKey] = result.data.result
   }
 
   return {

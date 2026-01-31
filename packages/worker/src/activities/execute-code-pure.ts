@@ -26,19 +26,9 @@ export async function executeCodePure(execInput: ExecuteCodePureInput): Promise<
   const start = Date.now()
   const timeout = Math.min(MAX_TIMEOUT, Math.max(MIN_TIMEOUT, rawTimeout ?? DEFAULT_TIMEOUT))
 
-  if (inputData !== undefined && (typeof inputData !== "object" || inputData === null || Array.isArray(inputData))) {
-    const actual = Array.isArray(inputData) ? "array" : typeof inputData
-    return {
-      success: false,
-      error: `code_execute input must be an object, received: ${actual}`,
-      logs: [],
-      duration: Date.now() - start,
-    }
-  }
-
   const result = await executeCode(organizationId, {
     code,
-    params: (inputData as Record<string, unknown>) ?? {},
+    params: inputData ?? {},
     paramAlias: inputData !== undefined ? "input" : undefined,
     context: { resources: [] },
     environmentId,

@@ -8,7 +8,17 @@ import { AgentReleaseTable, AgentWorkingCopyTable } from "./schema/agent.sql"
 import { createError } from "@synatra/util/error"
 import { principal } from "./principal"
 import { COMPUTE_TOOLS, OUTPUT_TOOLS, HUMAN_TOOLS } from "./system-tools"
-import type { RecipeInput, RecipeOutput, ParamBinding, AgentTool, ToolStepConfig } from "./types"
+import type {
+  RecipeInput,
+  RecipeOutput,
+  ParamBinding,
+  AgentTool,
+  QueryStepConfig,
+  CodeStepConfig,
+  OutputStepConfig,
+  InputStepConfig,
+  OutputStepKind,
+} from "./types"
 
 const SAMPLE_LIMIT = 3
 const STRING_LIMIT = 200
@@ -221,18 +231,14 @@ export function validateRecipeSteps(
       }
     }
 
-    for (const [paramName, binding] of Object.entries(step.config.params)) {
-      validateBinding(binding, step.stepKey, paramName)
+    if (step.type === "query" || step.type === "code" || step.type === "output") {
+      validateBinding(step.config.binding, step.stepKey, "binding")
     }
 
-    if (step.config.toolName === "human_request") {
-      const fieldsBinding = step.config.params.fields
-      if (fieldsBinding?.type === "static" && Array.isArray(fieldsBinding.value)) {
-        const fields = fieldsBinding.value as Array<{ kind: string }>
-        const unsupported = fields.filter((f) => f.kind === "confirm" || f.kind === "approval")
-        if (unsupported.length > 0) {
-          const kinds = [...new Set(unsupported.map((f) => f.kind))].join(", ")
-          errors.push(`Step "${step.stepKey}" uses unsupported field kinds: ${kinds}`)
+    if (step.type === "input") {
+      for (const field of step.config.fields) {
+        if (field.kind === "select_rows") {
+          validateBinding(field.dataBinding, step.stepKey, `fields.${field.key}.dataBinding`)
         }
       }
     }
@@ -294,7 +300,8 @@ export function formatToolSchemas(agentTools: AgentTool[]): string {
     "",
     "## Agent Tools",
     "",
-    ...agentToolLines,
+    ...(agentToolLines.length > 0 ? agentToolLines : ["(No agent tools available)"]),
+    "",
     "## System Tools (for Recipe)",
     "",
     ...systemToolLines,
@@ -328,7 +335,7 @@ Generalization principles:
 - **Let tools determine output structure** - If a query returns columns, display ALL returned columns, not just the ones shown in this conversation
 - **Derive display data from source** - Chart labels/values, table columns should come from actual query results
 - **Analyze tool capabilities** - Understand what each tool can return and build flexible data flows
-- **Exclude one-time analysis** - If LLM generated analysis text specific to the conversation data (e.g., "User X is top performer with 36% advantage"), EXCLUDE that output_markdown step entirely. Such analysis won't be valid when data changes. Only include markdown steps if they have a reusable structure (e.g., simple status messages, formatted data summaries using template bindings)
+- **Every step must be consumed** - A step is only valid if its output is either: (1) used by another step via binding, or (2) displayed as a final output. If a step's result isn't referenced anywhere, EXCLUDE it. Exploration, debugging, and intermediate analysis steps from the conversation should not appear in the recipe
 
 Your task:
 1. Identify the user's INTENT (not just the specific actions)
@@ -576,13 +583,16 @@ export interface RawStep {
   dependsOn: string[]
 }
 
-export interface ExtractedStep {
+export type ExtractedStep = {
   stepKey: string
   label: string
-  type: "tool"
-  config: ToolStepConfig
   dependsOn: string[]
-}
+} & (
+  | { type: "query"; config: QueryStepConfig }
+  | { type: "code"; config: CodeStepConfig }
+  | { type: "output"; config: OutputStepConfig }
+  | { type: "input"; config: InputStepConfig }
+)
 
 export interface NormalizeStepsResult {
   steps: ExtractedStep[]
@@ -590,7 +600,155 @@ export interface NormalizeStepsResult {
   errors: string[]
 }
 
-export function normalizeStepKeys(steps: RawStep[]): NormalizeStepsResult {
+const OUTPUT_KIND_MAP: Record<string, OutputStepKind> = {
+  output_table: "table",
+  output_chart: "chart",
+  output_markdown: "markdown",
+  output_key_value: "key_value",
+}
+
+function convertRawStepToExtractedStep(
+  step: RawStep & { stepKey: string },
+  keyMap: Map<string, string>,
+  agentTools: AgentTool[],
+): ExtractedStep {
+  const { stepKey, label, dependsOn, toolName, params } = step
+  const normalizedDependsOn = dependsOn.map((dep) => keyMap.get(dep) ?? dep)
+  const normalizedParams = updateParamBindingRefs(params, keyMap)
+
+  if (toolName in OUTPUT_KIND_MAP) {
+    const kind = OUTPUT_KIND_MAP[toolName]
+    return {
+      stepKey,
+      label,
+      dependsOn: normalizedDependsOn,
+      type: "output",
+      config: {
+        kind,
+        binding: { type: "object", entries: normalizedParams },
+      },
+    }
+  }
+
+  if (toolName === "human_request") {
+    const titleBinding = normalizedParams.title
+    const descBinding = normalizedParams.description
+    const fieldsBinding = normalizedParams.fields
+
+    const title = titleBinding?.type === "static" ? String(titleBinding.value) : "User Input"
+    const description = descBinding?.type === "static" ? String(descBinding.value) : undefined
+    const fields =
+      fieldsBinding?.type === "static" && Array.isArray(fieldsBinding.value)
+        ? (fieldsBinding.value as Array<Record<string, unknown>>)
+        : []
+
+    const convertedFields = fields.map((f) => {
+      if (f.kind === "select_rows" && f.data) {
+        const dataStepId = (normalizedParams.fields as ParamBinding & { type: "static" })?.value
+        return {
+          kind: "select_rows" as const,
+          key: String(f.key ?? "selection"),
+          columns: (f.columns as Array<{ key: string; label: string }>) ?? [],
+          dataBinding: { type: "static" as const, value: f.data },
+          selectionMode: (f.selectionMode as "single" | "multiple") ?? "multiple",
+        }
+      }
+      if (f.kind === "form") {
+        return {
+          kind: "form" as const,
+          key: String(f.key ?? "form"),
+          schema: (f.schema as Record<string, unknown>) ?? {},
+          defaults: f.defaults as Record<string, unknown> | undefined,
+        }
+      }
+      if (f.kind === "question") {
+        return {
+          kind: "question" as const,
+          key: String(f.key ?? "question"),
+          questions:
+            (f.questions as Array<{
+              question: string
+              header: string
+              options: Array<{ label: string; description: string }>
+              multiSelect?: boolean
+            }>) ?? [],
+        }
+      }
+      return {
+        kind: "form" as const,
+        key: String(f.key ?? "field"),
+        schema: {},
+      }
+    })
+
+    return {
+      stepKey,
+      label,
+      dependsOn: normalizedDependsOn,
+      type: "input",
+      config: {
+        title,
+        description,
+        fields: convertedFields as InputStepConfig["fields"],
+      },
+    }
+  }
+
+  if (toolName === "code_execute") {
+    const codeBinding = normalizedParams.code
+    const inputBinding = normalizedParams.input
+    const timeoutBinding = normalizedParams.timeout
+    const code = codeBinding?.type === "static" ? String(codeBinding.value) : ""
+    const binding = inputBinding ?? { type: "object" as const, entries: {} }
+    const timeoutMs = timeoutBinding?.type === "static" ? Number(timeoutBinding.value) : undefined
+
+    return {
+      stepKey,
+      label,
+      dependsOn: normalizedDependsOn,
+      type: "code",
+      config: {
+        code,
+        timeoutMs,
+        binding,
+      },
+    }
+  }
+
+  const agentTool = agentTools.find((t) => t.name === toolName)
+  if (agentTool) {
+    return {
+      stepKey,
+      label,
+      dependsOn: normalizedDependsOn,
+      type: "query",
+      config: {
+        description: agentTool.description,
+        params: agentTool.params as Record<string, unknown>,
+        returns: agentTool.returns as Record<string, unknown>,
+        code: agentTool.code,
+        timeoutMs: agentTool.timeoutMs,
+        binding: { type: "object", entries: normalizedParams },
+      },
+    }
+  }
+
+  return {
+    stepKey,
+    label,
+    dependsOn: normalizedDependsOn,
+    type: "query",
+    config: {
+      description: `Unknown tool: ${toolName}`,
+      params: {},
+      returns: {},
+      code: `throw new Error("Unknown tool: ${toolName}")`,
+      binding: { type: "object", entries: normalizedParams },
+    },
+  }
+}
+
+export function normalizeStepKeys(steps: RawStep[], agentTools: AgentTool[] = []): NormalizeStepsResult {
   const keyMap = new Map<string, string>()
   const usedKeys = new Set<string>()
   const errors: string[] = []
@@ -610,16 +768,7 @@ export function normalizeStepKeys(steps: RawStep[]): NormalizeStepsResult {
   })
 
   return {
-    steps: normalizedSteps.map((step) => ({
-      stepKey: step.stepKey,
-      label: step.label,
-      type: "tool" as const,
-      config: {
-        toolName: step.toolName,
-        params: updateParamBindingRefs(step.params, keyMap),
-      },
-      dependsOn: step.dependsOn.map((dep) => keyMap.get(dep) ?? dep),
-    })),
+    steps: normalizedSteps.map((step) => convertRawStepToExtractedStep(step, keyMap, agentTools)),
     keyMap,
     errors,
   }

@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-export const RecipeStepType = ["tool"] as const
+export const RecipeStepType = ["query", "code", "output", "input"] as const
 export type RecipeStepType = (typeof RecipeStepType)[number]
 
 const StaticBindingSchema = z.object({
@@ -69,23 +69,107 @@ export type ArrayBinding = {
 
 export type ParamBinding = StaticBinding | InputBinding | StepBinding | TemplateBinding | ObjectBinding | ArrayBinding
 
-export type ToolStepConfig = {
-  toolName: string
-  params: Record<string, ParamBinding>
-}
+const JsonSchemaSchema = z.record(z.string(), z.unknown())
 
-export const ToolStepConfigSchema = z.object({
-  toolName: z.string(),
-  params: z.record(z.string(), ParamBindingSchema),
+export const QueryStepConfigSchema = z.object({
+  description: z.string(),
+  params: JsonSchemaSchema,
+  returns: JsonSchemaSchema,
+  code: z.string(),
+  timeoutMs: z.number().int().min(100).max(60000).optional(),
+  binding: ParamBindingSchema,
 })
+export type QueryStepConfig = z.infer<typeof QueryStepConfigSchema>
 
-export const RecipeStepSchema = z.object({
-  stepKey: z.string(),
-  label: z.string(),
-  type: z.enum(RecipeStepType),
-  config: ToolStepConfigSchema,
-  dependsOn: z.array(z.string()),
+export const CodeStepConfigSchema = z.object({
+  code: z.string(),
+  timeoutMs: z.number().int().min(100).max(30000).optional(),
+  binding: ParamBindingSchema,
 })
+export type CodeStepConfig = z.infer<typeof CodeStepConfigSchema>
+
+export const OutputStepKind = ["table", "chart", "markdown", "key_value"] as const
+export type OutputStepKind = (typeof OutputStepKind)[number]
+
+export const OutputStepConfigSchema = z.object({
+  kind: z.enum(OutputStepKind),
+  name: z.string().optional(),
+  binding: ParamBindingSchema,
+})
+export type OutputStepConfig = z.infer<typeof OutputStepConfigSchema>
+
+export const InputStepFieldKind = ["form", "select_rows", "question"] as const
+export type InputStepFieldKind = (typeof InputStepFieldKind)[number]
+
+export const InputStepFormFieldSchema = z.object({
+  kind: z.literal("form"),
+  key: z.string(),
+  schema: z.record(z.string(), z.unknown()),
+  defaults: z.record(z.string(), z.unknown()).optional(),
+})
+export type InputStepFormField = z.infer<typeof InputStepFormFieldSchema>
+
+export const InputStepSelectRowsFieldSchema = z.object({
+  kind: z.literal("select_rows"),
+  key: z.string(),
+  columns: z.array(z.object({ key: z.string(), label: z.string() })),
+  dataBinding: ParamBindingSchema,
+  selectionMode: z.enum(["single", "multiple"]),
+  allowNone: z.boolean().optional(),
+})
+export type InputStepSelectRowsField = z.infer<typeof InputStepSelectRowsFieldSchema>
+
+export const InputStepQuestionFieldSchema = z.object({
+  kind: z.literal("question"),
+  key: z.string(),
+  questions: z.array(
+    z.object({
+      question: z.string(),
+      header: z.string(),
+      options: z.array(z.object({ label: z.string(), description: z.string() })),
+      multiSelect: z.boolean().optional(),
+    }),
+  ),
+})
+export type InputStepQuestionField = z.infer<typeof InputStepQuestionFieldSchema>
+
+export const InputStepFieldConfigSchema = z.discriminatedUnion("kind", [
+  InputStepFormFieldSchema,
+  InputStepSelectRowsFieldSchema,
+  InputStepQuestionFieldSchema,
+])
+export type InputStepFieldConfig = z.infer<typeof InputStepFieldConfigSchema>
+
+export const InputStepConfigSchema = z.object({
+  title: z.string(),
+  description: z.string().optional(),
+  fields: z.array(InputStepFieldConfigSchema),
+})
+export type InputStepConfig = z.infer<typeof InputStepConfigSchema>
+
+export type RecipeStepConfig = QueryStepConfig | CodeStepConfig | OutputStepConfig | InputStepConfig
+
+export const RecipeStepConfigSchema = z.union([
+  QueryStepConfigSchema,
+  CodeStepConfigSchema,
+  OutputStepConfigSchema,
+  InputStepConfigSchema,
+])
+
+export const RecipeStepSchema = z
+  .object({
+    stepKey: z.string(),
+    label: z.string(),
+    dependsOn: z.array(z.string()),
+  })
+  .and(
+    z.discriminatedUnion("type", [
+      z.object({ type: z.literal("query"), config: QueryStepConfigSchema }),
+      z.object({ type: z.literal("code"), config: CodeStepConfigSchema }),
+      z.object({ type: z.literal("output"), config: OutputStepConfigSchema }),
+      z.object({ type: z.literal("input"), config: InputStepConfigSchema }),
+    ]),
+  )
 export type RecipeStep = z.infer<typeof RecipeStepSchema>
 
 export const RecipeInputSchema = z.object({

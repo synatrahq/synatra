@@ -2,13 +2,12 @@ import { index, pgEnum, pgTable, text, timestamp, uuid, jsonb, uniqueIndex, inte
 import { sql } from "drizzle-orm"
 import { OrganizationTable } from "./organization.sql"
 import { EnvironmentTable } from "./environment.sql"
-import { ChannelTable } from "./channel.sql"
 import { AgentTable, AgentReleaseTable } from "./agent.sql"
 import { ThreadTable } from "./thread.sql"
 import { RunTable } from "./run.sql"
 import { UserTable } from "./user.sql"
 import { RecipeStepType } from "../types"
-import type { RecipeInput, RecipeOutput, PendingInputConfig, ToolStepConfig } from "../types"
+import type { RecipeInput, RecipeOutput, PendingInputConfig, RecipeStepConfig } from "../types"
 import { versionModeEnum } from "./trigger.sql"
 export const recipeStepTypeEnum = pgEnum("recipe_step_type", RecipeStepType)
 
@@ -21,10 +20,7 @@ export const RecipeTable = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => OrganizationTable.id, { onDelete: "cascade" }),
-    agentId: uuid("agent_id")
-      .notNull()
-      .references(() => AgentTable.id, { onDelete: "cascade" }),
-    channelId: uuid("channel_id").references(() => ChannelTable.id, { onDelete: "set null" }),
+    agentId: uuid("agent_id").references(() => AgentTable.id, { onDelete: "set null" }),
     sourceThreadId: uuid("source_thread_id").references(() => ThreadTable.id, { onDelete: "set null" }),
     sourceRunId: uuid("source_run_id").references(() => RunTable.id, { onDelete: "set null" }),
     name: text("name").notNull(),
@@ -109,8 +105,8 @@ export const RecipeStepTable = pgTable(
     releaseId: uuid("release_id").references(() => RecipeReleaseTable.id, { onDelete: "cascade" }),
     stepKey: text("step_key").notNull(),
     label: text("label").notNull(),
-    type: recipeStepTypeEnum("type").default("tool").notNull(),
-    config: jsonb("config").$type<ToolStepConfig>().notNull(),
+    type: recipeStepTypeEnum("type").notNull(),
+    config: jsonb("config").$type<RecipeStepConfig>().notNull(),
     position: integer("position").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -130,7 +126,7 @@ export const RecipeStepTable = pgTable(
   ],
 )
 
-export type RecipeStep = typeof RecipeStepTable.$inferSelect
+export type RecipeStepDb = typeof RecipeStepTable.$inferSelect
 
 export const RecipeEdgeTable = pgTable(
   "recipe_edge",

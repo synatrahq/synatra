@@ -2,11 +2,8 @@ import { Hono } from "hono"
 import { zValidator } from "@hono/zod-validator"
 import { z } from "zod"
 import {
-  getRecipeById,
   getRecipeRelease,
   getRecipeExecutionById,
-  getAgentById,
-  getAgentRelease,
   listResources,
   respondToRecipeExecution,
   updateRecipeExecution,
@@ -46,17 +43,7 @@ export const respond = new Hono().post(
       response: body.response,
     })
 
-    const recipe = await getRecipeById(recipeId)
     const release = await getRecipeRelease(recipeId, execution.releaseId)
-    const agent = await getAgentById(recipe.agentId)
-
-    let agentRuntimeConfig: { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
-    if (release.agentVersionMode === "fixed" && release.agentReleaseId) {
-      const agentRelease = await getAgentRelease(release.agentReleaseId)
-      agentRuntimeConfig = agentRelease.runtimeConfig
-    } else {
-      agentRuntimeConfig = agent.runtimeConfig as { tools?: Array<{ name: string; code: string; timeoutMs?: number }> }
-    }
 
     const allResources = await listResources()
     const resources = allResources.filter((r) => !isManagedResourceType(r.type))
@@ -93,7 +80,6 @@ export const respond = new Hono().post(
       {
         organizationId,
         environmentId: execution.environmentId,
-        agentTools: agentRuntimeConfig?.tools ?? [],
         resources: resources.map((r) => ({ slug: r.slug, id: r.id, type: r.type })),
         recipeOutputs: release.outputs,
         threadId: body.threadId,

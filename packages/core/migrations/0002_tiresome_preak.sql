@@ -1,4 +1,12 @@
-CREATE TYPE "public"."recipe_step_type" AS ENUM('tool');--> statement-breakpoint
+CREATE TYPE "public"."recipe_step_type" AS ENUM('query', 'code', 'output', 'input');--> statement-breakpoint
+CREATE TABLE "channel_recipe" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"channel_id" uuid NOT NULL,
+	"recipe_id" uuid NOT NULL,
+	"created_by" uuid,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "recipe_edge" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"working_copy_recipe_id" uuid,
@@ -49,7 +57,7 @@ CREATE TABLE "recipe_step" (
 	"release_id" uuid,
 	"step_key" text NOT NULL,
 	"label" text NOT NULL,
-	"type" "recipe_step_type" DEFAULT 'tool' NOT NULL,
+	"type" "recipe_step_type" NOT NULL,
 	"config" jsonb NOT NULL,
 	"position" integer NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -59,8 +67,7 @@ CREATE TABLE "recipe_step" (
 CREATE TABLE "recipe" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"organization_id" uuid NOT NULL,
-	"agent_id" uuid NOT NULL,
-	"channel_id" uuid,
+	"agent_id" uuid,
 	"source_thread_id" uuid,
 	"source_run_id" uuid,
 	"name" text NOT NULL,
@@ -84,6 +91,9 @@ CREATE TABLE "recipe_working_copy" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "channel_recipe" ADD CONSTRAINT "channel_recipe_channel_id_channel_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channel"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "channel_recipe" ADD CONSTRAINT "channel_recipe_recipe_id_recipe_id_fk" FOREIGN KEY ("recipe_id") REFERENCES "public"."recipe"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "channel_recipe" ADD CONSTRAINT "channel_recipe_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_edge" ADD CONSTRAINT "recipe_edge_working_copy_recipe_id_recipe_working_copy_recipe_id_fk" FOREIGN KEY ("working_copy_recipe_id") REFERENCES "public"."recipe_working_copy"("recipe_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_edge" ADD CONSTRAINT "recipe_edge_release_id_recipe_release_id_fk" FOREIGN KEY ("release_id") REFERENCES "public"."recipe_release"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_execution" ADD CONSTRAINT "recipe_execution_recipe_id_recipe_id_fk" FOREIGN KEY ("recipe_id") REFERENCES "public"."recipe"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -97,8 +107,7 @@ ALTER TABLE "recipe_release" ADD CONSTRAINT "recipe_release_created_by_user_id_f
 ALTER TABLE "recipe_step" ADD CONSTRAINT "recipe_step_working_copy_recipe_id_recipe_working_copy_recipe_id_fk" FOREIGN KEY ("working_copy_recipe_id") REFERENCES "public"."recipe_working_copy"("recipe_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_step" ADD CONSTRAINT "recipe_step_release_id_recipe_release_id_fk" FOREIGN KEY ("release_id") REFERENCES "public"."recipe_release"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe" ADD CONSTRAINT "recipe_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "recipe" ADD CONSTRAINT "recipe_agent_id_agent_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "recipe" ADD CONSTRAINT "recipe_channel_id_channel_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."channel"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "recipe" ADD CONSTRAINT "recipe_agent_id_agent_id_fk" FOREIGN KEY ("agent_id") REFERENCES "public"."agent"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe" ADD CONSTRAINT "recipe_source_thread_id_thread_id_fk" FOREIGN KEY ("source_thread_id") REFERENCES "public"."thread"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe" ADD CONSTRAINT "recipe_source_run_id_run_id_fk" FOREIGN KEY ("source_run_id") REFERENCES "public"."run"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe" ADD CONSTRAINT "recipe_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -106,6 +115,8 @@ ALTER TABLE "recipe" ADD CONSTRAINT "recipe_updated_by_user_id_fk" FOREIGN KEY (
 ALTER TABLE "recipe_working_copy" ADD CONSTRAINT "recipe_working_copy_recipe_id_recipe_id_fk" FOREIGN KEY ("recipe_id") REFERENCES "public"."recipe"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_working_copy" ADD CONSTRAINT "recipe_working_copy_agent_release_id_agent_release_id_fk" FOREIGN KEY ("agent_release_id") REFERENCES "public"."agent_release"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_working_copy" ADD CONSTRAINT "recipe_working_copy_updated_by_user_id_fk" FOREIGN KEY ("updated_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "channel_recipe_unique" ON "channel_recipe" USING btree ("channel_id","recipe_id");--> statement-breakpoint
+CREATE INDEX "channel_recipe_recipe_idx" ON "channel_recipe" USING btree ("recipe_id");--> statement-breakpoint
 CREATE INDEX "recipe_edge_working_copy_idx" ON "recipe_edge" USING btree ("working_copy_recipe_id");--> statement-breakpoint
 CREATE INDEX "recipe_edge_release_idx" ON "recipe_edge" USING btree ("release_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "recipe_edge_working_copy_unique_idx" ON "recipe_edge" USING btree ("working_copy_recipe_id","from_step_key","to_step_key") WHERE working_copy_recipe_id IS NOT NULL;--> statement-breakpoint

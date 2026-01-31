@@ -12,6 +12,7 @@ import { models } from "./models"
 import { workingCopy } from "./working-copy"
 import { releases } from "./releases"
 import { deploy } from "./deploy"
+import { channels } from "./channels"
 
 export const recipes = new Hono()
   .route("/", list)
@@ -27,3 +28,4 @@ export const recipes = new Hono()
   .route("/", execute)
   .route("/", pendingExecution)
   .route("/", respond)
+  .route("/", channels)

@@ -7,6 +7,7 @@ import {
   buildRecipeExtractionPrompt,
   validateRecipeSteps,
   normalizeStepKeys,
+  type RawStep,
 } from "@synatra/core"
 import { getModel } from "../agents/copilot/models"
 import type { RecipeInput, RecipeOutput, ParamBinding } from "@synatra/core/types"
@@ -32,9 +33,11 @@ const RecipeJsonSchema: JSONSchema7 = {
           key: { type: "string" },
           label: { type: "string" },
           type: { type: "string", enum: ["string", "number"] },
+          description: { type: "string" },
           required: { type: "boolean" },
+          defaultValue: {},
         },
-        required: ["key", "label", "type", "required"],
+        required: ["key", "label", "type"],
       },
     },
     steps: {
@@ -42,15 +45,8 @@ const RecipeJsonSchema: JSONSchema7 = {
       items: {
         type: "object",
         properties: {
-          stepKey: {
-            type: "string",
-            description:
-              "Unique snake_case identifier describing what this step does (e.g., fetch_active_users, calculate_total)",
-          },
-          label: {
-            type: "string",
-            description: "Human-readable label for UI display (e.g., 'Fetch active users', 'Calculate order total')",
-          },
+          stepKey: { type: "string" },
+          label: { type: "string" },
           toolName: { type: "string" },
           params: { type: "object", additionalProperties: { $ref: "#/$defs/binding" } },
           dependsOn: { type: "array", items: { type: "string" } },
@@ -119,14 +115,15 @@ const RecipeJsonSchema: JSONSchema7 = {
 type ExtractedRecipe = {
   name: string
   description: string
-  inputs: Array<{ key: string; label: string; type: string; required: boolean }>
-  steps: Array<{
-    stepKey: string
+  inputs: Array<{
+    key: string
     label: string
-    toolName: string
-    params: Record<string, ParamBinding>
-    dependsOn: string[]
+    type: string
+    description?: string
+    required?: boolean
+    defaultValue?: unknown
   }>
+  steps: RawStep[]
   outputs: Array<{ stepId: string; kind: string; name?: string }>
 }
 
@@ -163,7 +160,11 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
     }
 
     const extracted = toolCall.input as ExtractedRecipe
-    const { steps: normalizedSteps, keyMap, errors: normalizationErrors } = normalizeStepKeys(extracted.steps ?? [])
+    const {
+      steps: normalizedSteps,
+      keyMap,
+      errors: normalizationErrors,
+    } = normalizeStepKeys(extracted.steps ?? [], context.agentTools)
 
     const validation = validateRecipeSteps(normalizedSteps, (extracted.inputs ?? []) as RecipeInput[])
     const allErrors = [...normalizationErrors, ...validation.errors]

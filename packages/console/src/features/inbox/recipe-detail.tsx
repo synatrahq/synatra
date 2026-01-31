@@ -50,28 +50,56 @@ import type {
   HumanRequestSelectRowsConfig,
   ParamBinding,
   RecipeStep,
+  QueryStepConfig,
+  OutputStepConfig,
+  InputStepConfig,
 } from "@synatra/core/types"
 
-function getToolName(step: RecipeStep): string {
-  return step.config.toolName
+type RecipeStepLike = {
+  stepKey: string
+  label: string
+  type: "query" | "code" | "output" | "input"
+  config: Record<string, unknown>
+  dependsOn: string[]
 }
 
-function getParams(step: RecipeStep): Record<string, ParamBinding> {
-  return step.config.params
+function getStepDisplayName(step: RecipeStepLike): string {
+  if (step.type === "query") {
+    return "query"
+  }
+  if (step.type === "code") {
+    return "code"
+  }
+  if (step.type === "output") {
+    const config = step.config as { kind?: string }
+    return `output_${config.kind ?? "unknown"}`
+  }
+  if (step.type === "input") {
+    return "input"
+  }
+  return "unknown"
+}
+
+function getStepBinding(step: RecipeStepLike): ParamBinding | null {
+  if (step.type === "query" || step.type === "code" || step.type === "output") {
+    const config = step.config as { binding?: ParamBinding }
+    return config.binding ?? null
+  }
+  return null
 }
 
 type Tab = "configuration" | "result"
 
 type RecipeExecutionError = {
   stepKey: string
-  toolName: string
+  stepType: string
   message: string
 }
 
 type LastResult = {
   status: "completed" | "failed" | "waiting_input"
   stepResults?: Record<string, unknown>
-  resolvedParams?: Record<string, Record<string, unknown>>
+  resolvedParams?: Record<string, unknown>
   outputItemIds?: string[]
   error?: RecipeExecutionError
   executionId?: string
@@ -128,40 +156,58 @@ function resolveParams(params: Record<string, ParamBinding>): Record<string, unk
 
 type ToolDef = { name: string; description?: string; code: string }
 
-function StepToolIcon(props: { toolName: string; isCustomTool: boolean; class?: string }) {
+function StepTypeIcon(props: { step: RecipeStepLike; class?: string }) {
   const iconClass = () => props.class ?? "h-4 w-4"
 
-  if (props.isCustomTool) {
+  if (props.step.type === "query") {
     return <Code class={iconClass()} />
   }
 
-  switch (props.toolName) {
-    case "output_table":
-      return <Table class={iconClass()} />
-    case "output_chart":
-      return <ChartLine class={iconClass()} />
-    case "output_markdown":
-      return <TextAa class={iconClass()} />
-    case "output_key_value":
-      return <ListDashes class={iconClass()} />
-    case "compute":
-      return <Function class={iconClass()} />
-    case "human_request":
-      return <SignIn class={iconClass()} />
-    case "task_complete":
-      return <CheckCircle class={iconClass()} />
-    default:
-      return <Function class={iconClass()} />
+  if (props.step.type === "code") {
+    return <Function class={iconClass()} />
   }
+
+  if (props.step.type === "output") {
+    switch (props.step.config.kind) {
+      case "table":
+        return <Table class={iconClass()} />
+      case "chart":
+        return <ChartLine class={iconClass()} />
+      case "markdown":
+        return <TextAa class={iconClass()} />
+      case "key_value":
+        return <ListDashes class={iconClass()} />
+      default:
+        return <Export class={iconClass()} />
+    }
+  }
+
+  if (props.step.type === "input") {
+    return <SignIn class={iconClass()} />
+  }
+
+  return <Function class={iconClass()} />
 }
 
-function StepItem(props: { step: RecipeStep; index: number; tools?: ToolDef[]; isLast?: boolean; totalSteps: number }) {
+function StepItem(props: {
+  step: RecipeStepLike
+  index: number
+  tools?: ToolDef[]
+  isLast?: boolean
+  totalSteps: number
+}) {
   const [expanded, setExpanded] = createSignal(false)
-  const toolName = () => getToolName(props.step)
-  const params = () => getParams(props.step)
-  const hasParams = () => Object.keys(params()).length > 0
-  const toolDef = () => props.tools?.find((t) => t.name === toolName())
-  const isCustomTool = () => !!toolDef()
+  const displayName = () => getStepDisplayName(props.step)
+  const binding = () => getStepBinding(props.step)
+  const hasBinding = () => !!binding()
+  const isQueryStep = () => props.step.type === "query"
+  const isCodeStep = () => props.step.type === "code"
+  const queryConfig = () =>
+    props.step.type === "query" ? (props.step.config as { description?: string; code?: string }) : null
+  const codeConfig = () => (props.step.type === "code" ? (props.step.config as { code?: string }) : null)
+  const inputConfig = () => (props.step.type === "input" ? (props.step.config as { fields?: unknown[] }) : null)
+  const outputConfig = () => (props.step.type === "output" ? (props.step.config as { kind?: string }) : null)
+  const stepCode = () => queryConfig()?.code ?? codeConfig()?.code
 
   return (
     <div class="relative">
@@ -181,19 +227,17 @@ function StepItem(props: { step: RecipeStep; index: number; tools?: ToolDef[]; i
             "border-border bg-surface group-hover:border-accent/50 text-text-muted": !expanded(),
           }}
         >
-          <StepToolIcon toolName={toolName()} isCustomTool={isCustomTool()} />
+          <StepTypeIcon step={props.step} />
         </div>
 
         <div class="flex-1 min-w-0 py-1.5">
           <div class="flex items-center gap-2">
             <span class="text-2xs font-medium text-text-muted">Step {props.index + 1}</span>
-            <Show when={!isCustomTool()}>
-              <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">system</span>
-            </Show>
+            <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">{props.step.type}</span>
           </div>
           <div class="flex items-center gap-2 mt-0.5">
             <span class="text-xs font-medium text-text truncate">{props.step.label}</span>
-            <span class="font-code text-2xs text-text-muted shrink-0">({toolName()})</span>
+            <span class="font-code text-2xs text-text-muted shrink-0">({displayName()})</span>
             <Show when={props.step.dependsOn.length > 0}>
               <div class="flex items-center gap-1 text-2xs text-text-muted shrink-0">
                 <PlugsConnected class="h-3 w-3" />
@@ -210,31 +254,42 @@ function StepItem(props: { step: RecipeStep; index: number; tools?: ToolDef[]; i
 
       <Show when={expanded()}>
         <div class="ml-11 mt-2 mb-4 rounded-lg border border-border overflow-hidden bg-surface">
-          <Show when={toolDef()?.description}>
+          <Show when={queryConfig()?.description}>
             <div class="px-3 py-2.5 border-b border-border bg-surface-muted/50">
-              <p class="text-xs text-text-muted leading-relaxed">{toolDef()!.description}</p>
+              <p class="text-xs text-text-muted leading-relaxed">{queryConfig()!.description}</p>
             </div>
           </Show>
-          <Show when={hasParams()}>
+          <Show when={hasBinding()}>
             <div class="px-3 py-2.5 border-b border-border">
               <div class="flex items-center gap-1.5 mb-2">
                 <BracketsCurly class="h-3 w-3 text-text-muted" />
-                <span class="text-2xs font-medium text-text-muted">Parameters</span>
+                <span class="text-2xs font-medium text-text-muted">Binding</span>
               </div>
               <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2">
-                {JSON.stringify(resolveParams(params()), null, 2)}
+                {JSON.stringify(resolveBinding(binding()!), null, 2)}
               </pre>
             </div>
           </Show>
-          <Show when={toolDef()?.code}>
+          <Show when={(isQueryStep() || isCodeStep()) && stepCode()}>
             <div class="max-h-48 overflow-y-auto">
-              <CodeEditor value={toolDef()!.code} language="javascript" readonly />
+              <CodeEditor value={stepCode() ?? ""} language="javascript" readonly />
             </div>
           </Show>
-          <Show when={!isCustomTool() && !hasParams()}>
+          <Show when={inputConfig()}>
+            <div class="px-3 py-2.5">
+              <div class="flex items-center gap-1.5 mb-2">
+                <SignIn class="h-3 w-3 text-text-muted" />
+                <span class="text-2xs font-medium text-text-muted">Fields</span>
+              </div>
+              <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2">
+                {JSON.stringify(inputConfig()!.fields, null, 2)}
+              </pre>
+            </div>
+          </Show>
+          <Show when={outputConfig() && !hasBinding()}>
             <div class="px-3 py-3 text-xs text-text-muted flex items-center gap-2">
-              <Function class="h-3.5 w-3.5" />
-              Built-in system tool
+              <Export class="h-3.5 w-3.5" />
+              Output step ({outputConfig()!.kind})
             </div>
           </Show>
         </div>
@@ -429,7 +484,7 @@ function PendingInputForm(props: {
 function StepResultItem(props: {
   stepId: string
   result: unknown
-  resolvedParams?: Record<string, unknown>
+  resolvedParams?: unknown
   recipe: Recipe
   isOutput: boolean
   index: number
@@ -441,9 +496,8 @@ function StepResultItem(props: {
   const outputDef = () => props.recipe.outputs.find((o) => o.stepId === props.stepId)
   const [expanded, setExpanded] = createSignal(props.isOutput || props.failed)
   const [paramsExpanded, setParamsExpanded] = createSignal(false)
-  const hasParams = () => props.resolvedParams && Object.keys(props.resolvedParams).length > 0
-  const toolName = () => (step() ? getToolName(step()!) : props.stepId)
-  const isCustomTool = () => !!props.tools?.find((t) => t.name === toolName())
+  const hasParams = () => props.resolvedParams !== undefined && props.resolvedParams !== null
+  const displayName = () => (step() ? getStepDisplayName(step()!) : props.stepId)
 
   const asOutputItem = (): OutputItem | null => {
     const def = outputDef()
@@ -484,7 +538,7 @@ function StepResultItem(props: {
             "border-accent bg-accent/10 text-accent": !props.failed && expanded(),
           }}
         >
-          <Show when={props.failed} fallback={<StepToolIcon toolName={toolName()} isCustomTool={isCustomTool()} />}>
+          <Show when={props.failed} fallback={step() ? <StepTypeIcon step={step()!} /> : <Function class="h-4 w-4" />}>
             <XCircle class="h-4 w-4" weight="fill" />
           </Show>
         </div>
@@ -504,7 +558,7 @@ function StepResultItem(props: {
           </div>
           <div class="flex items-center gap-2">
             <span class="text-xs font-medium text-text truncate">{step()?.label}</span>
-            <span class="font-code text-2xs text-text-muted shrink-0">({toolName()})</span>
+            <span class="font-code text-2xs text-text-muted shrink-0">({displayName()})</span>
           </div>
         </div>
 
@@ -565,7 +619,7 @@ function StepResultItem(props: {
 
 function ResultDisplay(props: {
   stepResults: Record<string, unknown>
-  resolvedParams?: Record<string, Record<string, unknown>>
+  resolvedParams?: Record<string, unknown>
   recipe: Recipe
   tools?: ToolDef[]
   error?: RecipeExecutionError
@@ -598,7 +652,7 @@ function ResultDisplay(props: {
               <div class="flex items-center gap-2 mb-1.5">
                 <XCircle class="h-4 w-4 text-danger" weight="fill" />
                 <span class="text-xs font-medium text-danger">
-                  Step "{failedStep()?.label ?? err().stepKey}" ({err().toolName}) failed
+                  Step "{failedStep()?.label ?? err().stepKey}" ({err().stepType}) failed
                 </span>
               </div>
               <p class="text-xs text-text leading-relaxed">{err().message}</p>

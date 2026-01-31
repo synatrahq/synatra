@@ -10,6 +10,7 @@ import { ConnectorTable, ConnectorStatus } from "./connector.sql"
 import { ChannelTable } from "./channel.sql"
 import { ChannelMemberTable } from "./channel-member.sql"
 import { ChannelAgentTable } from "./channel-agent.sql"
+import { ChannelRecipeTable } from "./channel-recipe.sql"
 import { TriggerTable, TriggerReleaseTable, TriggerWorkingCopyTable, TriggerEnvironmentTable } from "./trigger.sql"
 import { PromptTable } from "./prompt.sql"
 import { ThreadTable } from "./thread.sql"
@@ -65,6 +66,7 @@ export * from "./connector.sql"
 export * from "./channel.sql"
 export * from "./channel-member.sql"
 export * from "./channel-agent.sql"
+export * from "./channel-recipe.sql"
 export * from "./trigger.sql"
 export * from "./prompt.sql"
 export * from "./thread.sql"
@@ -96,6 +98,7 @@ export const schema = {
   channelMember: ChannelMemberTable,
   ChannelMemberRole,
   channelAgent: ChannelAgentTable,
+  channelRecipe: ChannelRecipeTable,
   trigger: TriggerTable,
   triggerRelease: TriggerReleaseTable,
   triggerWorkingCopy: TriggerWorkingCopyTable,

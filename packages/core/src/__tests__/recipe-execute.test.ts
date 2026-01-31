@@ -4,7 +4,7 @@ import {
   resolveBinding,
   resolveStepParams,
   getStepExecutionOrder,
-  isHumanInputStep,
+  isInputStep,
   createRecipeRunner,
   getNextStep,
   advanceRunner,
@@ -110,17 +110,23 @@ describe("resolveBinding", () => {
 })
 
 describe("resolveStepParams", () => {
-  test("resolves all params for a step", () => {
+  test("resolves binding for a query step", () => {
     const step: NormalizedStep = {
       stepKey: "step_1",
       label: "Send email",
-      type: "tool",
+      type: "query",
       config: {
-        toolName: "send_email",
-        params: {
-          to: { type: "step", stepId: "step_0", path: "$.email" },
-          subject: { type: "static", value: "Hello" },
-          name: { type: "input", inputKey: "userName" },
+        description: "Send email",
+        params: {},
+        returns: {},
+        code: "return params",
+        binding: {
+          type: "object",
+          entries: {
+            to: { type: "step", stepId: "step_0", path: "$.email" },
+            subject: { type: "static", value: "Hello" },
+            name: { type: "input", inputKey: "userName" },
+          },
         },
       },
       position: 1,
@@ -148,24 +154,24 @@ describe("getStepExecutionOrder", () => {
       {
         stepKey: "step_2",
         label: "Step C",
-        type: "tool",
-        config: { toolName: "c", params: {} },
+        type: "query",
+        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
         position: 2,
         dependsOn: ["step_1"],
       },
       {
         stepKey: "step_0",
         label: "Step A",
-        type: "tool",
-        config: { toolName: "a", params: {} },
+        type: "query",
+        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
         position: 0,
         dependsOn: [],
       },
       {
         stepKey: "step_1",
         label: "Step B",
-        type: "tool",
-        config: { toolName: "b", params: {} },
+        type: "query",
+        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
         position: 1,
         dependsOn: ["step_0"],
       },
@@ -180,24 +186,24 @@ describe("getStepExecutionOrder", () => {
       {
         stepKey: "step_0",
         label: "Step A",
-        type: "tool",
-        config: { toolName: "a", params: {} },
+        type: "query",
+        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
         position: 0,
         dependsOn: [],
       },
       {
         stepKey: "step_1",
         label: "Step B",
-        type: "tool",
-        config: { toolName: "b", params: {} },
+        type: "query",
+        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
         position: 1,
         dependsOn: [],
       },
       {
         stepKey: "step_2",
         label: "Step C",
-        type: "tool",
-        config: { toolName: "c", params: {} },
+        type: "query",
+        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
         position: 2,
         dependsOn: ["step_0", "step_1"],
       },
@@ -209,71 +215,44 @@ describe("getStepExecutionOrder", () => {
   })
 })
 
-describe("isHumanInputStep", () => {
-  test("returns true for form human_request", () => {
+describe("isInputStep", () => {
+  test("returns true for input step", () => {
     const step: NormalizedStep = {
       stepKey: "step_0",
       label: "Input form",
-      type: "tool",
+      type: "input",
       config: {
-        toolName: "human_request",
-        params: {
-          title: { type: "static", value: "Input" },
-          fields: { type: "static", value: [{ kind: "form", key: "data", schema: {} }] },
-        },
+        title: "Input",
+        fields: [{ kind: "form", key: "data", schema: {} }],
       },
       position: 0,
       dependsOn: [],
     }
-    expect(isHumanInputStep(step)).toBe(true)
+    expect(isInputStep(step)).toBe(true)
   })
 
-  test("returns true for question human_request", () => {
-    const step: NormalizedStep = {
-      stepKey: "step_0",
-      label: "Question form",
-      type: "tool",
-      config: {
-        toolName: "human_request",
-        params: {
-          title: { type: "static", value: "Question" },
-          fields: { type: "static", value: [{ kind: "question", key: "answer" }] },
-        },
-      },
-      position: 0,
-      dependsOn: [],
-    }
-    expect(isHumanInputStep(step)).toBe(true)
-  })
-
-  test("returns false for confirm human_request", () => {
-    const step: NormalizedStep = {
-      stepKey: "step_0",
-      label: "Confirm action",
-      type: "tool",
-      config: {
-        toolName: "human_request",
-        params: {
-          title: { type: "static", value: "Confirm" },
-          fields: { type: "static", value: [{ kind: "confirm", key: "confirmed" }] },
-        },
-      },
-      position: 0,
-      dependsOn: [],
-    }
-    expect(isHumanInputStep(step)).toBe(false)
-  })
-
-  test("returns false for non-human_request tool", () => {
+  test("returns false for query step", () => {
     const step: NormalizedStep = {
       stepKey: "step_0",
       label: "Fetch data",
-      type: "tool",
-      config: { toolName: "fetch_data", params: {} },
+      type: "query",
+      config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
       position: 0,
       dependsOn: [],
     }
-    expect(isHumanInputStep(step)).toBe(false)
+    expect(isInputStep(step)).toBe(false)
+  })
+
+  test("returns false for output step", () => {
+    const step: NormalizedStep = {
+      stepKey: "step_0",
+      label: "Output data",
+      type: "output",
+      config: { kind: "table", binding: { type: "static", value: {} } },
+      position: 0,
+      dependsOn: [],
+    }
+    expect(isInputStep(step)).toBe(false)
   })
 })
 
@@ -282,24 +261,24 @@ describe("RecipeRunner", () => {
     {
       stepKey: "step_0",
       label: "Fetch data",
-      type: "tool",
-      config: { toolName: "fetch", params: {} },
+      type: "query",
+      config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
       position: 0,
       dependsOn: [],
     },
     {
       stepKey: "step_1",
       label: "Transform data",
-      type: "tool",
-      config: { toolName: "transform", params: {} },
+      type: "query",
+      config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
       position: 1,
       dependsOn: ["step_0"],
     },
     {
       stepKey: "step_2",
       label: "Output result",
-      type: "tool",
-      config: { toolName: "output", params: {} },
+      type: "output",
+      config: { kind: "table", binding: { type: "static", value: {} } },
       position: 2,
       dependsOn: ["step_1"],
     },

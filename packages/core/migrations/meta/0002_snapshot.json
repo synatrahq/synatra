@@ -1,5 +1,5 @@
 {
-  "id": "8153905e-d53f-40c9-8b21-6c07b717f484",
+  "id": "2703d0f3-6b4a-44fe-9883-8451e85ef036",
   "prevId": "9a5cd05c-1415-434d-8e80-7c1cd69aad55",
   "version": "7",
   "dialect": "postgresql",
@@ -1839,6 +1839,128 @@
         "channel_member_created_by_user_id_fk": {
           "name": "channel_member_created_by_user_id_fk",
           "tableFrom": "channel_member",
+          "tableTo": "user",
+          "columnsFrom": [
+            "created_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.channel_recipe": {
+      "name": "channel_recipe",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "channel_id": {
+          "name": "channel_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recipe_id": {
+          "name": "recipe_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by": {
+          "name": "created_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "channel_recipe_unique": {
+          "name": "channel_recipe_unique",
+          "columns": [
+            {
+              "expression": "channel_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "recipe_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "channel_recipe_recipe_idx": {
+          "name": "channel_recipe_recipe_idx",
+          "columns": [
+            {
+              "expression": "recipe_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "channel_recipe_channel_id_channel_id_fk": {
+          "name": "channel_recipe_channel_id_channel_id_fk",
+          "tableFrom": "channel_recipe",
+          "tableTo": "channel",
+          "columnsFrom": [
+            "channel_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "channel_recipe_recipe_id_recipe_id_fk": {
+          "name": "channel_recipe_recipe_id_recipe_id_fk",
+          "tableFrom": "channel_recipe",
+          "tableTo": "recipe",
+          "columnsFrom": [
+            "recipe_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "channel_recipe_created_by_user_id_fk": {
+          "name": "channel_recipe_created_by_user_id_fk",
+          "tableFrom": "channel_recipe",
           "tableTo": "user",
           "columnsFrom": [
             "created_by"
@@ -4309,8 +4431,7 @@
           "type": "recipe_step_type",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'tool'"
+          "notNull": true
         },
         "config": {
           "name": "config",
@@ -4480,12 +4601,6 @@
           "name": "agent_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
-        },
-        "channel_id": {
-          "name": "channel_id",
-          "type": "uuid",
-          "primaryKey": false,
           "notNull": false
         },
         "source_thread_id": {
@@ -4636,19 +4751,6 @@
           "tableTo": "agent",
           "columnsFrom": [
             "agent_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "recipe_channel_id_channel_id_fk": {
-          "name": "recipe_channel_id_channel_id_fk",
-          "tableFrom": "recipe",
-          "tableTo": "channel",
-          "columnsFrom": [
-            "channel_id"
           ],
           "columnsTo": [
             "id"
@@ -7780,7 +7882,10 @@
       "name": "recipe_step_type",
       "schema": "public",
       "values": [
-        "tool"
+        "query",
+        "code",
+        "output",
+        "input"
       ]
     },
     "public.connection_mode": {
