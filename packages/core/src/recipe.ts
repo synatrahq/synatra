@@ -15,6 +15,8 @@ import { ChannelRecipeTable } from "./schema/channel-recipe.sql"
 import { UserTable } from "./schema/user.sql"
 import { MemberTable } from "./schema/member.sql"
 import { ChannelMemberTable } from "./schema/channel-member.sql"
+import { canAccessCurrentUserChannelMember } from "./channel-member"
+import { getChannelById } from "./channel"
 import { createError } from "@synatra/util/error"
 import { generateSlug, generateRandomId, isReservedSlug } from "@synatra/util/identifier"
 import { bumpVersion, parseVersion, stringifyVersion } from "@synatra/util/version"
@@ -44,6 +46,14 @@ function parseCursor(cursor: string): { date: Date; id: string } {
 
 function hashConfig(config: Record<string, unknown>): string {
   return createHash("sha256").update(serializeConfig(config)).digest("hex")
+}
+
+async function assertChannelAccess(channelId: string) {
+  await getChannelById(channelId)
+  const hasAccess = await canAccessCurrentUserChannelMember(channelId)
+  if (!hasAccess) {
+    throw createError("ForbiddenError", { message: "No access to this channel" })
+  }
 }
 
 export function extractBindingRefs(binding: Value): string[] {
@@ -246,6 +256,12 @@ export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
     outputs: input.outputs,
   }
   const configHashValue = hashConfig(configData)
+
+  if (input.channelIds && input.channelIds.length > 0) {
+    for (const channelId of input.channelIds) {
+      await assertChannelAccess(channelId)
+    }
+  }
 
   let recipeId: string
   try {
@@ -1222,6 +1238,7 @@ export const AddRecipeToChannelSchema = z.object({
 export async function addRecipeToChannel(raw: z.input<typeof AddRecipeToChannelSchema>) {
   const input = AddRecipeToChannelSchema.parse(raw)
   await getRecipeById(input.recipeId)
+  await assertChannelAccess(input.channelId)
   const userId = principal.userId()
 
   try {
