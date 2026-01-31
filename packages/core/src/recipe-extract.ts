@@ -190,15 +190,16 @@ export function validateRecipeSteps(
   inputs: RecipeInput[] = [],
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = []
-  const stepKeys = new Set(steps.map((s) => s.stepKey))
-  const stepMap = new Map(steps.map((s) => [s.stepKey, s]))
   const inputKeys = new Set(inputs.map((i) => i.key))
+  const precedingKeys = new Set<string>()
 
   function validateBinding(binding: ParamBinding, stepKey: string, paramPath: string): void {
     switch (binding.type) {
       case "step":
-        if (!stepKeys.has(binding.stepKey)) {
-          errors.push(`Step "${stepKey}" param "${paramPath}" references non-existent step "${binding.stepKey}"`)
+        if (!precedingKeys.has(binding.stepKey)) {
+          errors.push(
+            `Step "${stepKey}" param "${paramPath}" references "${binding.stepKey}" which is not a preceding step`,
+          )
         }
         break
       case "input":
@@ -225,12 +226,6 @@ export function validateRecipeSteps(
   }
 
   for (const step of steps) {
-    for (const depKey of step.dependsOn) {
-      if (!stepKeys.has(depKey)) {
-        errors.push(`Step "${step.stepKey}" depends on non-existent step "${depKey}"`)
-      }
-    }
-
     if (step.type === "query" || step.type === "code" || step.type === "output") {
       validateBinding(step.config.binding, step.stepKey, "binding")
     }
@@ -242,32 +237,8 @@ export function validateRecipeSteps(
         }
       }
     }
-  }
 
-  const visited = new Set<string>()
-  const visiting = new Set<string>()
-
-  function hasCycle(stepKey: string): boolean {
-    if (visiting.has(stepKey)) return true
-    if (visited.has(stepKey)) return false
-
-    visiting.add(stepKey)
-    const step = stepMap.get(stepKey)
-    if (step) {
-      for (const depKey of step.dependsOn) {
-        if (hasCycle(depKey)) return true
-      }
-    }
-    visiting.delete(stepKey)
-    visited.add(stepKey)
-    return false
-  }
-
-  for (const step of steps) {
-    if (hasCycle(step.stepKey)) {
-      errors.push(`Circular dependency detected involving step "${step.stepKey}"`)
-      break
-    }
+    precedingKeys.add(step.stepKey)
   }
 
   return { valid: errors.length === 0, errors }
@@ -351,9 +322,11 @@ Your task:
   "name": "Recipe name",
   "description": "What this recipe does",
   "inputs": [{ "key": "user_id", "label": "User ID", "type": "string", "description": "Target user to analyze", "required": true, "defaultValue": "123" }],
-  "steps": [{ "stepKey": "snake_case_key", "label": "Human readable", "toolName": "tool", "params": { ... }, "dependsOn": [] }],
+  "steps": [{ "stepKey": "snake_case_key", "label": "Human readable", "toolName": "tool", "params": { ... } }],
   "outputs": [{ "stepId": "output_step_key", "kind": "table" }]
 }
+
+IMPORTANT: Steps are executed in array order. Each step can only reference previous steps via bindings.
 
 Input types: "string" | "number"
 Output kinds: "table" | "chart" | "markdown" | "key_value"
@@ -435,8 +408,7 @@ Example - output_markdown with dynamic content (common pattern):
         "summary": { "type": "step", "stepKey": "generate_summary" }
       }
     }
-  },
-  "dependsOn": ["fetch_stats", "generate_summary"]
+  }
 }
 
 Example - Dynamic file path:
@@ -502,8 +474,7 @@ IMPORTANT: The input parameter MUST be an object. Wrap arrays using object bindi
         "users": { "type": "step", "stepKey": "fetch_users" }
       }
     }
-  },
-  "dependsOn": ["fetch_users"]
+  }
 }
 
 ---
@@ -529,9 +500,7 @@ Do NOT include:
 **label**: Human-readable description for UI
 - Good: "Fetch active users", "Calculate order total"
 
-**dependsOn**: List stepKeys that must complete before this step
-- Must reference existing stepKeys
-- No circular dependencies allowed
+**Step ordering**: Steps are executed in array order. A step can only reference previous steps via bindings.
 
 ---
 
@@ -580,13 +549,11 @@ export interface RawStep {
   label: string
   toolName: string
   params: Record<string, ParamBinding>
-  dependsOn: string[]
 }
 
 export type ExtractedStep = {
   stepKey: string
   label: string
-  dependsOn: string[]
 } & (
   | { type: "query"; config: QueryStepConfig }
   | { type: "code"; config: CodeStepConfig }
@@ -612,8 +579,7 @@ function convertRawStepToExtractedStep(
   keyMap: Map<string, string>,
   agentTools: AgentTool[],
 ): ExtractedStep {
-  const { stepKey, label, dependsOn, toolName, params } = step
-  const normalizedDependsOn = dependsOn.map((dep) => keyMap.get(dep) ?? dep)
+  const { stepKey, label, toolName, params } = step
   const normalizedParams = updateParamBindingRefs(params, keyMap)
 
   if (toolName in OUTPUT_KIND_MAP) {
@@ -621,7 +587,6 @@ function convertRawStepToExtractedStep(
     return {
       stepKey,
       label,
-      dependsOn: normalizedDependsOn,
       type: "output",
       config: {
         kind,
@@ -684,7 +649,6 @@ function convertRawStepToExtractedStep(
     return {
       stepKey,
       label,
-      dependsOn: normalizedDependsOn,
       type: "input",
       config: {
         title,
@@ -705,7 +669,6 @@ function convertRawStepToExtractedStep(
     return {
       stepKey,
       label,
-      dependsOn: normalizedDependsOn,
       type: "code",
       config: {
         code,
@@ -720,7 +683,6 @@ function convertRawStepToExtractedStep(
     return {
       stepKey,
       label,
-      dependsOn: normalizedDependsOn,
       type: "query",
       config: {
         description: agentTool.description,
@@ -736,7 +698,6 @@ function convertRawStepToExtractedStep(
   return {
     stepKey,
     label,
-    dependsOn: normalizedDependsOn,
     type: "query",
     config: {
       description: `Unknown tool: ${toolName}`,
