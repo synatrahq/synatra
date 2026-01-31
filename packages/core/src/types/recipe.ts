@@ -160,7 +160,6 @@ export const RecipeStepSchema = z
   .object({
     stepKey: z.string(),
     label: z.string(),
-    dependsOn: z.array(z.string()),
   })
   .and(
     z.discriminatedUnion("type", [

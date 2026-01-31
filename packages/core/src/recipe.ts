@@ -23,10 +23,11 @@ import {
   RecipeInputSchema,
   RecipeOutputSchema,
   PendingInputConfigSchema,
-  RecipeStepType,
-  RecipeStepConfigSchema,
+  RecipeStepSchema,
   type RecipeInput,
   type RecipeOutput,
+  type ParamBinding,
+  type RecipeStepConfig,
 } from "./types"
 
 function parseCursor(cursor: string): { date: Date; id: string } {
@@ -45,6 +46,97 @@ function parseCursor(cursor: string): { date: Date; id: string } {
 
 function hashConfig(config: Record<string, unknown>): string {
   return createHash("sha256").update(serializeConfig(config)).digest("hex")
+}
+
+export function extractBindingRefs(binding: ParamBinding): string[] {
+  const refs: string[] = []
+  function walk(b: ParamBinding): void {
+    if (b.type === "step") refs.push(b.stepKey)
+    if (b.type === "template") Object.values(b.variables).forEach(walk)
+    if (b.type === "object") Object.values(b.entries).forEach(walk)
+    if (b.type === "array") b.items.forEach(walk)
+  }
+  walk(binding)
+  return [...new Set(refs)]
+}
+
+function collectStepRefs(config: RecipeStepConfig): string[] {
+  const refs: string[] = []
+  if ("binding" in config) refs.push(...extractBindingRefs(config.binding))
+  if ("fields" in config) {
+    for (const field of config.fields) {
+      if (field.kind === "select_rows") refs.push(...extractBindingRefs(field.dataBinding))
+    }
+  }
+  return refs
+}
+
+export function validateStepBindings(steps: Array<{ stepKey: string; config: RecipeStepConfig }>): {
+  valid: boolean
+  errors: string[]
+} {
+  const errors: string[] = []
+  const precedingKeys = new Set<string>()
+
+  for (const step of steps) {
+    for (const ref of collectStepRefs(step.config)) {
+      if (!precedingKeys.has(ref)) {
+        errors.push(`Step "${step.stepKey}" references "${ref}" which is not a preceding step`)
+      }
+    }
+    precedingKeys.add(step.stepKey)
+  }
+
+  return { valid: errors.length === 0, errors }
+}
+
+function orderStepsByEdgeChain<T extends { id: string }>(
+  steps: T[],
+  edges: Array<{ fromStepId: string; toStepId: string }>,
+): T[] {
+  if (steps.length === 0) return []
+
+  const stepById = new Map(steps.map((s) => [s.id, s]))
+  const indexById = new Map(steps.map((s, index) => [s.id, index]))
+  const adjacency = new Map<string, string[]>()
+  const inDegree = new Map<string, number>()
+  for (const step of steps) {
+    adjacency.set(step.id, [])
+    inDegree.set(step.id, 0)
+  }
+  for (const edge of edges) {
+    if (!stepById.has(edge.fromStepId) || !stepById.has(edge.toStepId)) continue
+    adjacency.get(edge.fromStepId)?.push(edge.toStepId)
+    inDegree.set(edge.toStepId, (inDegree.get(edge.toStepId) ?? 0) + 1)
+  }
+
+  const ordered: T[] = []
+  const visited = new Set<string>()
+  const available = steps.filter((step) => (inDegree.get(step.id) ?? 0) === 0).map((step) => step.id)
+
+  while (available.length > 0) {
+    available.sort((a, b) => (indexById.get(a) ?? 0) - (indexById.get(b) ?? 0))
+    const currentId = available.shift()
+    if (!currentId || visited.has(currentId)) continue
+    visited.add(currentId)
+    const step = stepById.get(currentId)
+    if (step) ordered.push(step)
+    for (const nextId of adjacency.get(currentId) ?? []) {
+      inDegree.set(nextId, (inDegree.get(nextId) ?? 0) - 1)
+      if ((inDegree.get(nextId) ?? 0) === 0) {
+        available.push(nextId)
+      }
+    }
+  }
+
+  if (ordered.length === steps.length) return ordered
+  for (const step of steps) {
+    if (!visited.has(step.id)) {
+      ordered.push(step)
+    }
+  }
+
+  return ordered
 }
 
 async function getAccessibleChannelIds(): Promise<string[] | null> {
@@ -88,21 +180,6 @@ async function canAccessRecipeViaChannel(recipeId: string): Promise<boolean> {
   return channelRecipes.some((cr) => accessibleChannels.includes(cr.channelId))
 }
 
-const RecipeStepInputSchema = z
-  .object({
-    stepKey: z.string(),
-    label: z.string(),
-    dependsOn: z.array(z.string()),
-  })
-  .and(
-    z.union([
-      z.object({ type: z.literal("query"), config: RecipeStepConfigSchema }),
-      z.object({ type: z.literal("code"), config: RecipeStepConfigSchema }),
-      z.object({ type: z.literal("output"), config: RecipeStepConfigSchema }),
-      z.object({ type: z.literal("input"), config: RecipeStepConfigSchema }),
-    ]),
-  )
-
 export const CreateRecipeSchema = z.object({
   agentId: z.string().optional(),
   channelIds: z.array(z.string()).optional(),
@@ -115,7 +192,7 @@ export const CreateRecipeSchema = z.object({
   agentVersionMode: z.enum(["current", "fixed"]).default("current"),
   inputs: z.array(RecipeInputSchema),
   outputs: z.array(RecipeOutputSchema),
-  steps: z.array(RecipeStepInputSchema),
+  steps: z.array(RecipeStepSchema),
 })
 
 export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
@@ -126,6 +203,13 @@ export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
 
   if (isReservedSlug(slug)) {
     throw createError("BadRequestError", { message: `Slug "${slug}" is reserved` })
+  }
+
+  if (input.steps.length > 0) {
+    const bindingValidation = validateStepBindings(input.steps)
+    if (!bindingValidation.valid) {
+      throw createError("BadRequestError", { message: bindingValidation.errors.join("; ") })
+    }
   }
 
   const versionParsed = parseVersion("0.0.1")
@@ -198,24 +282,22 @@ export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
 
       if (input.steps.length > 0) {
         await db.insert(RecipeStepTable).values(
-          input.steps.map((step, idx) => ({
+          input.steps.map((step) => ({
             releaseId: release.id,
             stepKey: step.stepKey,
             label: step.label,
             type: step.type,
             config: step.config,
-            position: idx,
           })),
         )
 
         await db.insert(RecipeStepTable).values(
-          input.steps.map((step, idx) => ({
+          input.steps.map((step) => ({
             workingCopyRecipeId: recipe.id,
             stepKey: step.stepKey,
             label: step.label,
             type: step.type,
             config: step.config,
-            position: idx,
           })),
         )
 
@@ -223,11 +305,13 @@ export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
           .select({ id: RecipeStepTable.id, stepKey: RecipeStepTable.stepKey })
           .from(RecipeStepTable)
           .where(eq(RecipeStepTable.releaseId, release.id))
+          .orderBy(RecipeStepTable.createdAt, RecipeStepTable.id)
 
         const workingSteps = await db
           .select({ id: RecipeStepTable.id, stepKey: RecipeStepTable.stepKey })
           .from(RecipeStepTable)
           .where(eq(RecipeStepTable.workingCopyRecipeId, recipe.id))
+          .orderBy(RecipeStepTable.createdAt, RecipeStepTable.id)
 
         const releaseKeyToId = new Map(releaseSteps.map((s) => [s.stepKey, s.id]))
         const workingKeyToId = new Map(workingSteps.map((s) => [s.stepKey, s.id]))
@@ -238,18 +322,18 @@ export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
           fromStepId: string
           toStepId: string
         }> = []
-        for (const step of input.steps) {
-          for (const depKey of step.dependsOn) {
-            const releaseFromId = releaseKeyToId.get(depKey)
-            const releaseToId = releaseKeyToId.get(step.stepKey)
-            const workingFromId = workingKeyToId.get(depKey)
-            const workingToId = workingKeyToId.get(step.stepKey)
-            if (releaseFromId && releaseToId) {
-              edges.push({ releaseId: release.id, fromStepId: releaseFromId, toStepId: releaseToId })
-            }
-            if (workingFromId && workingToId) {
-              edges.push({ workingCopyRecipeId: recipe.id, fromStepId: workingFromId, toStepId: workingToId })
-            }
+        for (let i = 1; i < input.steps.length; i++) {
+          const prevKey = input.steps[i - 1].stepKey
+          const currKey = input.steps[i].stepKey
+          const releaseFromId = releaseKeyToId.get(prevKey)
+          const releaseToId = releaseKeyToId.get(currKey)
+          const workingFromId = workingKeyToId.get(prevKey)
+          const workingToId = workingKeyToId.get(currKey)
+          if (releaseFromId && releaseToId) {
+            edges.push({ releaseId: release.id, fromStepId: releaseFromId, toStepId: releaseToId })
+          }
+          if (workingFromId && workingToId) {
+            edges.push({ workingCopyRecipeId: recipe.id, fromStepId: workingFromId, toStepId: workingToId })
           }
         }
         if (edges.length > 0) {
@@ -461,7 +545,7 @@ export const SaveRecipeWorkingCopySchema = z.object({
   agentVersionMode: z.enum(["current", "fixed"]).optional(),
   inputs: z.array(RecipeInputSchema).optional(),
   outputs: z.array(RecipeOutputSchema).optional(),
-  steps: z.array(RecipeStepInputSchema).optional(),
+  steps: z.array(RecipeStepSchema).optional(),
 })
 
 export async function saveRecipeWorkingCopy(raw: z.input<typeof SaveRecipeWorkingCopySchema>) {
@@ -480,6 +564,13 @@ export async function saveRecipeWorkingCopy(raw: z.input<typeof SaveRecipeWorkin
   const configData = { agentReleaseId, agentVersionMode, inputs, outputs }
   const configHashValue = hashConfig(configData)
   const userId = principal.userId()
+
+  if (input.steps !== undefined && input.steps.length > 0) {
+    const bindingValidation = validateStepBindings(input.steps)
+    if (!bindingValidation.valid) {
+      throw createError("BadRequestError", { message: bindingValidation.errors.join("; ") })
+    }
+  }
 
   await withTx(async (db) => {
     await db
@@ -512,13 +603,12 @@ export async function saveRecipeWorkingCopy(raw: z.input<typeof SaveRecipeWorkin
 
       if (input.steps.length > 0) {
         await db.insert(RecipeStepTable).values(
-          input.steps.map((step, idx) => ({
+          input.steps.map((step) => ({
             workingCopyRecipeId: input.recipeId,
             stepKey: step.stepKey,
             label: step.label,
             type: step.type,
             config: step.config,
-            position: idx,
           })),
         )
 
@@ -526,17 +616,18 @@ export async function saveRecipeWorkingCopy(raw: z.input<typeof SaveRecipeWorkin
           .select({ id: RecipeStepTable.id, stepKey: RecipeStepTable.stepKey })
           .from(RecipeStepTable)
           .where(eq(RecipeStepTable.workingCopyRecipeId, input.recipeId))
+          .orderBy(RecipeStepTable.createdAt, RecipeStepTable.id)
 
         const keyToId = new Map(insertedSteps.map((s) => [s.stepKey, s.id]))
 
         const edges: Array<{ workingCopyRecipeId: string; fromStepId: string; toStepId: string }> = []
-        for (const step of input.steps) {
-          for (const depKey of step.dependsOn) {
-            const fromId = keyToId.get(depKey)
-            const toId = keyToId.get(step.stepKey)
-            if (fromId && toId) {
-              edges.push({ workingCopyRecipeId: input.recipeId, fromStepId: fromId, toStepId: toId })
-            }
+        for (let i = 1; i < input.steps.length; i++) {
+          const prevKey = input.steps[i - 1].stepKey
+          const currKey = input.steps[i].stepKey
+          const fromId = keyToId.get(prevKey)
+          const toId = keyToId.get(currKey)
+          if (fromId && toId) {
+            edges.push({ workingCopyRecipeId: input.recipeId, fromStepId: fromId, toStepId: toId })
           }
         }
         if (edges.length > 0) {
@@ -563,17 +654,15 @@ export async function getRecipeWorkingCopy(recipeId: string) {
 
   if (!workingCopy) throw createError("NotFoundError", { type: "RecipeWorkingCopy", id: recipeId })
 
-  const steps = await withDb((db) =>
-    db
-      .select()
-      .from(RecipeStepTable)
-      .where(eq(RecipeStepTable.workingCopyRecipeId, recipeId))
-      .orderBy(RecipeStepTable.position),
+  const rawSteps = await withDb((db) =>
+    db.select().from(RecipeStepTable).where(eq(RecipeStepTable.workingCopyRecipeId, recipeId)),
   )
 
   const edges = await withDb((db) =>
     db.select().from(RecipeEdgeTable).where(eq(RecipeEdgeTable.workingCopyRecipeId, recipeId)),
   )
+
+  const steps = orderStepsByEdgeChain(rawSteps, edges)
 
   return { ...workingCopy, steps, edges }
 }
@@ -641,7 +730,7 @@ export async function deployRecipe(raw: z.input<typeof DeployRecipeSchema>) {
       .select()
       .from(RecipeStepTable)
       .where(eq(RecipeStepTable.workingCopyRecipeId, input.recipeId))
-      .orderBy(RecipeStepTable.position)
+      .orderBy(RecipeStepTable.createdAt, RecipeStepTable.id)
 
     if (workingSteps.length > 0) {
       await db.insert(RecipeStepTable).values(
@@ -651,7 +740,6 @@ export async function deployRecipe(raw: z.input<typeof DeployRecipeSchema>) {
           label: step.label,
           type: step.type,
           config: step.config,
-          position: step.position,
         })),
       )
     }
@@ -785,7 +873,7 @@ export async function checkoutRecipe(raw: z.input<typeof CheckoutRecipeSchema>) 
       .select()
       .from(RecipeStepTable)
       .where(eq(RecipeStepTable.releaseId, input.releaseId))
-      .orderBy(RecipeStepTable.position)
+      .orderBy(RecipeStepTable.createdAt, RecipeStepTable.id)
 
     if (releaseSteps.length > 0) {
       await db.insert(RecipeStepTable).values(
@@ -795,7 +883,6 @@ export async function checkoutRecipe(raw: z.input<typeof CheckoutRecipeSchema>) 
           label: step.label,
           type: step.type,
           config: step.config,
-          position: step.position,
         })),
       )
     }
@@ -907,11 +994,13 @@ export async function getRecipeRelease(recipeId: string, releaseId: string) {
 
   if (!release) throw createError("NotFoundError", { type: "RecipeRelease", id: releaseId })
 
-  const steps = await withDb((db) =>
-    db.select().from(RecipeStepTable).where(eq(RecipeStepTable.releaseId, releaseId)).orderBy(RecipeStepTable.position),
+  const rawSteps = await withDb((db) =>
+    db.select().from(RecipeStepTable).where(eq(RecipeStepTable.releaseId, releaseId)),
   )
 
   const edges = await withDb((db) => db.select().from(RecipeEdgeTable).where(eq(RecipeEdgeTable.releaseId, releaseId)))
+
+  const steps = orderStepsByEdgeChain(rawSteps, edges)
 
   return { ...release, steps, edges }
 }

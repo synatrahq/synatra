@@ -59,7 +59,6 @@ CREATE TABLE "recipe_step" (
 	"label" text NOT NULL,
 	"type" "recipe_step_type" NOT NULL,
 	"config" jsonb NOT NULL,
-	"position" integer NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "recipe_step_parent_check" CHECK ((working_copy_recipe_id IS NOT NULL AND release_id IS NULL) OR (working_copy_recipe_id IS NULL AND release_id IS NOT NULL))
 );
@@ -128,8 +127,8 @@ CREATE INDEX "recipe_execution_org_idx" ON "recipe_execution" USING btree ("orga
 CREATE UNIQUE INDEX "recipe_release_unique_idx" ON "recipe_release" USING btree ("recipe_id","version");--> statement-breakpoint
 CREATE UNIQUE INDEX "recipe_release_semver_idx" ON "recipe_release" USING btree ("recipe_id","version_major","version_minor","version_patch");--> statement-breakpoint
 CREATE INDEX "recipe_release_recipe_idx" ON "recipe_release" USING btree ("recipe_id","created_at");--> statement-breakpoint
-CREATE INDEX "recipe_step_working_copy_idx" ON "recipe_step" USING btree ("working_copy_recipe_id","position");--> statement-breakpoint
-CREATE INDEX "recipe_step_release_idx" ON "recipe_step" USING btree ("release_id","position");--> statement-breakpoint
+CREATE INDEX "recipe_step_working_copy_idx" ON "recipe_step" USING btree ("working_copy_recipe_id");--> statement-breakpoint
+CREATE INDEX "recipe_step_release_idx" ON "recipe_step" USING btree ("release_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "recipe_step_working_copy_key_idx" ON "recipe_step" USING btree ("working_copy_recipe_id","step_key") WHERE working_copy_recipe_id IS NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "recipe_step_release_key_idx" ON "recipe_step" USING btree ("release_id","step_key") WHERE release_id IS NOT NULL;--> statement-breakpoint
 CREATE UNIQUE INDEX "recipe_org_slug_idx" ON "recipe" USING btree ("organization_id","slug");--> statement-breakpoint

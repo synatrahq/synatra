@@ -60,7 +60,7 @@ type RecipeStepLike = {
   label: string
   type: "query" | "code" | "output" | "input"
   config: Record<string, unknown>
-  dependsOn: string[]
+  bindingRefs: string[]
 }
 
 function getStepDisplayName(step: RecipeStepLike): string {
@@ -238,10 +238,10 @@ function StepItem(props: {
           <div class="flex items-center gap-2 mt-0.5">
             <span class="text-xs font-medium text-text truncate">{props.step.label}</span>
             <span class="font-code text-2xs text-text-muted shrink-0">({displayName()})</span>
-            <Show when={props.step.dependsOn.length > 0}>
+            <Show when={props.step.bindingRefs.length > 0}>
               <div class="flex items-center gap-1 text-2xs text-text-muted shrink-0">
                 <PlugsConnected class="h-3 w-3" />
-                {props.step.dependsOn.join(", ")}
+                {props.step.bindingRefs.join(", ")}
               </div>
             </Show>
           </div>

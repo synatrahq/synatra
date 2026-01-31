@@ -188,9 +188,6 @@ export function RecipeExtractModal(props: RecipeExtractModalProps) {
                           </span>
                           <span class="text-xs text-text truncate">{step.label}</span>
                           <span class="font-code text-2xs text-text-muted shrink-0">({step.type})</span>
-                          <Show when={step.dependsOn.length > 0}>
-                            <Badge variant="secondary">depends: {step.dependsOn.join(", ")}</Badge>
-                          </Show>
                         </div>
                       )}
                     </For>

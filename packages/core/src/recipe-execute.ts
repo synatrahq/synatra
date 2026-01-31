@@ -15,8 +15,6 @@ import type { ProblemDetails } from "@synatra/util/error"
 export type NormalizedStep = {
   stepKey: string
   label: string
-  position: number
-  dependsOn: string[]
 } & (
   | { type: "query"; config: QueryStepConfig }
   | { type: "code"; config: CodeStepConfig }
@@ -103,28 +101,15 @@ export function resolveStepParams(step: NormalizedStep, context: RecipeExecution
   return {}
 }
 
-export function buildNormalizedSteps(steps: RecipeStepDb[], edges: RecipeEdge[]): NormalizedStep[] {
-  const stepIdToKey = new Map(steps.map((s) => [s.id, s.stepKey]))
+export function buildNormalizedSteps(steps: RecipeStepDb[], _edges: RecipeEdge[]): NormalizedStep[] {
+  if (steps.length === 0) return []
 
-  const edgeMap = new Map<string, string[]>()
-  for (const edge of edges) {
-    const toKey = stepIdToKey.get(edge.toStepId)
-    const fromKey = stepIdToKey.get(edge.fromStepId)
-    if (!toKey || !fromKey) continue
-    const deps = edgeMap.get(toKey) ?? []
-    deps.push(fromKey)
-    edgeMap.set(toKey, deps)
-  }
-
-  return steps.map((step) => {
-    const base = {
-      stepKey: step.stepKey,
-      label: step.label,
-      position: step.position,
-      dependsOn: edgeMap.get(step.stepKey) ?? [],
-    }
-    return { ...base, type: step.type, config: step.config } as NormalizedStep
-  })
+  return steps.map((step) => ({
+    stepKey: step.stepKey,
+    label: step.label,
+    type: step.type,
+    config: step.config,
+  })) as NormalizedStep[]
 }
 
 export function getStepType(step: NormalizedStep): RecipeStepType {
@@ -132,28 +117,7 @@ export function getStepType(step: NormalizedStep): RecipeStepType {
 }
 
 export function getStepExecutionOrder(steps: NormalizedStep[]): NormalizedStep[] {
-  const stepMap = new Map(steps.map((s) => [s.stepKey, s]))
-  const visited = new Set<string>()
-  const order: NormalizedStep[] = []
-
-  function visit(stepKey: string) {
-    if (visited.has(stepKey)) return
-    visited.add(stepKey)
-
-    const step = stepMap.get(stepKey)
-    if (!step) return
-
-    for (const depKey of step.dependsOn) {
-      visit(depKey)
-    }
-    order.push(step)
-  }
-
-  for (const step of steps) {
-    visit(step.stepKey)
-  }
-
-  return order
+  return steps
 }
 
 export function isInputStep(step: NormalizedStep): step is NormalizedStep & { type: "input"; config: InputStepConfig } {

@@ -107,12 +107,11 @@ export const RecipeStepTable = pgTable(
     label: text("label").notNull(),
     type: recipeStepTypeEnum("type").notNull(),
     config: jsonb("config").$type<RecipeStepConfig>().notNull(),
-    position: integer("position").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    index("recipe_step_working_copy_idx").on(table.workingCopyRecipeId, table.position),
-    index("recipe_step_release_idx").on(table.releaseId, table.position),
+    index("recipe_step_working_copy_idx").on(table.workingCopyRecipeId),
+    index("recipe_step_release_idx").on(table.releaseId),
     uniqueIndex("recipe_step_working_copy_key_idx")
       .on(table.workingCopyRecipeId, table.stepKey)
       .where(sql`working_copy_recipe_id IS NOT NULL`),

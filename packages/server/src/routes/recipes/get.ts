@@ -1,20 +1,24 @@
 import { Hono } from "hono"
-import { getRecipeById, getRecipeRelease } from "@synatra/core"
+import { getRecipeById, getRecipeRelease, extractBindingRefs } from "@synatra/core"
+import type { RecipeStepConfig, ParamBinding } from "@synatra/core/types"
+
+function getConfigBinding(config: RecipeStepConfig): ParamBinding | null {
+  if ("binding" in config) return config.binding
+  return null
+}
 
 export const get = new Hono().get("/:id", async (c) => {
   const recipe = await getRecipeById(c.req.param("id"))
 
   if (recipe.currentReleaseId) {
     const release = await getRecipeRelease(recipe.id, recipe.currentReleaseId)
-    const stepIdToKey = new Map(release.steps.map((s) => [s.id, s.stepKey]))
     const steps = release.steps.map((s) => {
+      const binding = getConfigBinding(s.config)
+      const bindingRefs = binding ? extractBindingRefs(binding) : []
       const base = {
         stepKey: s.stepKey,
         label: s.label,
-        dependsOn: release.edges
-          .filter((e) => e.toStepId === s.id)
-          .map((e) => stepIdToKey.get(e.fromStepId))
-          .filter((key): key is string => key !== undefined),
+        bindingRefs,
       }
       if (s.type === "query") {
         return { ...base, type: "query" as const, config: s.config }

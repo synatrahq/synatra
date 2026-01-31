@@ -1,5 +1,5 @@
 {
-  "id": "c154f0f4-afec-411a-a6d0-446ff91a835b",
+  "id": "6563f439-e474-4b1e-a796-74bc55ae8d8f",
   "prevId": "9a5cd05c-1415-434d-8e80-7c1cd69aad55",
   "version": "7",
   "dialect": "postgresql",
@@ -4465,12 +4465,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "position": {
-          "name": "position",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -4488,12 +4482,6 @@
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            },
-            {
-              "expression": "position",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
             }
           ],
           "isUnique": false,
@@ -4506,12 +4494,6 @@
           "columns": [
             {
               "expression": "release_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "position",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

@@ -129,8 +129,6 @@ describe("resolveStepParams", () => {
           },
         },
       },
-      position: 1,
-      dependsOn: ["step_0"],
     }
 
     const context: RecipeExecutionContext = {
@@ -149,69 +147,30 @@ describe("resolveStepParams", () => {
 })
 
 describe("getStepExecutionOrder", () => {
-  test("returns steps in dependency order", () => {
+  test("returns steps in same order (already ordered)", () => {
     const steps: NormalizedStep[] = [
-      {
-        stepKey: "step_2",
-        label: "Step C",
-        type: "query",
-        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
-        position: 2,
-        dependsOn: ["step_1"],
-      },
       {
         stepKey: "step_0",
         label: "Step A",
         type: "query",
         config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
-        position: 0,
-        dependsOn: [],
       },
       {
         stepKey: "step_1",
         label: "Step B",
         type: "query",
         config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
-        position: 1,
-        dependsOn: ["step_0"],
+      },
+      {
+        stepKey: "step_2",
+        label: "Step C",
+        type: "query",
+        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
       },
     ]
 
     const ordered = getStepExecutionOrder(steps)
     expect(ordered.map((s) => s.stepKey)).toEqual(["step_0", "step_1", "step_2"])
-  })
-
-  test("handles parallel steps", () => {
-    const steps: NormalizedStep[] = [
-      {
-        stepKey: "step_0",
-        label: "Step A",
-        type: "query",
-        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
-        position: 0,
-        dependsOn: [],
-      },
-      {
-        stepKey: "step_1",
-        label: "Step B",
-        type: "query",
-        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
-        position: 1,
-        dependsOn: [],
-      },
-      {
-        stepKey: "step_2",
-        label: "Step C",
-        type: "query",
-        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
-        position: 2,
-        dependsOn: ["step_0", "step_1"],
-      },
-    ]
-
-    const ordered = getStepExecutionOrder(steps)
-    const step2Index = ordered.findIndex((s) => s.stepKey === "step_2")
-    expect(step2Index).toBe(2)
   })
 })
 
@@ -225,8 +184,6 @@ describe("isInputStep", () => {
         title: "Input",
         fields: [{ kind: "form", key: "data", schema: {} }],
       },
-      position: 0,
-      dependsOn: [],
     }
     expect(isInputStep(step)).toBe(true)
   })
@@ -237,8 +194,6 @@ describe("isInputStep", () => {
       label: "Fetch data",
       type: "query",
       config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
-      position: 0,
-      dependsOn: [],
     }
     expect(isInputStep(step)).toBe(false)
   })
@@ -249,8 +204,6 @@ describe("isInputStep", () => {
       label: "Output data",
       type: "output",
       config: { kind: "table", binding: { type: "static", value: {} } },
-      position: 0,
-      dependsOn: [],
     }
     expect(isInputStep(step)).toBe(false)
   })
@@ -263,24 +216,18 @@ describe("RecipeRunner", () => {
       label: "Fetch data",
       type: "query",
       config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
-      position: 0,
-      dependsOn: [],
     },
     {
       stepKey: "step_1",
       label: "Transform data",
       type: "query",
       config: { description: "", params: {}, returns: {}, code: "", binding: { type: "static", value: {} } },
-      position: 1,
-      dependsOn: ["step_0"],
     },
     {
       stepKey: "step_2",
       label: "Output result",
       type: "output",
       config: { kind: "table", binding: { type: "static", value: {} } },
-      position: 2,
-      dependsOn: ["step_1"],
     },
   ]
 
