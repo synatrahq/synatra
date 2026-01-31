@@ -69,7 +69,7 @@ function getStepDisplayName(step: RecipeStepLike): string {
     case "code":
       return "code"
     case "output":
-      return `output_${(step.config as { kind?: string }).kind ?? "unknown"}`
+      return (step.config as { kind?: string }).kind ?? "unknown"
     case "input":
       return "input"
     default:
@@ -214,7 +214,8 @@ function StepItem(props: {
   const isQueryStep = () => props.step.type === "query"
   const isCodeStep = () => props.step.type === "code"
   const queryConfig = () => (props.step.type === "query" ? (props.step.config as { description?: string }) : null)
-  const codeConfig = () => (props.step.type === "code" ? (props.step.config as { code?: Value }) : null)
+  const codeConfig = () =>
+    props.step.type === "code" || props.step.type === "query" ? (props.step.config as { code?: Value }) : null
   const inputConfig = () =>
     props.step.type === "input" ? (props.step.config as { params?: { fields?: unknown[] } }) : null
   const outputConfig = () => (props.step.type === "output" ? (props.step.config as { kind?: string }) : null)
