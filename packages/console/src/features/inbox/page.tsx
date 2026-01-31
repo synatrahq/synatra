@@ -234,7 +234,6 @@ export default function InboxPage() {
     status: "completed" | "failed" | "waiting_input"
     stepResults?: Record<string, unknown>
     resolvedParams?: Record<string, unknown>
-    outputItemIds?: string[]
     error?: { stepKey: string; stepType: string; message: string }
     executionId?: string
     pendingInputConfig?: unknown
@@ -471,7 +470,6 @@ export default function InboxPage() {
         status: "completed" | "failed" | "waiting_input"
         stepResults?: Record<string, unknown>
         resolvedParams?: Record<string, unknown>
-        outputItemIds?: string[]
         error?: { stepKey: string; stepType: string; message: string }
         executionId?: string
         pendingInputConfig?: unknown
@@ -480,7 +478,6 @@ export default function InboxPage() {
         status: result.status,
         stepResults: result.stepResults,
         resolvedParams: result.resolvedParams,
-        outputItemIds: result.outputItemIds,
         error: result.error,
         executionId: result.executionId,
         pendingInputConfig: result.pendingInputConfig,
@@ -509,6 +506,7 @@ export default function InboxPage() {
   }))
 
   const [recipeResponding, setRecipeResponding] = createSignal(false)
+  const [recipeAborting, setRecipeAborting] = createSignal(false)
 
   const handleRecipeRespond = async (executionId: string, response: Record<string, unknown>) => {
     const recipe = selectedRecipe()
@@ -526,7 +524,6 @@ export default function InboxPage() {
         status: "completed" | "failed" | "waiting_input"
         stepResults?: Record<string, unknown>
         resolvedParams?: Record<string, unknown>
-        outputItemIds?: string[]
         error?: { stepKey: string; stepType: string; message: string }
         executionId?: string
         pendingInputConfig?: unknown
@@ -535,7 +532,6 @@ export default function InboxPage() {
         status: data.status,
         stepResults: data.stepResults,
         resolvedParams: data.resolvedParams,
-        outputItemIds: data.outputItemIds,
         error: data.error,
         executionId: data.executionId,
         pendingInputConfig: data.pendingInputConfig,
@@ -545,6 +541,23 @@ export default function InboxPage() {
       }
     } finally {
       setRecipeResponding(false)
+    }
+  }
+
+  const handleRecipeAbort = async (executionId: string) => {
+    const recipe = selectedRecipe()
+    if (!recipe) return
+
+    setRecipeAborting(true)
+    try {
+      await api.api.recipes[":id"].executions[":executionId"].abort.$post({
+        param: { id: recipe.id, executionId },
+        json: {},
+      })
+      setLastRecipeResult(null)
+      queryClient.invalidateQueries({ queryKey: ["pending-execution", recipe.id, activeOrg()?.id] })
+    } finally {
+      setRecipeAborting(false)
     }
   }
 
@@ -1648,6 +1661,8 @@ export default function InboxPage() {
               executing={recipeExecuteMutation.isPending}
               onRespond={handleRecipeRespond}
               responding={recipeResponding()}
+              onAbort={handleRecipeAbort}
+              aborting={recipeAborting()}
             />
           </Show>
 

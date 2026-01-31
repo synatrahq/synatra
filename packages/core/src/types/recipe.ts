@@ -3,6 +3,9 @@ import { z } from "zod"
 export const RecipeStepType = ["query", "code", "output", "input"] as const
 export type RecipeStepType = (typeof RecipeStepType)[number]
 
+export const RecipeExecutionStatus = ["pending", "running", "waiting_input", "completed", "failed", "aborted"] as const
+export type RecipeExecutionStatus = (typeof RecipeExecutionStatus)[number]
+
 const LiteralBindingSchema = z.object({
   type: z.literal("literal"),
   value: z.unknown(),
@@ -33,7 +36,7 @@ const ObjectBindingSchema: z.ZodType<ObjectBinding> = z.lazy(() =>
 const ArrayBindingSchema: z.ZodType<ArrayBinding> = z.lazy(() =>
   z.object({
     type: z.literal("array"),
-    items: z.array(ValueSchema),
+    items: ValueSchema,
   }),
 )
 
@@ -57,7 +60,7 @@ export type ObjectBinding = {
 }
 export type ArrayBinding = {
   type: "array"
-  items: Value[]
+  items: Value
 }
 
 export type Value = LiteralBinding | RefBinding | TemplateBinding | ObjectBinding | ArrayBinding

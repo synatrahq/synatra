@@ -8,7 +8,6 @@ import {
   respondToRecipeExecution,
   updateRecipeExecution,
   deleteRecipeExecution,
-  createOutputItemAndIncrementSeq,
   buildNormalizedSteps,
   getStepExecutionOrder,
   executeStepLoop,
@@ -21,7 +20,6 @@ import { createError } from "@synatra/util/error"
 const schema = z.object({
   response: z.record(z.string(), z.unknown()),
   environmentId: z.string().optional(),
-  threadId: z.string().optional(),
 })
 
 export const respond = new Hono().post(
@@ -74,15 +72,11 @@ export const respond = new Hono().post(
         results: stepResults,
         resolvedParams: {},
       },
-      [...execution.outputItemIds],
       {
         organizationId,
         environmentId: execution.environmentId,
         resources: resources.map((r) => ({ slug: r.slug, id: r.id, type: r.type })),
-        recipeOutputs: release.outputs,
-        threadId: body.threadId,
         executeCode: (orgId, input) => executor.execute(orgId, input),
-        createOutputItem: body.threadId ? (params) => createOutputItemAndIncrementSeq(params) : undefined,
       },
     )
 
@@ -92,7 +86,7 @@ export const respond = new Hono().post(
         currentStepKey: result.currentStepKey,
         pendingInputConfig: result.pendingInputConfig,
         results: result.stepResults,
-        outputItemIds: result.outputItemIds,
+        status: "waiting_input",
       })
       return c.json({
         executionId,
@@ -118,7 +112,6 @@ export const respond = new Hono().post(
     return c.json({
       ok: true,
       status: "completed" as const,
-      outputItemIds: result.outputItemIds,
       stepResults: result.stepResults,
       resolvedParams: result.resolvedParams,
     })

@@ -97,7 +97,6 @@ type LastResult = {
   status: "completed" | "failed" | "waiting_input"
   stepResults?: Record<string, unknown>
   resolvedParams?: Record<string, unknown>
-  outputItemIds?: string[]
   error?: RecipeExecutionError
   executionId?: string
   pendingInputConfig?: unknown
@@ -145,7 +144,7 @@ function resolveBinding(binding: Value): unknown {
     case "object":
       return Object.fromEntries(Object.entries(binding.entries).map(([k, v]) => [k, resolveBinding(v)]))
     case "array":
-      return binding.items.map((item) => resolveBinding(item))
+      return [resolveBinding(binding.items)]
   }
 }
 
@@ -359,7 +358,9 @@ function FieldContent(props: {
 function PendingInputForm(props: {
   config: PendingInputConfig
   onSubmit: (response: Record<string, unknown>) => void
+  onAbort?: () => void
   submitting?: boolean
+  aborting?: boolean
 }) {
   const fields = () => props.config.fields
 
@@ -497,8 +498,27 @@ function PendingInputForm(props: {
           </div>
         )}
       </For>
-      <div class="flex justify-end">
-        <Button size="sm" class="h-7 text-xs" onClick={handleSubmit} disabled={props.submitting || !isFormValid()}>
+      <div class="flex items-center justify-end gap-2">
+        <Show when={props.onAbort}>
+          <Button
+            variant="ghost"
+            size="sm"
+            class="h-7 text-xs"
+            onClick={() => props.onAbort?.()}
+            disabled={props.submitting || props.aborting}
+          >
+            <Show when={props.aborting} fallback="Cancel">
+              <Spinner size="xs" class="border-white border-t-transparent" />
+              Cancelling...
+            </Show>
+          </Button>
+        </Show>
+        <Button
+          size="sm"
+          class="h-7 text-xs"
+          onClick={handleSubmit}
+          disabled={props.submitting || props.aborting || !isFormValid()}
+        >
           <Show when={props.submitting} fallback="Submit">
             <Spinner size="xs" class="border-white border-t-transparent" />
             Submitting...
@@ -715,7 +735,9 @@ function ExecutionRow(props: {
   recipe: Recipe
   isLatest?: boolean
   onRespond?: (executionId: string, response: Record<string, unknown>) => void
+  onAbort?: (executionId: string) => void
   responding?: boolean
+  aborting?: boolean
   tools?: ToolDef[]
 }) {
   const [expanded, setExpanded] = createSignal(true)
@@ -778,7 +800,9 @@ function ExecutionRow(props: {
             <PendingInputForm
               config={props.execution.pendingInputConfig as unknown as PendingInputConfig}
               onSubmit={handleRespond}
+              onAbort={props.onAbort ? () => props.onAbort?.(props.execution.id) : undefined}
               submitting={props.responding}
+              aborting={props.aborting}
             />
           </Show>
         </div>
@@ -815,7 +839,9 @@ type RecipeDetailProps = {
   onExecute?: (inputs: Record<string, unknown>) => void
   executing?: boolean
   onRespond?: (executionId: string, response: Record<string, unknown>) => void
+  onAbort?: (executionId: string) => void
   responding?: boolean
+  aborting?: boolean
 }
 
 export function RecipeDetail(props: RecipeDetailProps) {
@@ -1165,7 +1191,9 @@ export function RecipeDetail(props: RecipeDetailProps) {
                               <PendingInputForm
                                 config={execution().pendingInputConfig as unknown as PendingInputConfig}
                                 onSubmit={(response) => props.onRespond?.(execution().id, response)}
+                                onAbort={props.onAbort ? () => props.onAbort?.(execution().id) : undefined}
                                 submitting={props.responding}
+                                aborting={props.aborting}
                               />
                             </Show>
                           </div>
@@ -1246,7 +1274,9 @@ export function RecipeDetail(props: RecipeDetailProps) {
                               <PendingInputForm
                                 config={result().pendingInputConfig as unknown as PendingInputConfig}
                                 onSubmit={(response) => props.onRespond?.(result().executionId!, response)}
+                                onAbort={props.onAbort ? () => props.onAbort?.(result().executionId!) : undefined}
                                 submitting={props.responding}
+                                aborting={props.aborting}
                               />
                             </div>
                           </Show>

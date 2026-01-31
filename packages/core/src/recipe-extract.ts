@@ -195,9 +195,7 @@ export function validateRecipeSteps(
         }
         break
       case "array":
-        binding.items.forEach((item, idx) => {
-          validateBinding(item, stepKey, `${paramPath}.items[${idx}]`)
-        })
+        validateBinding(binding.items, stepKey, `${paramPath}.items`)
         break
     }
   }
@@ -544,7 +542,7 @@ export function updateBindingRef(binding: Value, idMap: Map<string, string>): Va
     return { ...binding, entries: updateValueRefs(binding.entries, idMap) }
   }
   if (binding.type === "array") {
-    return { ...binding, items: binding.items.map((item) => updateBindingRef(item, idMap)) }
+    return { ...binding, items: updateBindingRef(binding.items, idMap) }
   }
   return binding
 }

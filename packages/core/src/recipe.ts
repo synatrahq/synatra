@@ -26,6 +26,7 @@ import {
   RecipeOutputSchema,
   PendingInputConfigSchema,
   RecipeStepInputSchema,
+  RecipeExecutionStatus,
   type Value,
   type RecipeStepConfig,
 } from "./types"
@@ -66,7 +67,7 @@ export function extractBindingRefs(binding: Value): string[] {
       }
     }
     if (b.type === "object") Object.values(b.entries).forEach(walk)
-    if (b.type === "array") b.items.forEach(walk)
+    if (b.type === "array") walk(b.items)
   }
   walk(binding)
   return [...new Set(refs)]
@@ -1073,7 +1074,7 @@ export async function createRecipeExecution(raw: z.input<typeof CreateRecipeExec
         environmentId: input.environmentId,
         inputs: input.inputs,
         results: {},
-        outputItemIds: [],
+        status: "pending",
         createdBy: userId,
       })
       .returning(),
@@ -1087,7 +1088,7 @@ export const UpdateRecipeExecutionSchema = z.object({
   currentStepKey: z.string().optional(),
   pendingInputConfig: PendingInputConfigSchema.optional().nullable(),
   results: z.record(z.string(), z.unknown()).optional(),
-  outputItemIds: z.array(z.string()).optional(),
+  status: z.enum(RecipeExecutionStatus).optional(),
 })
 
 export async function updateRecipeExecution(raw: z.input<typeof UpdateRecipeExecutionSchema>) {
@@ -1098,7 +1099,7 @@ export async function updateRecipeExecution(raw: z.input<typeof UpdateRecipeExec
   if (input.currentStepKey !== undefined) updateData.currentStepKey = input.currentStepKey
   if (input.pendingInputConfig !== undefined) updateData.pendingInputConfig = input.pendingInputConfig
   if (input.results !== undefined) updateData.results = input.results
-  if (input.outputItemIds !== undefined) updateData.outputItemIds = input.outputItemIds
+  if (input.status !== undefined) updateData.status = input.status
 
   const [updated] = await withDb((db) =>
     db
@@ -1158,12 +1159,89 @@ export async function findPendingExecution(recipeId: string) {
           eq(RecipeExecutionTable.recipeId, recipeId),
           eq(RecipeExecutionTable.organizationId, organizationId),
           eq(RecipeExecutionTable.createdBy, userId),
+          eq(RecipeExecutionTable.status, "waiting_input"),
         ),
       )
       .orderBy(desc(RecipeExecutionTable.createdAt))
       .limit(1)
       .then(first),
   )
+}
+
+export const AbortRecipeExecutionSchema = z.object({
+  id: z.string(),
+  recipeId: z.string().optional(),
+})
+
+export async function abortRecipeExecution(raw: z.input<typeof AbortRecipeExecutionSchema>) {
+  const input = AbortRecipeExecutionSchema.parse(raw)
+  const organizationId = principal.orgId()
+  const userId = principal.userId()
+
+  const execution = await withDb((db) =>
+    db
+      .select()
+      .from(RecipeExecutionTable)
+      .where(and(eq(RecipeExecutionTable.id, input.id), eq(RecipeExecutionTable.organizationId, organizationId)))
+      .then(first),
+  )
+
+  if (!execution) {
+    throw createError("NotFoundError", { type: "RecipeExecution", id: input.id })
+  }
+  if (input.recipeId && execution.recipeId !== input.recipeId) {
+    throw createError("BadRequestError", { message: "Execution does not belong to this recipe" })
+  }
+  if (!execution.createdBy || execution.createdBy !== userId) {
+    throw createError("ForbiddenError", { message: "Only the execution creator can abort this execution" })
+  }
+
+  if (execution.status === "aborted") {
+    return execution
+  }
+
+  if (execution.status !== "waiting_input") {
+    throw createError("ConflictError", { message: "Execution is not waiting for input" })
+  }
+
+  const abortedAt = new Date()
+  const updateData: Record<string, unknown> = {
+    status: "aborted",
+    abortedAt,
+    abortedBy: userId,
+    pendingInputConfig: null,
+    updatedAt: abortedAt,
+  }
+
+  const [updated] = await withDb((db) =>
+    db
+      .update(RecipeExecutionTable)
+      .set(updateData)
+      .where(
+        and(
+          eq(RecipeExecutionTable.id, input.id),
+          eq(RecipeExecutionTable.organizationId, organizationId),
+          eq(RecipeExecutionTable.status, "waiting_input"),
+        ),
+      )
+      .returning(),
+  )
+
+  if (!updated) {
+    const current = await withDb((db) =>
+      db
+        .select()
+        .from(RecipeExecutionTable)
+        .where(and(eq(RecipeExecutionTable.id, input.id), eq(RecipeExecutionTable.organizationId, organizationId)))
+        .then(first),
+    )
+    if (current?.status === "aborted") {
+      return current
+    }
+    throw createError("ConflictError", { message: "Execution is not waiting for input" })
+  }
+
+  return updated
 }
 
 export const ListRecipeExecutionsSchema = z

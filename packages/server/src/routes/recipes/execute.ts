@@ -9,7 +9,6 @@ import {
   getRecipeRelease,
   getEnvironmentById,
   listResources,
-  createOutputItemAndIncrementSeq,
   buildNormalizedSteps,
   getStepExecutionOrder,
   executeStepLoop,
@@ -23,7 +22,6 @@ const schema = z.object({
   inputs: z.record(z.string(), z.unknown()).default({}),
   environmentId: z.string(),
   releaseId: z.string().optional(),
-  threadId: z.string().optional(),
 })
 
 export const execute = new Hono().post("/:id/execute", zValidator("json", schema), async (c) => {
@@ -81,15 +79,17 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
   const normalizedSteps = buildNormalizedSteps(release.steps)
   const sortedSteps = getStepExecutionOrder(normalizedSteps)
 
-  const result = await executeStepLoop(sortedSteps, 0, { inputs: body.inputs, results: {}, resolvedParams: {} }, [], {
-    organizationId,
-    environmentId: body.environmentId,
-    resources: resources.map((r) => ({ slug: r.slug, id: r.id, type: r.type })),
-    recipeOutputs: release.outputs,
-    threadId: body.threadId,
-    executeCode: (orgId, input) => executor.execute(orgId, input),
-    createOutputItem: body.threadId ? (params) => createOutputItemAndIncrementSeq(params) : undefined,
-  })
+  const result = await executeStepLoop(
+    sortedSteps,
+    0,
+    { inputs: body.inputs, results: {}, resolvedParams: {} },
+    {
+      organizationId,
+      environmentId: body.environmentId,
+      resources: resources.map((r) => ({ slug: r.slug, id: r.id, type: r.type })),
+      executeCode: (orgId, input) => executor.execute(orgId, input),
+    },
+  )
 
   if (result.status === "waiting_input") {
     await updateRecipeExecution({
@@ -97,7 +97,7 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
       currentStepKey: result.currentStepKey,
       pendingInputConfig: result.pendingInputConfig,
       results: result.stepResults,
-      outputItemIds: result.outputItemIds,
+      status: "waiting_input",
     })
     return c.json({
       executionId: execution.id,
@@ -123,7 +123,6 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
   return c.json({
     ok: true,
     status: "completed" as const,
-    outputItemIds: result.outputItemIds,
     stepResults: result.stepResults,
     resolvedParams: result.resolvedParams,
   })

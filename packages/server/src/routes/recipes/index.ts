@@ -7,6 +7,7 @@ import { del } from "./delete"
 import { execute } from "./execute"
 import { pendingExecution } from "./pending-execution"
 import { respond } from "./respond"
+import { abort } from "./abort"
 import { extract } from "./extract"
 import { models } from "./models"
 import { workingCopy } from "./working-copy"
@@ -28,4 +29,5 @@ export const recipes = new Hono()
   .route("/", execute)
   .route("/", pendingExecution)
   .route("/", respond)
+  .route("/", abort)
   .route("/", channels)

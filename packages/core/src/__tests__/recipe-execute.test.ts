@@ -112,12 +112,9 @@ describe("resolveBinding", () => {
   test("resolves array binding", () => {
     const binding: Value = {
       type: "array",
-      items: [
-        { type: "ref", scope: "input", key: "userId" },
-        { type: "ref", scope: "input", key: "name" },
-      ],
+      items: { type: "ref", scope: "input", key: "userId" },
     }
-    expect(resolveBinding(binding, context)).toEqual(["123", "Alice"])
+    expect(resolveBinding(binding, context)).toEqual(["123"])
   })
 })
 

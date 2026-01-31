@@ -27,7 +27,9 @@ CREATE TABLE "recipe_execution" (
 	"current_step_key" text,
 	"pending_input_config" jsonb,
 	"results" jsonb DEFAULT '{}'::jsonb NOT NULL,
-	"output_item_ids" jsonb DEFAULT '[]'::jsonb NOT NULL,
+	"status" text DEFAULT 'waiting_input' NOT NULL,
+	"aborted_at" timestamp with time zone,
+	"aborted_by" uuid,
 	"created_by" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -101,6 +103,7 @@ ALTER TABLE "recipe_execution" ADD CONSTRAINT "recipe_execution_recipe_id_recipe
 ALTER TABLE "recipe_execution" ADD CONSTRAINT "recipe_execution_release_id_recipe_release_id_fk" FOREIGN KEY ("release_id") REFERENCES "public"."recipe_release"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_execution" ADD CONSTRAINT "recipe_execution_organization_id_organization_id_fk" FOREIGN KEY ("organization_id") REFERENCES "public"."organization"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_execution" ADD CONSTRAINT "recipe_execution_environment_id_environment_id_fk" FOREIGN KEY ("environment_id") REFERENCES "public"."environment"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "recipe_execution" ADD CONSTRAINT "recipe_execution_aborted_by_user_id_fk" FOREIGN KEY ("aborted_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_execution" ADD CONSTRAINT "recipe_execution_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_release" ADD CONSTRAINT "recipe_release_recipe_id_recipe_id_fk" FOREIGN KEY ("recipe_id") REFERENCES "public"."recipe"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "recipe_release" ADD CONSTRAINT "recipe_release_agent_release_id_agent_release_id_fk" FOREIGN KEY ("agent_release_id") REFERENCES "public"."agent_release"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint

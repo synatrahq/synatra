@@ -1,5 +1,5 @@
 {
-  "id": "6563f439-e474-4b1e-a796-74bc55ae8d8f",
+  "id": "f12cf778-b02d-4737-9850-2a131f5dc6b6",
   "prevId": "9a5cd05c-1415-434d-8e80-7c1cd69aad55",
   "version": "7",
   "dialect": "postgresql",
@@ -4057,12 +4057,24 @@
           "notNull": true,
           "default": "'{}'::jsonb"
         },
-        "output_item_ids": {
-          "name": "output_item_ids",
-          "type": "jsonb",
+        "status": {
+          "name": "status",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'[]'::jsonb"
+          "default": "'waiting_input'"
+        },
+        "aborted_at": {
+          "name": "aborted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aborted_by": {
+          "name": "aborted_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_by": {
           "name": "created_by",
@@ -4168,6 +4180,19 @@
             "id"
           ],
           "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "recipe_execution_aborted_by_user_id_fk": {
+          "name": "recipe_execution_aborted_by_user_id_fk",
+          "tableFrom": "recipe_execution",
+          "tableTo": "user",
+          "columnsFrom": [
+            "aborted_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "recipe_execution_created_by_user_id_fk": {

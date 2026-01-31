@@ -69,8 +69,8 @@ Example: { "type": "template", "parts": ["User ", { "type": "ref", "scope": "ste
 object - Construct object from multiple bindings
 Example: { "type": "object", "entries": { "userId": ..., "date": ... } }
 
-array - Construct array from multiple bindings
-Example: { "type": "array", "items": [..., ...] }
+array - Construct array from a binding
+Example: { "type": "array", "items": { "type": "ref", "scope": "step", "key": "fetch_users", "path": ["data", 0, "id"] } }
 </binding_reference>
 
 <extraction_rules>

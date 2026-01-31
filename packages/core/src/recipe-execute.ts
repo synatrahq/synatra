@@ -1,7 +1,6 @@
 import type {
   Value,
   PendingInputConfig,
-  RecipeOutput,
   QueryStepConfig,
   CodeStepConfig,
   OutputStepConfig,
@@ -117,7 +116,7 @@ export function resolveBinding(binding: Value, context: RecipeExecutionContext):
     case "object":
       return Object.fromEntries(Object.entries(binding.entries).map(([key, b]) => [key, resolveBinding(b, context)]))
     case "array":
-      return binding.items.map((item) => resolveBinding(item, context))
+      return [resolveBinding(binding.items, context)]
     default:
       return undefined
   }
@@ -182,7 +181,6 @@ export function buildPendingInputConfig(
 export type StepExecutionResult =
   | { type: "success"; result: unknown }
   | { type: "waiting_input"; config: PendingInputConfig }
-  | { type: "output"; outputItemId: string }
   | { type: "error"; error: string }
 
 export interface RecipeRunner {
@@ -191,7 +189,6 @@ export interface RecipeRunner {
   currentStepIndex: number
   status: "pending" | "running" | "waiting_input" | "completed" | "failed"
   error?: string
-  outputItemIds: string[]
 }
 
 export function createRecipeRunner(steps: NormalizedStep[], inputs: Record<string, unknown>): RecipeRunner {
@@ -207,7 +204,6 @@ export function createRecipeRunner(steps: NormalizedStep[], inputs: Record<strin
     currentStepIndex: 0,
     status: "pending",
     error: undefined,
-    outputItemIds: [],
   }
 }
 
@@ -271,8 +267,6 @@ export interface StepExecutorDependencies {
   organizationId: string
   environmentId: string
   resources: Array<{ slug: string; id: string; type: string }>
-  recipeOutputs: RecipeOutput[]
-  threadId?: string
   executeCode: (
     organizationId: string,
     input: {
@@ -284,12 +278,6 @@ export interface StepExecutorDependencies {
       timeout: number
     },
   ) => Promise<ExecuteCodeResult>
-  createOutputItem?: (params: {
-    threadId: string
-    kind: "table" | "chart" | "markdown" | "key_value"
-    name?: string
-    payload: Record<string, unknown>
-  }) => Promise<{ item: { id: string } }>
 }
 
 export type StepLoopResult =
@@ -297,7 +285,6 @@ export type StepLoopResult =
       status: "completed"
       stepResults: Record<string, unknown>
       resolvedParams: Record<string, unknown>
-      outputItemIds: string[]
     }
   | {
       status: "waiting_input"
@@ -305,7 +292,6 @@ export type StepLoopResult =
       pendingInputConfig: PendingInputConfig
       stepResults: Record<string, unknown>
       resolvedParams: Record<string, unknown>
-      outputItemIds: string[]
     }
   | {
       status: "failed"
@@ -336,12 +322,10 @@ export async function executeStepLoop(
   steps: NormalizedStep[],
   startIndex: number,
   initialContext: RecipeExecutionContext,
-  initialOutputItemIds: string[],
   deps: StepExecutorDependencies,
 ): Promise<StepLoopResult> {
   const stepResults = { ...initialContext.results }
   const resolvedParams: Record<string, unknown> = { ...initialContext.resolvedParams }
-  const outputItemIds = [...initialOutputItemIds]
   const context = { inputs: initialContext.inputs, results: stepResults, resolvedParams }
 
   for (let i = startIndex; i < steps.length; i++) {
@@ -357,7 +341,6 @@ export async function executeStepLoop(
         pendingInputConfig,
         stepResults,
         resolvedParams,
-        outputItemIds,
       }
     }
 
@@ -372,18 +355,6 @@ export async function executeStepLoop(
         }
       }
       stepResults[step.stepKey] = params
-      if (deps.threadId && deps.createOutputItem) {
-        const output = deps.recipeOutputs.find((o) => o.stepId === step.stepKey)
-        if (output) {
-          const { item } = await deps.createOutputItem({
-            threadId: deps.threadId,
-            kind: output.kind,
-            name: output.name,
-            payload: params as Record<string, unknown>,
-          })
-          outputItemIds.push(item.id)
-        }
-      }
       continue
     }
 
@@ -469,6 +440,5 @@ export async function executeStepLoop(
     status: "completed",
     stepResults,
     resolvedParams,
-    outputItemIds,
   }
 }

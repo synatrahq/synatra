@@ -17,7 +17,6 @@ vi.mock("@synatra/core", () => ({
     currentStepKey: "step-1",
     results: {},
     inputs: {},
-    outputItemIds: [],
     pendingInputConfig: { fields: [] },
   }),
   respondToRecipeExecution: async (input: { id: string; response: Record<string, unknown> }) => ({
@@ -30,7 +29,6 @@ vi.mock("@synatra/core", () => ({
       currentStepKey: "step-1",
       results: {},
       inputs: {},
-      outputItemIds: [],
       pendingInputConfig: { fields: [] },
     },
     response: input.response,
@@ -51,7 +49,6 @@ vi.mock("@synatra/core", () => ({
     currentStepKey: "step-1",
     pendingInputConfig: { fields: [] },
     stepResults: {},
-    outputItemIds: [],
     resolvedParams: {},
   }),
 }))
