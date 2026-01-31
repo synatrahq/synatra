@@ -1,11 +1,13 @@
 import { test, expect, vi, beforeEach } from "vitest"
 
 const updateCalls: Array<Record<string, unknown>> = []
+let pendingExecutionResult: Record<string, unknown> | undefined
 
 vi.mock("@synatra/core", () => ({
   principal: {
     orgId: () => "org-1",
   },
+  getRecipeById: async () => ({ id: "recipe-1" }),
   getRecipeExecutionById: async (id: string) => ({
     id,
     recipeId: "recipe-1",
@@ -41,6 +43,7 @@ vi.mock("@synatra/core", () => ({
   },
   deleteRecipeExecution: async () => null,
   createOutputItemAndIncrementSeq: async () => null,
+  findPendingExecution: async () => pendingExecutionResult,
   buildNormalizedSteps: () => [{ stepKey: "step-1" }],
   getStepExecutionOrder: (steps: Array<{ stepKey: string }>) => steps,
   executeStepLoop: async () => ({
@@ -65,9 +68,11 @@ vi.mock("@synatra/service-call", () => ({
 }))
 
 const { respond } = await import("../routes/recipes/respond")
+const { pendingExecution } = await import("../routes/recipes/pending-execution")
 
 beforeEach(() => {
   updateCalls.length = 0
+  pendingExecutionResult = undefined
 })
 
 test("recipes.respond does not clear pending input before loop completes", async () => {
@@ -80,4 +85,11 @@ test("recipes.respond does not clear pending input before loop completes", async
   expect(res.status).toBe(200)
   expect(updateCalls.length).toBe(1)
   expect(updateCalls.some((call) => call.pendingInputConfig === null)).toBe(false)
+})
+
+test("recipes.pending-execution returns null when none exists", async () => {
+  const res = await pendingExecution.request("/recipe-1/pending-execution")
+
+  expect(res.status).toBe(200)
+  expect(await res.json()).toBeNull()
 })

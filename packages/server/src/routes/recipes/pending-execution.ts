@@ -5,5 +5,5 @@ export const pendingExecution = new Hono().get("/:id/pending-execution", async (
   const recipeId = c.req.param("id")
   await getRecipeById(recipeId)
   const execution = await findPendingExecution(recipeId)
-  return c.json(execution)
+  return c.json(execution ?? null)
 })
