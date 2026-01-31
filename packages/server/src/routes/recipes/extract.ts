@@ -50,6 +50,8 @@ const RecipeJsonSchema: JSONSchema7 = {
           label: { type: "string" },
           toolName: { type: "string" },
           params: { type: "object", additionalProperties: { $ref: "#/$defs/binding" } },
+          paramSchema: { type: "object", additionalProperties: true },
+          returnSchema: { type: "object", additionalProperties: true },
         },
         required: ["stepKey", "label", "toolName", "params"],
       },

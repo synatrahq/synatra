@@ -110,13 +110,30 @@ Example:
   }
 }
 
-### Rule 6: Step Order = Dependency Order
+### Rule 6: code_execute Must Include Schemas
+For code_execute steps, always provide paramSchema and returnSchema as JSON Schema objects.
+- paramSchema: Describes the input object structure (matches the "input" binding's entries)
+- returnSchema: Describes what the code returns (infer from the code's return statement)
+
+Example:
+{
+  "stepKey": "transform_data",
+  "toolName": "code_execute",
+  "params": {
+    "code": { "type": "literal", "value": "return input.items.map(i => ({ id: i.id, name: i.name }))" },
+    "input": { "type": "object", "entries": { "items": { "type": "ref", "scope": "step", "key": "fetch_items" } } }
+  },
+  "paramSchema": { "type": "object", "properties": { "items": { "type": "array" } }, "required": ["items"] },
+  "returnSchema": { "type": "array", "items": { "type": "object", "properties": { "id": {}, "name": { "type": "string" } } } }
+}
+
+### Rule 7: Step Order = Dependency Order
 Steps execute in array order. Only reference EARLIER steps.
 
-### Rule 7: Exclude Confirmation Steps
+### Rule 8: Exclude Confirmation Steps
 human_request with kind=confirm is for one-time decisions, not reusable recipes.
 
-### Rule 8: select_rows Data Binding
+### Rule 9: select_rows Data Binding
 When using human_request with select_rows, data must be a Value.
 Example:
 {
@@ -127,7 +144,7 @@ Example:
   "selectionMode": "multiple"
 }
 
-### Rule 9: form Defaults Binding
+### Rule 10: form Defaults Binding
 Use defaults with a Value to pre-fill form fields from previous step results.
 Example:
 {
@@ -267,7 +284,9 @@ Recipe:
             "orders": { "type": "ref", "scope": "step", "key": "fetch_orders" }
           }
         }
-      }
+      },
+      "paramSchema": { "type": "object", "properties": { "orders": { "type": "array", "items": { "type": "object", "properties": { "status": { "type": "string" }, "amount": { "type": "number" } } } } }, "required": ["orders"] },
+      "returnSchema": { "type": "array", "items": { "type": "object", "properties": { "status": { "type": "string" }, "total": { "type": "number" } } } }
     },
     {
       "stepKey": "display",
@@ -287,6 +306,7 @@ Recipe:
 Key points:
 - code_execute input MUST be object (wrap array in entries)
 - Access as input.orders in code
+- paramSchema describes the input structure, returnSchema describes the output
 
 ### Example 3: User Selection Mid-Flow
 
@@ -332,7 +352,9 @@ Recipe:
             "users": { "type": "ref", "scope": "step", "key": "select_users", "path": ["responses", "selected", "selectedRows"] }
           }
         }
-      }
+      },
+      "paramSchema": { "type": "object", "properties": { "users": { "type": "array", "items": { "type": "object", "properties": { "email": { "type": "string" } } } } }, "required": ["users"] },
+      "returnSchema": { "type": "array", "items": { "type": "string" } }
     }
   ]
 }
@@ -340,6 +362,7 @@ Recipe:
 Key points:
 - select_rows data is a ref binding
 - Access selection via path: ["responses", "<field_key>", "selectedRows"]
+- code_execute includes paramSchema and returnSchema
 
 ### Example 4: Template for Markdown
 

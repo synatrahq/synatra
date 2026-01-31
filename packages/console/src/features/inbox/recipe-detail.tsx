@@ -35,6 +35,7 @@ import {
   ModalBody,
   ModalFooter,
   CodeEditor,
+  SchemaTypeDisplay,
   type SelectOption,
   type JSONSchema,
 } from "../../ui"
@@ -50,8 +51,7 @@ import type {
   HumanRequestSelectRowsConfig,
   Value,
   QueryStepConfig,
-  OutputStepConfig,
-  InputStepConfig,
+  CodeStepConfig,
 } from "@synatra/core/types"
 
 type RecipeStepLike = {
@@ -251,7 +251,7 @@ function StepItem(props: {
         <div class="flex-1 min-w-0 py-1.5">
           <div class="flex items-center gap-2">
             <span class="text-2xs font-medium text-text-muted">Step {props.index + 1}</span>
-            <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">{props.step.type}</span>
+            <Badge variant="default">{props.step.type}</Badge>
           </div>
           <div class="flex items-center gap-2 mt-0.5">
             <span class="text-xs font-medium text-text truncate">{props.step.label}</span>
@@ -289,9 +289,45 @@ function StepItem(props: {
             </div>
           </Show>
           <Show when={(isQueryStep() || isCodeStep()) && stepCode()}>
-            <div class="max-h-48 overflow-y-auto">
-              <CodeEditor value={stepCode() ?? ""} language="javascript" readonly />
-            </div>
+            {(() => {
+              const queryConf = isQueryStep() ? (props.step.config as QueryStepConfig) : null
+              const codeConf = isCodeStep() ? (props.step.config as CodeStepConfig) : null
+              const paramSchema = (queryConf?.paramSchema ?? codeConf?.paramSchema) as JSONSchema | undefined
+              const returnSchema = (queryConf?.returnSchema ?? codeConf?.returnSchema) as JSONSchema | undefined
+              const hasParamSchema = paramSchema && Object.keys(paramSchema).length > 0
+              const hasReturnSchema = returnSchema && Object.keys(returnSchema).length > 0
+              return (
+                <>
+                  <div class="border-b border-border/50 px-3 py-2 font-code text-xs">
+                    <span class="text-syntax-keyword">async function</span>{" "}
+                    <span class="text-syntax-function">{props.step.stepKey}</span>
+                    <span class="text-syntax-punctuation">(</span>
+                    <Show when={hasBinding()}>
+                      <span class="text-syntax-variable">params</span>
+                      <span class="text-syntax-punctuation">: </span>
+                      <Show when={hasParamSchema} fallback={<span class="text-syntax-type">unknown</span>}>
+                        <SchemaTypeDisplay schema={paramSchema!} />
+                      </Show>
+                      <span class="text-syntax-punctuation">, </span>
+                    </Show>
+                    <span class="text-syntax-variable">context</span>
+                    <span class="text-syntax-punctuation">): </span>
+                    <span class="text-syntax-type">Promise&lt;</span>
+                    <Show when={hasReturnSchema} fallback={<span class="text-syntax-type">unknown</span>}>
+                      <SchemaTypeDisplay schema={returnSchema!} />
+                    </Show>
+                    <span class="text-syntax-type">&gt;</span>
+                    <span class="text-syntax-punctuation">{" {"}</span>
+                  </div>
+                  <div class="max-h-48 overflow-y-auto">
+                    <CodeEditor value={stepCode() ?? ""} language="javascript" readonly />
+                  </div>
+                  <div class="border-t border-border/50 px-3 py-1.5 font-code text-xs">
+                    <span class="text-text-muted">{"}"}</span>
+                  </div>
+                </>
+              )
+            })()}
           </Show>
           <Show when={inputConfig()}>
             <div class="px-3 py-2.5">
@@ -598,10 +634,10 @@ function StepResultItem(props: {
           <div class="flex items-center gap-2">
             <span class="text-2xs font-medium text-text-muted">Step {props.index + 1}</span>
             <Show when={props.failed}>
-              <span class="text-2xs text-danger bg-danger/10 px-1.5 py-0.5 rounded">failed</span>
+              <Badge variant="destructive">failed</Badge>
             </Show>
             <Show when={isOutputStep() && !props.failed}>
-              <span class="text-2xs text-accent bg-accent/10 px-1.5 py-0.5 rounded">output</span>
+              <Badge variant="default">output</Badge>
             </Show>
             <Show when={!props.failed}>
               <CheckCircle class="h-3 w-3 text-success" weight="fill" />

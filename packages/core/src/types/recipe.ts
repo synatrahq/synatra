@@ -104,6 +104,8 @@ export const CodeStepConfigSchema = z.object({
   code: ValueSchema,
   timeoutMs: ValueSchema.optional(),
   params: ValueSchema,
+  paramSchema: JsonSchemaSchema.optional(),
+  returnSchema: JsonSchemaSchema.optional(),
 })
 export type CodeStepConfig = z.infer<typeof CodeStepConfigSchema>
 

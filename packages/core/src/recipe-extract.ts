@@ -315,6 +315,8 @@ export interface RawStep {
   label: string
   toolName: string
   params: Record<string, Value>
+  paramSchema?: Record<string, unknown>
+  returnSchema?: Record<string, unknown>
 }
 
 export type ExtractedStep = {
@@ -464,6 +466,8 @@ function convertRawStepToExtractedStep(
         code,
         timeoutMs,
         params,
+        paramSchema: step.paramSchema,
+        returnSchema: step.returnSchema,
       },
     }
   }
@@ -527,10 +531,17 @@ export function normalizeStepKeys(steps: RawStep[], agentTools: AgentTool[] = []
 }
 
 export function updateValueRefs(params: Record<string, Value>, idMap: Map<string, string>): Record<string, Value> {
-  return Object.fromEntries(Object.entries(params).map(([key, binding]) => [key, updateBindingRef(binding, idMap)]))
+  return Object.fromEntries(
+    Object.entries(params)
+      .filter(([, binding]) => binding != null)
+      .map(([key, binding]) => [key, updateBindingRef(binding, idMap)]),
+  )
 }
 
 export function updateBindingRef(binding: Value, idMap: Map<string, string>): Value {
+  if (!binding || typeof binding !== "object" || !("type" in binding)) {
+    return binding
+  }
   if (binding.type === "ref" && binding.scope === "step") {
     return { ...binding, key: idMap.get(binding.key) ?? binding.key }
   }
