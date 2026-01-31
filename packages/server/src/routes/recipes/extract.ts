@@ -110,7 +110,7 @@ const RecipeJsonSchema: JSONSchema7 = {
           type: "object",
           properties: {
             type: { const: "array" },
-            items: { type: "array", items: { $ref: "#/$defs/binding" } },
+            items: { $ref: "#/$defs/binding" },
           },
           required: ["type", "items"],
         },
