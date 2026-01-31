@@ -82,8 +82,8 @@ function getStepDisplayName(step: RecipeStepLike): string {
 
 function getStepBinding(step: RecipeStepLike): ParamBinding | null {
   if (step.type === "query" || step.type === "code" || step.type === "output") {
-    const config = step.config as { binding?: ParamBinding }
-    return config.binding ?? null
+    const config = step.config as { params?: ParamBinding }
+    return config.params ?? null
   }
   return null
 }
@@ -152,8 +152,8 @@ function resolveBinding(binding: ParamBinding): unknown {
   }
 }
 
-function resolveParams(params: Record<string, ParamBinding>): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(params).map(([key, binding]) => [key, resolveBinding(binding)]))
+function resolveParams(params: ParamBinding): unknown {
+  return resolveBinding(params)
 }
 
 function isParamBinding(value: unknown): value is ParamBinding {
@@ -169,13 +169,9 @@ function resolveInputFields(fields: unknown[]): unknown[] {
   return fields.map((field) => {
     if (typeof field !== "object" || field === null) return field
     const f = field as Record<string, unknown>
-    const resolved: Record<string, unknown> = { ...f }
-    if (f.kind === "select_rows" && isParamBinding(f.data)) {
-      resolved.data = resolveBinding(f.data)
-    }
-    if (f.kind === "form" && isParamBinding(f.defaults)) {
-      resolved.defaults = resolveBinding(f.defaults)
-    }
+    const resolved: Record<string, unknown> = Object.fromEntries(
+      Object.entries(f).map(([key, value]) => [key, isParamBinding(value) ? resolveBinding(value) : value]),
+    )
     return resolved
   })
 }
@@ -229,11 +225,18 @@ function StepItem(props: {
   const isQueryStep = () => props.step.type === "query"
   const isCodeStep = () => props.step.type === "code"
   const queryConfig = () =>
-    props.step.type === "query" ? (props.step.config as { description?: string; code?: string }) : null
-  const codeConfig = () => (props.step.type === "code" ? (props.step.config as { code?: string }) : null)
-  const inputConfig = () => (props.step.type === "input" ? (props.step.config as { fields?: unknown[] }) : null)
+    props.step.type === "query" ? (props.step.config as { description?: string; code?: ParamBinding }) : null
+  const codeConfig = () => (props.step.type === "code" ? (props.step.config as { code?: ParamBinding }) : null)
+  const inputConfig = () =>
+    props.step.type === "input" ? (props.step.config as { params?: { fields?: unknown[] } }) : null
   const outputConfig = () => (props.step.type === "output" ? (props.step.config as { kind?: string }) : null)
-  const stepCode = () => queryConfig()?.code ?? codeConfig()?.code
+  const stepCode = () => {
+    const code = queryConfig()?.code ?? codeConfig()?.code
+    if (!code) return undefined
+    const resolved = isParamBinding(code) ? resolveBinding(code) : code
+    if (resolved === undefined || resolved === null) return undefined
+    return typeof resolved === "string" ? resolved : JSON.stringify(resolved, null, 2)
+  }
 
   return (
     <div class="relative">
@@ -289,7 +292,7 @@ function StepItem(props: {
             <div class="px-3 py-2.5 border-b border-border">
               <div class="flex items-center gap-1.5 mb-2">
                 <BracketsCurly class="h-3 w-3 text-text-muted" />
-                <span class="text-2xs font-medium text-text-muted">Binding</span>
+                <span class="text-2xs font-medium text-text-muted">Params</span>
               </div>
               <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2">
                 {JSON.stringify(resolveBinding(binding()!), null, 2)}
@@ -308,7 +311,7 @@ function StepItem(props: {
                 <span class="text-2xs font-medium text-text-muted">Fields</span>
               </div>
               <pre class="font-code text-2xs text-text-secondary whitespace-pre-wrap overflow-x-auto bg-surface-muted rounded p-2">
-                {JSON.stringify(resolveInputFields(inputConfig()!.fields as unknown[]), null, 2)}
+                {JSON.stringify(resolveInputFields((inputConfig()!.params?.fields ?? []) as unknown[]), null, 2)}
               </pre>
             </div>
           </Show>

@@ -1,7 +1,7 @@
 import type { AgentTool } from "./types"
 import { COMPUTE_TOOLS, OUTPUT_TOOLS, HUMAN_TOOLS } from "./system-tools"
 
-export const RECIPE_EXTRACTION_PROMPT_V2 = `<role>
+export const RECIPE_EXTRACTION_PROMPT = `<role>
 You are an expert at extracting reusable workflow recipes from conversation logs.
 Your goal: Transform a specific conversation into a GENERALIZED, PARAMETERIZED workflow.
 </role>
@@ -486,7 +486,7 @@ export function formatConversationForExtraction(
   return lines.join("\n")
 }
 
-export function buildExtractionPromptV2(
+export function buildExtractionPrompt(
   agentTools: AgentTool[],
   messages: Array<{
     type: string
@@ -499,7 +499,7 @@ export function buildExtractionPromptV2(
   const toolsDocs = formatToolsForExtraction(agentTools)
   const conversationLog = formatConversationForExtraction(messages, sampleValue)
 
-  return `${RECIPE_EXTRACTION_PROMPT_V2}
+  return `${RECIPE_EXTRACTION_PROMPT}
 
 ---
 

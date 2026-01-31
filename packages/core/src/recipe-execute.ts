@@ -2,7 +2,6 @@ import type {
   ParamBinding,
   PendingInputConfig,
   RecipeOutput,
-  RecipeStepConfig,
   QueryStepConfig,
   CodeStepConfig,
   OutputStepConfig,
@@ -123,11 +122,8 @@ export function resolveBinding(binding: ParamBinding, context: RecipeExecutionCo
 }
 
 export function resolveStepParams(step: NormalizedStep, context: RecipeExecutionContext): unknown {
-  if (step.type === "query" || step.type === "code") {
-    return resolveBinding(step.config.binding, context)
-  }
-  if (step.type === "output") {
-    return resolveBinding(step.config.binding, context)
+  if (step.type === "query" || step.type === "code" || step.type === "output") {
+    return resolveBinding(step.config.params, context)
   }
   return {}
 }
@@ -143,10 +139,6 @@ export function buildNormalizedSteps(steps: RecipeStepDb[], _edges: RecipeEdge[]
   })) as NormalizedStep[]
 }
 
-export function getStepType(step: NormalizedStep): RecipeStepType {
-  return step.type
-}
-
 export function getStepExecutionOrder(steps: NormalizedStep[]): NormalizedStep[] {
   return steps
 }
@@ -159,27 +151,28 @@ export function buildPendingInputConfig(
   step: NormalizedStep & { type: "input"; config: InputStepConfig },
   context: RecipeExecutionContext,
 ): PendingInputConfig {
-  const resolvedFields = step.config.fields.map((field) => {
-    if (field.kind === "select_rows") {
-      return {
-        ...field,
-        data: resolveBinding(field.data, context) as Array<Record<string, unknown>>,
-      }
+  const resolvedFields = step.config.params.fields.map((field) => {
+    const resolved = Object.fromEntries(
+      Object.entries(field)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => [key, resolveBinding(value as ParamBinding, context)]),
+    )
+    const kind = resolved.kind
+    if (kind !== "select_rows" && kind !== "form" && kind !== "question") {
+      throw new Error(`Invalid input field kind: ${String(kind)}`)
     }
-    if (field.kind === "form" && field.defaults) {
-      const resolvedDefaults = resolveBinding(field.defaults, context) as Record<string, unknown>
-      return {
-        ...field,
-        defaults: resolvedDefaults,
-      }
-    }
-    return field
+    return resolved
   })
+
+  const title = resolveBinding(step.config.params.title, context)
+  const description = step.config.params.description
+    ? resolveBinding(step.config.params.description, context)
+    : undefined
 
   return {
     stepKey: step.stepKey,
-    title: step.config.title,
-    description: step.config.description,
+    title: typeof title === "string" ? title : String(title ?? ""),
+    description: typeof description === "string" ? description : description ? String(description) : undefined,
     fields: resolvedFields as Array<Record<string, unknown>>,
   }
 }
@@ -268,13 +261,6 @@ export function resumeRunnerWithInput(runner: RecipeRunner, stepKey: string, res
   }
 }
 
-export function addOutputItemId(runner: RecipeRunner, outputItemId: string): RecipeRunner {
-  return {
-    ...runner,
-    outputItemIds: [...runner.outputItemIds, outputItemId],
-  }
-}
-
 export type ExecuteCodeResult =
   | { ok: true; data: { success: boolean; result?: unknown; error?: string } }
   | { ok: false; error: ProblemDetails }
@@ -331,6 +317,19 @@ function toErrorMessage(error: ProblemDetails): string {
   return error.detail ?? error.title ?? "Unknown error"
 }
 
+function toTimeout(value: unknown, min: number, max: number, fallback: number): number {
+  if (typeof value === "number" && value >= min && value <= max) return value
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value)
+    if (!Number.isNaN(parsed) && parsed >= min && parsed <= max) return parsed
+  }
+  return fallback
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
 export async function executeStepLoop(
   steps: NormalizedStep[],
   startIndex: number,
@@ -361,6 +360,15 @@ export async function executeStepLoop(
     }
 
     if (step.type === "output") {
+      if (!isPlainObject(params)) {
+        return {
+          status: "failed",
+          error: { stepKey: step.stepKey, stepType: step.type, message: "Output params must be an object" },
+          currentStepKey: step.stepKey,
+          stepResults,
+          resolvedParams,
+        }
+      }
       stepResults[step.stepKey] = params
       if (deps.threadId && deps.createOutputItem) {
         const output = deps.recipeOutputs.find((o) => o.stepId === step.stepKey)
@@ -378,8 +386,20 @@ export async function executeStepLoop(
     }
 
     if (step.type === "query") {
-      const { code, timeoutMs } = step.config
-      const timeout = typeof timeoutMs === "number" && timeoutMs >= 100 && timeoutMs <= 60000 ? timeoutMs : 30000
+      const codeValue = resolveBinding(step.config.code, context)
+      const code = typeof codeValue === "string" ? codeValue : String(codeValue ?? "")
+      const timeoutValue = step.config.timeoutMs ? resolveBinding(step.config.timeoutMs, context) : undefined
+      const timeout = toTimeout(timeoutValue, 100, 60000, 30000)
+
+      if (!isPlainObject(params)) {
+        return {
+          status: "failed",
+          error: { stepKey: step.stepKey, stepType: step.type, message: "Query params must be an object" },
+          currentStepKey: step.stepKey,
+          stepResults,
+          resolvedParams,
+        }
+      }
 
       const result = await deps.executeCode(deps.organizationId, {
         code,
@@ -404,8 +424,20 @@ export async function executeStepLoop(
     }
 
     if (step.type === "code") {
-      const { code, timeoutMs } = step.config
-      const timeout = typeof timeoutMs === "number" && timeoutMs >= 100 && timeoutMs <= 30000 ? timeoutMs : 10000
+      const codeValue = resolveBinding(step.config.code, context)
+      const code = typeof codeValue === "string" ? codeValue : String(codeValue ?? "")
+      const timeoutValue = step.config.timeoutMs ? resolveBinding(step.config.timeoutMs, context) : undefined
+      const timeout = toTimeout(timeoutValue, 100, 30000, 10000)
+
+      if (!isPlainObject(params)) {
+        return {
+          status: "failed",
+          error: { stepKey: step.stepKey, stepType: step.type, message: "Code params must be an object" },
+          currentStepKey: step.stepKey,
+          stepResults,
+          resolvedParams,
+        }
+      }
 
       const result = await deps.executeCode(deps.organizationId, {
         code,

@@ -24,8 +24,6 @@ import {
   RecipeOutputSchema,
   PendingInputConfigSchema,
   RecipeStepSchema,
-  type RecipeInput,
-  type RecipeOutput,
   type ParamBinding,
   type RecipeStepConfig,
 } from "./types"
@@ -66,11 +64,23 @@ export function extractBindingRefs(binding: ParamBinding): string[] {
 
 function collectStepRefs(config: RecipeStepConfig): string[] {
   const refs: string[] = []
-  if ("binding" in config) refs.push(...extractBindingRefs(config.binding))
-  if ("fields" in config) {
-    for (const field of config.fields) {
-      if (field.kind === "select_rows") refs.push(...extractBindingRefs(field.data))
-      if (field.kind === "form" && field.defaults) refs.push(...extractBindingRefs(field.defaults))
+  if ("params" in config && config.params && typeof config.params === "object") {
+    if ("type" in config.params) {
+      refs.push(...extractBindingRefs(config.params as ParamBinding))
+    } else if ("fields" in config.params) {
+      const params = config.params as {
+        fields: Array<Record<string, ParamBinding>>
+        title: ParamBinding
+        description?: ParamBinding
+      }
+      refs.push(...extractBindingRefs(params.title))
+      if (params.description) refs.push(...extractBindingRefs(params.description as ParamBinding))
+      for (const field of params.fields) {
+        for (const value of Object.values(field)) {
+          if (value === undefined) continue
+          refs.push(...extractBindingRefs(value))
+        }
+      }
     }
   }
   return refs

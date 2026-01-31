@@ -61,23 +61,24 @@ export type ArrayBinding = {
 }
 
 export type ParamBinding = LiteralBinding | RefBinding | TemplateBinding | ObjectBinding | ArrayBinding
+export type Value = ParamBinding
 
 const JsonSchemaSchema = z.record(z.string(), z.unknown())
 
 export const QueryStepConfigSchema = z.object({
   description: z.string(),
-  params: JsonSchemaSchema,
-  returns: JsonSchemaSchema,
-  code: z.string(),
-  timeoutMs: z.number().int().min(100).max(60000).optional(),
-  binding: ParamBindingSchema,
+  paramSchema: JsonSchemaSchema,
+  returnSchema: JsonSchemaSchema,
+  code: ParamBindingSchema,
+  timeoutMs: ParamBindingSchema.optional(),
+  params: ParamBindingSchema,
 })
 export type QueryStepConfig = z.infer<typeof QueryStepConfigSchema>
 
 export const CodeStepConfigSchema = z.object({
-  code: z.string(),
-  timeoutMs: z.number().int().min(100).max(30000).optional(),
-  binding: ParamBindingSchema,
+  code: ParamBindingSchema,
+  timeoutMs: ParamBindingSchema.optional(),
+  params: ParamBindingSchema,
 })
 export type CodeStepConfig = z.infer<typeof CodeStepConfigSchema>
 
@@ -86,47 +87,46 @@ export type OutputStepKind = (typeof OutputStepKind)[number]
 
 export const OutputStepConfigSchema = z.object({
   kind: z.enum(OutputStepKind),
-  name: z.string().optional(),
-  binding: ParamBindingSchema,
+  name: ParamBindingSchema.optional(),
+  params: ParamBindingSchema,
 })
 export type OutputStepConfig = z.infer<typeof OutputStepConfigSchema>
 
 export const InputStepFieldKind = ["form", "select_rows", "question"] as const
 export type InputStepFieldKind = (typeof InputStepFieldKind)[number]
 
-export const InputStepFormFieldSchema = z.object({
-  kind: z.literal("form"),
-  key: z.string(),
-  schema: z.record(z.string(), z.unknown()),
-  defaults: ParamBindingSchema.optional(),
-})
+export const InputStepFormFieldSchema = z
+  .object({
+    kind: ParamBindingSchema,
+    key: ParamBindingSchema,
+    schema: ParamBindingSchema,
+    defaults: ParamBindingSchema.optional(),
+  })
+  .catchall(ParamBindingSchema)
 export type InputStepFormField = z.infer<typeof InputStepFormFieldSchema>
 
-export const InputStepSelectRowsFieldSchema = z.object({
-  kind: z.literal("select_rows"),
-  key: z.string(),
-  columns: z.array(z.object({ key: z.string(), label: z.string() })),
-  data: ParamBindingSchema,
-  selectionMode: z.enum(["single", "multiple"]),
-  allowNone: z.boolean().optional(),
-})
+export const InputStepSelectRowsFieldSchema = z
+  .object({
+    kind: ParamBindingSchema,
+    key: ParamBindingSchema,
+    columns: ParamBindingSchema,
+    data: ParamBindingSchema,
+    selectionMode: ParamBindingSchema,
+    allowNone: ParamBindingSchema.optional(),
+  })
+  .catchall(ParamBindingSchema)
 export type InputStepSelectRowsField = z.infer<typeof InputStepSelectRowsFieldSchema>
 
-export const InputStepQuestionFieldSchema = z.object({
-  kind: z.literal("question"),
-  key: z.string(),
-  questions: z.array(
-    z.object({
-      question: z.string(),
-      header: z.string(),
-      options: z.array(z.object({ label: z.string(), description: z.string() })),
-      multiSelect: z.boolean().optional(),
-    }),
-  ),
-})
+export const InputStepQuestionFieldSchema = z
+  .object({
+    kind: ParamBindingSchema,
+    key: ParamBindingSchema,
+    questions: ParamBindingSchema,
+  })
+  .catchall(ParamBindingSchema)
 export type InputStepQuestionField = z.infer<typeof InputStepQuestionFieldSchema>
 
-export const InputStepFieldConfigSchema = z.discriminatedUnion("kind", [
+export const InputStepFieldConfigSchema = z.union([
   InputStepFormFieldSchema,
   InputStepSelectRowsFieldSchema,
   InputStepQuestionFieldSchema,
@@ -134,9 +134,11 @@ export const InputStepFieldConfigSchema = z.discriminatedUnion("kind", [
 export type InputStepFieldConfig = z.infer<typeof InputStepFieldConfigSchema>
 
 export const InputStepConfigSchema = z.object({
-  title: z.string(),
-  description: z.string().optional(),
-  fields: z.array(InputStepFieldConfigSchema),
+  params: z.object({
+    title: ParamBindingSchema,
+    description: ParamBindingSchema.optional(),
+    fields: z.array(InputStepFieldConfigSchema),
+  }),
 })
 export type InputStepConfig = z.infer<typeof InputStepConfigSchema>
 

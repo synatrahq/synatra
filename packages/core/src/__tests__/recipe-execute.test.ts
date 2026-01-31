@@ -251,10 +251,10 @@ describe("resolveStepParams", () => {
       type: "query",
       config: {
         description: "Send email",
-        params: {},
-        returns: {},
-        code: "return params",
-        binding: {
+        paramSchema: {},
+        returnSchema: {},
+        code: { type: "literal", value: "return params" },
+        params: {
           type: "object",
           entries: {
             to: { type: "ref", scope: "step", key: "step_0", path: ["email"] },
@@ -287,19 +287,37 @@ describe("getStepExecutionOrder", () => {
         stepKey: "step_0",
         label: "Step A",
         type: "query",
-        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "literal", value: {} } },
+        config: {
+          description: "",
+          paramSchema: {},
+          returnSchema: {},
+          code: { type: "literal", value: "" },
+          params: { type: "literal", value: {} },
+        },
       },
       {
         stepKey: "step_1",
         label: "Step B",
         type: "query",
-        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "literal", value: {} } },
+        config: {
+          description: "",
+          paramSchema: {},
+          returnSchema: {},
+          code: { type: "literal", value: "" },
+          params: { type: "literal", value: {} },
+        },
       },
       {
         stepKey: "step_2",
         label: "Step C",
         type: "query",
-        config: { description: "", params: {}, returns: {}, code: "", binding: { type: "literal", value: {} } },
+        config: {
+          description: "",
+          paramSchema: {},
+          returnSchema: {},
+          code: { type: "literal", value: "" },
+          params: { type: "literal", value: {} },
+        },
       },
     ]
 
@@ -315,8 +333,16 @@ describe("isInputStep", () => {
       label: "Input form",
       type: "input",
       config: {
-        title: "Input",
-        fields: [{ kind: "form", key: "data", schema: {} }],
+        params: {
+          title: { type: "literal", value: "Input" },
+          fields: [
+            {
+              kind: { type: "literal", value: "form" },
+              key: { type: "literal", value: "data" },
+              schema: { type: "literal", value: {} },
+            },
+          ],
+        },
       },
     }
     expect(isInputStep(step)).toBe(true)
@@ -327,7 +353,13 @@ describe("isInputStep", () => {
       stepKey: "step_0",
       label: "Fetch data",
       type: "query",
-      config: { description: "", params: {}, returns: {}, code: "", binding: { type: "literal", value: {} } },
+      config: {
+        description: "",
+        paramSchema: {},
+        returnSchema: {},
+        code: { type: "literal", value: "" },
+        params: { type: "literal", value: {} },
+      },
     }
     expect(isInputStep(step)).toBe(false)
   })
@@ -337,7 +369,7 @@ describe("isInputStep", () => {
       stepKey: "step_0",
       label: "Output data",
       type: "output",
-      config: { kind: "table", binding: { type: "literal", value: {} } },
+      config: { kind: "table", params: { type: "literal", value: {} } },
     }
     expect(isInputStep(step)).toBe(false)
   })
@@ -349,19 +381,31 @@ describe("RecipeRunner", () => {
       stepKey: "step_0",
       label: "Fetch data",
       type: "query",
-      config: { description: "", params: {}, returns: {}, code: "", binding: { type: "literal", value: {} } },
+      config: {
+        description: "",
+        paramSchema: {},
+        returnSchema: {},
+        code: { type: "literal", value: "" },
+        params: { type: "literal", value: {} },
+      },
     },
     {
       stepKey: "step_1",
       label: "Transform data",
       type: "query",
-      config: { description: "", params: {}, returns: {}, code: "", binding: { type: "literal", value: {} } },
+      config: {
+        description: "",
+        paramSchema: {},
+        returnSchema: {},
+        code: { type: "literal", value: "" },
+        params: { type: "literal", value: {} },
+      },
     },
     {
       stepKey: "step_2",
       label: "Output result",
       type: "output",
-      config: { kind: "table", binding: { type: "literal", value: {} } },
+      config: { kind: "table", params: { type: "literal", value: {} } },
     },
   ]
 
