@@ -78,7 +78,7 @@ export const execute = new Hono().post("/:id/execute", zValidator("json", schema
   const config = loadConfig("server")
   const executor = createCodeExecutor(config)
 
-  const normalizedSteps = buildNormalizedSteps(release.steps, release.edges)
+  const normalizedSteps = buildNormalizedSteps(release.steps)
   const sortedSteps = getStepExecutionOrder(normalizedSteps)
 
   const result = await executeStepLoop(sortedSteps, 0, { inputs: body.inputs, results: {}, resolvedParams: {} }, [], {

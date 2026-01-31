@@ -49,7 +49,6 @@ import type {
   HumanRequestQuestionConfig,
   HumanRequestSelectRowsConfig,
   ParamBinding,
-  RecipeStep,
   QueryStepConfig,
   OutputStepConfig,
   InputStepConfig,
@@ -64,20 +63,18 @@ type RecipeStepLike = {
 }
 
 function getStepDisplayName(step: RecipeStepLike): string {
-  if (step.type === "query") {
-    return "query"
+  switch (step.type) {
+    case "query":
+      return "query"
+    case "code":
+      return "code"
+    case "output":
+      return `output_${(step.config as { kind?: string }).kind ?? "unknown"}`
+    case "input":
+      return "input"
+    default:
+      return "unknown"
   }
-  if (step.type === "code") {
-    return "code"
-  }
-  if (step.type === "output") {
-    const config = step.config as { kind?: string }
-    return `output_${config.kind ?? "unknown"}`
-  }
-  if (step.type === "input") {
-    return "input"
-  }
-  return "unknown"
 }
 
 function getStepBinding(step: RecipeStepLike): ParamBinding | null {
@@ -152,10 +149,6 @@ function resolveBinding(binding: ParamBinding): unknown {
   }
 }
 
-function resolveParams(params: ParamBinding): unknown {
-  return resolveBinding(params)
-}
-
 function isParamBinding(value: unknown): value is ParamBinding {
   return (
     typeof value === "object" &&
@@ -181,34 +174,29 @@ type ToolDef = { name: string; description?: string; code: string }
 function StepTypeIcon(props: { step: RecipeStepLike; class?: string }) {
   const iconClass = () => props.class ?? "h-4 w-4"
 
-  if (props.step.type === "query") {
-    return <Code class={iconClass()} />
+  switch (props.step.type) {
+    case "query":
+      return <Code class={iconClass()} />
+    case "code":
+      return <Function class={iconClass()} />
+    case "output":
+      switch (props.step.config.kind) {
+        case "table":
+          return <Table class={iconClass()} />
+        case "chart":
+          return <ChartLine class={iconClass()} />
+        case "markdown":
+          return <TextAa class={iconClass()} />
+        case "key_value":
+          return <ListDashes class={iconClass()} />
+        default:
+          return <Export class={iconClass()} />
+      }
+    case "input":
+      return <SignIn class={iconClass()} />
+    default:
+      return <Function class={iconClass()} />
   }
-
-  if (props.step.type === "code") {
-    return <Function class={iconClass()} />
-  }
-
-  if (props.step.type === "output") {
-    switch (props.step.config.kind) {
-      case "table":
-        return <Table class={iconClass()} />
-      case "chart":
-        return <ChartLine class={iconClass()} />
-      case "markdown":
-        return <TextAa class={iconClass()} />
-      case "key_value":
-        return <ListDashes class={iconClass()} />
-      default:
-        return <Export class={iconClass()} />
-    }
-  }
-
-  if (props.step.type === "input") {
-    return <SignIn class={iconClass()} />
-  }
-
-  return <Function class={iconClass()} />
 }
 
 function StepItem(props: {

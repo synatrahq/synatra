@@ -262,16 +262,21 @@ export function formatToolSchemas(agentTools: AgentTool[]): string {
 }
 
 function formatMessage(msg: ExtractedMessage): string[] {
-  if (msg.type === "user") return ["## User Message", msg.content ?? "", ""]
-  if (msg.type === "assistant" && msg.content) return ["## Assistant Response", msg.content, ""]
-  if (msg.type === "tool_call" && msg.toolCall) {
-    return [`## Tool Call: ${msg.toolCall.name}`, "```json", JSON.stringify(msg.toolCall.params, null, 2), "```", ""]
+  switch (msg.type) {
+    case "user":
+      return ["## User Message", msg.content ?? "", ""]
+    case "assistant":
+      return msg.content ? ["## Assistant Response", msg.content, ""] : []
+    case "tool_call":
+      if (!msg.toolCall) return []
+      return [`## Tool Call: ${msg.toolCall.name}`, "```json", JSON.stringify(msg.toolCall.params, null, 2), "```", ""]
+    case "tool_result":
+      if (!msg.toolResult) return []
+      if (msg.toolResult.error) return ["## Tool Result (Error)", `Error: ${msg.toolResult.error}`, ""]
+      return ["## Tool Result", "```json", JSON.stringify(sampleValue(msg.toolResult.result), null, 2), "```", ""]
+    default:
+      return []
   }
-  if (msg.type === "tool_result" && msg.toolResult) {
-    if (msg.toolResult.error) return ["## Tool Result (Error)", `Error: ${msg.toolResult.error}`, ""]
-    return ["## Tool Result", "```json", JSON.stringify(sampleValue(msg.toolResult.result), null, 2), "```", ""]
-  }
-  return []
 }
 
 export function formatConversationForLLM(context: ConversationContext): string {

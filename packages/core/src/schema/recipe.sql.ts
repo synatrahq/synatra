@@ -125,7 +125,7 @@ export const RecipeStepTable = pgTable(
   ],
 )
 
-export type RecipeStepDb = typeof RecipeStepTable.$inferSelect
+export type RecipeStep = typeof RecipeStepTable.$inferSelect
 
 export const RecipeEdgeTable = pgTable(
   "recipe_edge",

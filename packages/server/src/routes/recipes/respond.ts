@@ -51,7 +51,7 @@ export const respond = new Hono().post(
     const config = loadConfig("server")
     const executor = createCodeExecutor(config)
 
-    const normalizedSteps = buildNormalizedSteps(release.steps, release.edges)
+    const normalizedSteps = buildNormalizedSteps(release.steps)
     const sortedSteps = getStepExecutionOrder(normalizedSteps)
 
     if (!execution.currentStepKey) {

@@ -8,7 +8,7 @@ import type {
   InputStepConfig,
   RecipeStepType,
 } from "./types"
-import type { RecipeStepDb, RecipeEdge } from "./schema/recipe.sql"
+import type { RecipeStep } from "./schema/recipe.sql"
 import type { ProblemDetails } from "@synatra/util/error"
 
 export type NormalizedStep = {
@@ -64,33 +64,35 @@ export function getValueByPath(obj: unknown, path?: Array<string | number>): unk
 type BindingCast = "string" | "number" | "boolean" | "object" | "array"
 
 function castBindingValue(value: unknown, target: BindingCast): unknown {
-  if (target === "string") return value === null || value === undefined ? "" : String(value)
-  if (target === "number") {
-    if (typeof value === "number") return value
-    if (typeof value === "string" && value.trim() !== "") {
-      const parsed = Number(value)
-      return Number.isNaN(parsed) ? undefined : parsed
-    }
-    return undefined
-  }
-  if (target === "boolean") {
-    if (typeof value === "boolean") return value
-    if (typeof value === "string") {
-      const normalized = value.trim().toLowerCase()
-      if (normalized === "true") return true
-      if (normalized === "false") return false
+  switch (target) {
+    case "string":
+      return value === null || value === undefined ? "" : String(value)
+    case "number": {
+      if (typeof value === "number") return value
+      if (typeof value === "string" && value.trim() !== "") {
+        const parsed = Number(value)
+        return Number.isNaN(parsed) ? undefined : parsed
+      }
       return undefined
     }
-    if (typeof value === "number") return value !== 0
-    return undefined
+    case "boolean": {
+      if (typeof value === "boolean") return value
+      if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase()
+        if (normalized === "true") return true
+        if (normalized === "false") return false
+        return undefined
+      }
+      if (typeof value === "number") return value !== 0
+      return undefined
+    }
+    case "object":
+      return value && typeof value === "object" && !Array.isArray(value) ? value : undefined
+    case "array":
+      return Array.isArray(value) ? value : undefined
+    default:
+      return value
   }
-  if (target === "object") {
-    return value && typeof value === "object" && !Array.isArray(value) ? value : undefined
-  }
-  if (target === "array") {
-    return Array.isArray(value) ? value : undefined
-  }
-  return value
 }
 
 export function resolveBinding(binding: ParamBinding, context: RecipeExecutionContext): unknown {
@@ -128,7 +130,7 @@ export function resolveStepParams(step: NormalizedStep, context: RecipeExecution
   return {}
 }
 
-export function buildNormalizedSteps(steps: RecipeStepDb[], _edges: RecipeEdge[]): NormalizedStep[] {
+export function buildNormalizedSteps(steps: RecipeStep[]): NormalizedStep[] {
   if (steps.length === 0) return []
 
   return steps.map((step) => ({

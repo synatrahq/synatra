@@ -151,7 +151,7 @@ export const RecipeStepConfigSchema = z.union([
   InputStepConfigSchema,
 ])
 
-export const RecipeStepSchema = z
+export const RecipeStepInputSchema = z
   .object({
     stepKey: z.string(),
     label: z.string(),
@@ -164,7 +164,7 @@ export const RecipeStepSchema = z
       z.object({ type: z.literal("input"), config: InputStepConfigSchema }),
     ]),
   )
-export type RecipeStep = z.infer<typeof RecipeStepSchema>
+export type RecipeStepInput = z.infer<typeof RecipeStepInputSchema>
 
 export const RecipeInputSchema = z.object({
   key: z.string(),

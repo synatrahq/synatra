@@ -23,7 +23,7 @@ import {
   RecipeInputSchema,
   RecipeOutputSchema,
   PendingInputConfigSchema,
-  RecipeStepSchema,
+  RecipeStepInputSchema,
   type ParamBinding,
   type RecipeStepConfig,
 } from "./types"
@@ -62,7 +62,7 @@ export function extractBindingRefs(binding: ParamBinding): string[] {
   return [...new Set(refs)]
 }
 
-function collectStepRefs(config: RecipeStepConfig): string[] {
+export function collectStepRefs(config: RecipeStepConfig): string[] {
   const refs: string[] = []
   if ("params" in config && config.params && typeof config.params === "object") {
     if ("type" in config.params) {
@@ -207,7 +207,7 @@ export const CreateRecipeSchema = z.object({
   agentVersionMode: z.enum(["current", "fixed"]).default("current"),
   inputs: z.array(RecipeInputSchema),
   outputs: z.array(RecipeOutputSchema),
-  steps: z.array(RecipeStepSchema),
+  steps: z.array(RecipeStepInputSchema),
 })
 
 export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
@@ -560,7 +560,7 @@ export const SaveRecipeWorkingCopySchema = z.object({
   agentVersionMode: z.enum(["current", "fixed"]).optional(),
   inputs: z.array(RecipeInputSchema).optional(),
   outputs: z.array(RecipeOutputSchema).optional(),
-  steps: z.array(RecipeStepSchema).optional(),
+  steps: z.array(RecipeStepInputSchema).optional(),
 })
 
 export async function saveRecipeWorkingCopy(raw: z.input<typeof SaveRecipeWorkingCopySchema>) {
