@@ -512,8 +512,15 @@ export async function listRecipes(raw?: z.input<typeof ListRecipesSchema>) {
     conditions.push(or(lt(RecipeTable.createdAt, date), and(eq(RecipeTable.createdAt, date), lt(RecipeTable.id, id)))!)
   }
 
-  let recipes = await withDb((db) =>
-    db
+  if (filters?.channelId) {
+    if (accessibleChannels !== null && !accessibleChannels.includes(filters.channelId)) {
+      return { items: [], nextCursor: null }
+    }
+    conditions.push(eq(ChannelRecipeTable.channelId, filters.channelId))
+  }
+
+  let recipes = await withDb((db) => {
+    let query = db
       .select({
         ...getTableColumns(RecipeTable),
         version: RecipeReleaseTable.version,
@@ -522,27 +529,18 @@ export async function listRecipes(raw?: z.input<typeof ListRecipesSchema>) {
       })
       .from(RecipeTable)
       .leftJoin(RecipeReleaseTable, eq(RecipeTable.currentReleaseId, RecipeReleaseTable.id))
-      .where(and(...conditions))
-      .orderBy(desc(RecipeTable.createdAt), desc(RecipeTable.id))
-      .limit(limit * 2 + 1),
-  )
 
-  if (filters?.channelId) {
-    if (accessibleChannels !== null && !accessibleChannels.includes(filters.channelId)) {
-      return { items: [], nextCursor: null }
+    if (filters?.channelId) {
+      query = query.innerJoin(ChannelRecipeTable, eq(RecipeTable.id, ChannelRecipeTable.recipeId))
     }
 
-    const channelRecipes = await withDb((db) =>
-      db
-        .select({ recipeId: ChannelRecipeTable.recipeId })
-        .from(ChannelRecipeTable)
-        .where(eq(ChannelRecipeTable.channelId, filters.channelId!)),
-    )
-    const channelRecipeIds = new Set(channelRecipes.map((cr) => cr.recipeId))
-    recipes = recipes.filter((r) => channelRecipeIds.has(r.id))
-  }
+    return query
+      .where(and(...conditions))
+      .orderBy(desc(RecipeTable.createdAt), desc(RecipeTable.id))
+      .limit(limit * 2 + 1)
+  })
 
-  if (accessibleChannels !== null) {
+  if (!filters?.channelId && accessibleChannels !== null) {
     const recipeIds = recipes.map((r) => r.id)
     if (recipeIds.length > 0) {
       const channelRecipes = await withDb((db) =>
