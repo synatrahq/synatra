@@ -9,16 +9,18 @@ import { createError } from "@synatra/util/error"
 import { principal } from "./principal"
 import { COMPUTE_TOOLS, OUTPUT_TOOLS, HUMAN_TOOLS } from "./system-tools"
 import { buildExtractionPrompt, buildRetryPrompt } from "./recipe-extract-prompt"
-import type {
-  RecipeInput,
-  RecipeOutput,
-  Value,
-  AgentTool,
-  QueryStepConfig,
-  CodeStepConfig,
-  OutputStepConfig,
-  InputStepConfig,
-  OutputStepKind,
+import {
+  RecipeStepInputSchema,
+  type RecipeInput,
+  type RecipeOutput,
+  type Value,
+  type RecipeStepInput,
+  type AgentTool,
+  type QueryStepConfig,
+  type CodeStepConfig,
+  type OutputStepConfig,
+  type InputStepConfig,
+  type OutputStepKind,
 } from "./types"
 
 const SAMPLE_LIMIT = 3
@@ -227,6 +229,20 @@ export function validateRecipeSteps(
   }
 
   return { valid: errors.length === 0, errors }
+}
+
+export function validateRecipeStructure(steps: RecipeStepInput[]): string[] {
+  const errors: string[] = []
+  for (const [index, step] of steps.entries()) {
+    const parsed = RecipeStepInputSchema.safeParse(step)
+    if (!parsed.success) {
+      for (const issue of parsed.error.issues) {
+        const path = issue.path.length > 0 ? issue.path.join(".") : "step"
+        errors.push(`Step ${step.stepKey ?? index}: ${path} ${issue.message}`)
+      }
+    }
+  }
+  return errors
 }
 
 function formatToolSection(name: string, description: string, params: unknown, returns?: unknown): string {

@@ -7,11 +7,12 @@ import {
   buildRecipeExtractionPrompt,
   buildValidationRetryPrompt,
   validateRecipeSteps,
+  validateRecipeStructure,
   normalizeStepKeys,
   type RawStep,
 } from "@synatra/core"
 import { getModel } from "../agents/copilot/models"
-import type { RecipeInput, RecipeOutput } from "@synatra/core/types"
+import type { RecipeStepInput, RecipeInput, RecipeOutput } from "@synatra/core/types"
 import { createError } from "@synatra/util/error"
 
 const ExtractRequestSchema = z.object({
@@ -21,7 +22,7 @@ const ExtractRequestSchema = z.object({
   modelId: z.string().optional(),
 })
 
-const RecipeJsonSchema: JSONSchema7 = {
+export const RecipeJsonSchema: JSONSchema7 = {
   type: "object",
   properties: {
     name: { type: "string" },
@@ -95,7 +96,26 @@ const RecipeJsonSchema: JSONSchema7 = {
             type: { const: "template" },
             parts: {
               type: "array",
-              items: { oneOf: [{ type: "string" }, { $ref: "#/$defs/binding" }] },
+              items: {
+                oneOf: [
+                  {
+                    type: "object",
+                    properties: {
+                      type: { const: "text" },
+                      value: { type: "string" },
+                    },
+                    required: ["type", "value"],
+                  },
+                  {
+                    type: "object",
+                    properties: {
+                      type: { const: "expr" },
+                      value: { $ref: "#/$defs/binding" },
+                    },
+                    required: ["type", "value"],
+                  },
+                ],
+              },
             },
           },
           required: ["type", "parts"],
@@ -112,7 +132,7 @@ const RecipeJsonSchema: JSONSchema7 = {
           type: "object",
           properties: {
             type: { const: "array" },
-            items: { $ref: "#/$defs/binding" },
+            items: { type: "array", items: { $ref: "#/$defs/binding" } },
           },
           required: ["type", "items"],
         },
@@ -176,7 +196,8 @@ export const extract = new Hono().post("/extract", zValidator("json", ExtractReq
     } = normalizeStepKeys(extracted.steps ?? [], context.agentTools)
 
     const validation = validateRecipeSteps(normalizedSteps, (extracted.inputs ?? []) as RecipeInput[])
-    const allErrors = [...normalizationErrors, ...validation.errors]
+    const schemaErrors = validateRecipeStructure(normalizedSteps as RecipeStepInput[])
+    const allErrors = [...normalizationErrors, ...validation.errors, ...schemaErrors]
     if (normalizedSteps.length === 0 || allErrors.length > 0) {
       const errors = normalizedSteps.length === 0 ? ["Recipe must have at least one step"] : allErrors
       if (retryCount < MAX_RETRIES) {
