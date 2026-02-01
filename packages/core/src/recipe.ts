@@ -1300,9 +1300,13 @@ export const RespondToRecipeExecutionSchema = z.object({
 export async function respondToRecipeExecution(raw: z.input<typeof RespondToRecipeExecutionSchema>) {
   const input = RespondToRecipeExecutionSchema.parse(raw)
   const execution = await getRecipeExecutionById(input.id)
+  const userId = principal.userId()
 
   if (!execution.pendingInputConfig) {
     throw createError("BadRequestError", { message: "Execution is not waiting for input" })
+  }
+  if (!execution.createdBy || execution.createdBy !== userId) {
+    throw createError("ForbiddenError", { message: "Only the execution creator can respond to this execution" })
   }
 
   return { execution, response: input.response }
