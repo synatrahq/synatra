@@ -76,6 +76,8 @@ Learn more about building with Synatra:
 - [Resources](https://synatrahq.com/docs/concepts/resources) - Connect external services
 - [Triggers](https://synatrahq.com/docs/concepts/triggers) - Automate workflows
 
+Tool names must not overlap built-in system tools (for example: output_table, human_request, task_complete, delegate_to_*).
+
 ## Security
 
 - Isolated VM sandbox for code execution (memory/CPU limits)

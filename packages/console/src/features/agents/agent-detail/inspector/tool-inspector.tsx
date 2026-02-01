@@ -1,6 +1,7 @@
 import { Show, For, createSignal, createEffect, onMount } from "solid-js"
 import type { AgentTool } from "@synatra/core/types"
 import { ManagedResourceType } from "@synatra/core/types"
+import { isSystemTool } from "@synatra/core/system-tools"
 import {
   Input,
   Select,
@@ -202,6 +203,10 @@ export function ToolInspector(props: {
     const name = localName().trim()
     if (!name) {
       setNameError("Name is required")
+      return
+    }
+    if (isSystemTool(name)) {
+      setNameError("This name is reserved for system tools")
       return
     }
     if (otherNames().includes(name)) {

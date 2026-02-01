@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { validateJsonSchema, validateJsonSchemaForProvider, ValidJsonSchemaTypes } from "@synatra/util/validate"
+import { isSystemTool } from "../system-tools"
 
 const JsonSchemaSchema = z.record(z.string(), z.unknown())
 
@@ -111,6 +112,14 @@ export const AgentRuntimeConfigSchema = z
 
     for (let i = 0; i < config.tools.length; i++) {
       const tool = config.tools[i]
+      if (isSystemTool(tool.name)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["tools", i, "name"],
+          message: `Tool name "${tool.name}" is reserved for system tools`,
+        })
+        continue
+      }
       const paramsResult = validateJsonSchema(tool.params)
       if (!paramsResult.valid) {
         for (const error of paramsResult.errors) {
