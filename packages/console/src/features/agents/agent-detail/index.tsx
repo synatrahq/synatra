@@ -25,6 +25,7 @@ import { ResizablePanel } from "./resizable-panel"
 import { ResizableSidebar } from "./resizable-sidebar"
 import { createPersistedSignal } from "../../../app/persisted-signal"
 import { api } from "../../../app"
+import { isSystemTool } from "@synatra/core/system-tools"
 
 export { type AgentDetailProps } from "./constants"
 
@@ -643,10 +644,14 @@ export function AgentDetail(props: AgentDetailProps) {
     const existingTypeNames = new Set(Object.keys(existingTypes))
 
     const getUniqueName = (name: string, existingNames: Set<string>): string => {
-      if (!existingNames.has(name)) return name
+      let base = name
+      if (isSystemTool(base)) {
+        base = `custom_${base}`
+      }
+      if (!existingNames.has(base)) return base
       let i = 2
-      while (existingNames.has(`${name}${i}`)) i++
-      return `${name}${i}`
+      while (existingNames.has(`${base}${i}`)) i++
+      return `${base}${i}`
     }
 
     const typeNameMap: Record<string, string> = {}
