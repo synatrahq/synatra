@@ -26,6 +26,8 @@ export const RecipeTable = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),
+    icon: text("icon").default("ListChecks").notNull(),
+    iconColor: text("icon_color").default("indigo").notNull(),
     currentReleaseId: uuid("current_release_id"),
     createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),
     updatedBy: uuid("updated_by").references(() => UserTable.id, { onDelete: "set null" }),

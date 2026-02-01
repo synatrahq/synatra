@@ -1,5 +1,5 @@
 {
-  "id": "f12cf778-b02d-4737-9850-2a131f5dc6b6",
+  "id": "cc798606-b838-46d0-8681-be6203af2650",
   "prevId": "9a5cd05c-1415-434d-8e80-7c1cd69aad55",
   "version": "7",
   "dialect": "postgresql",
@@ -4665,6 +4665,20 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "icon": {
+          "name": "icon",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'ListChecks'"
+        },
+        "icon_color": {
+          "name": "icon_color",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'indigo'"
         },
         "current_release_id": {
           "name": "current_release_id",

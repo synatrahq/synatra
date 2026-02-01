@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js"
 import { A, useParams } from "@solidjs/router"
-import { ListChecks, DotsThree, Robot } from "phosphor-solid-js"
+import { ListChecks, DotsThree } from "phosphor-solid-js"
 import { DropdownMenu, IconButton, Skeleton, type DropdownMenuItem } from "../../ui"
 import { EntityIcon } from "../../components"
 import type { Recipes, Agents } from "../../app/api"
@@ -51,17 +51,13 @@ function RecipeItemComponent(props: { recipe: RecipeListItem; isSelected: boolea
         "hover:bg-surface-muted": !props.isSelected,
       }}
     >
-      <div class="relative pt-0.5">
+      <div class="pt-0.5">
         <EntityIcon
-          icon={props.recipe.agent?.icon ?? null}
-          iconColor={props.recipe.agent?.iconColor ?? null}
+          icon={props.recipe.icon ?? null}
+          iconColor={props.recipe.iconColor ?? null}
           size={24}
           rounded="md"
-          fallback={Robot}
         />
-        <div class="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-sm bg-surface-elevated shadow-sm">
-          <ListChecks class="h-2.5 w-2.5 text-text-muted" weight="bold" />
-        </div>
       </div>
 
       <div class="min-w-0 flex-1">

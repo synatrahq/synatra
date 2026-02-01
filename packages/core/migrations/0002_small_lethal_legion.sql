@@ -74,6 +74,8 @@ CREATE TABLE "recipe" (
 	"name" text NOT NULL,
 	"slug" text NOT NULL,
 	"description" text,
+	"icon" text DEFAULT 'ListChecks' NOT NULL,
+	"icon_color" text DEFAULT 'indigo' NOT NULL,
 	"current_release_id" uuid,
 	"created_by" uuid,
 	"updated_by" uuid,

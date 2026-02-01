@@ -983,17 +983,7 @@ export function RecipeDetail(props: RecipeDetailProps) {
         {(recipe) => (
           <>
             <div class="flex shrink-0 items-center gap-2.5 border-b border-border px-4 py-2.5">
-              <div class="relative">
-                <EntityIcon
-                  icon={agent()?.icon ?? null}
-                  iconColor={agent()?.iconColor ?? null}
-                  size={24}
-                  rounded="md"
-                />
-                <div class="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-sm bg-surface-elevated shadow-sm">
-                  <ListChecks class="h-2.5 w-2.5 text-text-muted" weight="bold" />
-                </div>
-              </div>
+              <EntityIcon icon={recipe().icon ?? null} iconColor={recipe().iconColor ?? null} size={24} rounded="md" />
               <div class="flex flex-col min-w-0 flex-1">
                 <div class="flex items-center gap-1.5">
                   <button

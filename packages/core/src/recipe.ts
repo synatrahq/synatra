@@ -223,6 +223,8 @@ export const CreateRecipeSchema = z.object({
   name: z.string().min(1),
   slug: z.string().optional(),
   description: z.string().optional(),
+  icon: z.string().optional(),
+  iconColor: z.string().optional(),
   agentReleaseId: z.string().nullable().optional(),
   agentVersionMode: z.enum(["current", "fixed"]).default("current"),
   inputs: z.array(RecipeInputSchema),
@@ -277,6 +279,8 @@ export async function createRecipe(raw: z.input<typeof CreateRecipeSchema>) {
           name: input.name,
           slug,
           description: input.description,
+          icon: input.icon ?? "ListChecks",
+          iconColor: input.iconColor ?? "indigo",
           createdBy: userId,
           updatedBy: userId,
         })
@@ -404,6 +408,8 @@ export const UpdateRecipeSchema = z.object({
   name: z.string().min(1).optional(),
   slug: z.string().min(1).optional(),
   description: z.string().optional(),
+  icon: z.string().optional(),
+  iconColor: z.string().optional(),
 })
 
 export async function updateRecipe(raw: z.input<typeof UpdateRecipeSchema>) {
@@ -418,6 +424,8 @@ export async function updateRecipe(raw: z.input<typeof UpdateRecipeSchema>) {
   if (input.name !== undefined) updateData.name = input.name
   if (input.slug !== undefined) updateData.slug = input.slug
   if (input.description !== undefined) updateData.description = input.description
+  if (input.icon !== undefined) updateData.icon = input.icon
+  if (input.iconColor !== undefined) updateData.iconColor = input.iconColor
 
   try {
     const [updated] = await withDb((db) =>
