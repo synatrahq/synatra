@@ -84,7 +84,7 @@ const SYSTEM_TOOLS_DOCS = `
 <agent_system_tools>
 ## Agent's Built-in System Tools
 
-**Note**: These are tools available to the agents you configure, NOT tools you can call directly. Understanding these helps you design agents that use them effectively.
+**Note**: These are built-in tools that all agents have access to automatically. You can reference these in the agent's system prompt to guide behavior when needed (e.g., "Always display query results using output_table", "Use human_request to confirm before deletions").
 
 All agents have access to these tools automatically.
 
@@ -130,22 +130,22 @@ Unified tool to request user input. Execution pauses until user responds.
 
 Execute JavaScript code for reliable calculations and data transformations.
 
+**IMPORTANT**: This is an Agent-level tool called directly by the LLM, NOT available inside custom tool code. For calculations in tool code, use standard JavaScript (Math, Array methods, etc.) directly.
+
 \`\`\`typescript
 {
   code: string,      // JavaScript code with 'return' statement
+  params?: object,   // Parameters accessible as 'params' variable
   timeout?: number   // Optional timeout 100-30000ms, default 10s
 }
 \`\`\`
 
-**Use cases:**
-- Mathematical calculations (LLMs can make arithmetic errors)
-- Data transformations (sort, filter, aggregate arrays)
-- String manipulation and parsing
-- Date calculations
+**When Agent uses code_execute:**
+- Complex calculations after fetching data from tools
+- Data transformations between tool calls
+- Avoiding LLM arithmetic errors
 
-**Constraints:**
-- No database or API access (use custom tools for that)
-- Pure JavaScript only
+**NOT for use in custom tool code** - tool code already runs JavaScript.
 
 ### task_complete
 
