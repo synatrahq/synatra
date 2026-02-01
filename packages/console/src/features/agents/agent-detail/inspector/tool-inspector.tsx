@@ -7,7 +7,7 @@ import {
   CodeEditor,
   Checkbox,
   TopLevelSchemaEditor,
-  SchemaTypeDisplay,
+  FunctionSignature,
   FormField,
   CollapsibleSection,
 } from "../../../../ui"
@@ -22,6 +22,8 @@ type ResourceInfo = {
 type MethodParam = { name: string; type: string; optional?: boolean }
 type MethodDef = { name: string; params: MethodParam[]; returnType: string }
 
+const HTTP_METHOD_TYPE = '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"'
+
 function getResourceMethods(type: string): MethodDef[] {
   if (type === "postgres" || type === "mysql") {
     return [
@@ -35,63 +37,13 @@ function getResourceMethods(type: string): MethodDef[] {
       },
     ]
   }
-  if (type === "stripe") {
-    return [
-      {
-        name: "request",
-        params: [
-          { name: "method", type: '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"' },
-          { name: "path", type: "string" },
-          {
-            name: "options",
-            type: "{ queryParams?: Record<string, string>, body?: unknown }",
-            optional: true,
-          },
-        ],
-        returnType: "Promise<unknown>",
-      },
-    ]
-  }
-  if (type === "github") {
-    return [
-      {
-        name: "request",
-        params: [
-          { name: "method", type: '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"' },
-          { name: "endpoint", type: "string" },
-          {
-            name: "options",
-            type: "{ queryParams?: Record<string, string>, body?: unknown }",
-            optional: true,
-          },
-        ],
-        returnType: "Promise<unknown>",
-      },
-    ]
-  }
-  if (type === "intercom") {
-    return [
-      {
-        name: "request",
-        params: [
-          { name: "method", type: '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"' },
-          { name: "endpoint", type: "string" },
-          {
-            name: "options",
-            type: "{ queryParams?: Record<string, string>, body?: unknown }",
-            optional: true,
-          },
-        ],
-        returnType: "Promise<unknown>",
-      },
-    ]
-  }
+
   if (type === "restapi") {
     return [
       {
         name: "request",
         params: [
-          { name: "method", type: '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"' },
+          { name: "method", type: HTTP_METHOD_TYPE },
           { name: "path", type: "string" },
           {
             name: "options",
@@ -103,6 +55,26 @@ function getResourceMethods(type: string): MethodDef[] {
       },
     ]
   }
+
+  const apiPathParam = type === "stripe" ? "path" : "endpoint"
+  if (type === "stripe" || type === "github" || type === "intercom") {
+    return [
+      {
+        name: "request",
+        params: [
+          { name: "method", type: HTTP_METHOD_TYPE },
+          { name: apiPathParam, type: "string" },
+          {
+            name: "options",
+            type: "{ queryParams?: Record<string, string>, body?: unknown }",
+            optional: true,
+          },
+        ],
+        returnType: "Promise<unknown>",
+      },
+    ]
+  }
+
   return []
 }
 
@@ -257,35 +229,16 @@ export function ToolInspector(props: {
     }
   })
 
-  const hasParams = () => {
-    const p = props.tool.params
-    if (p.$ref || p.allOf) return true
-    if (
-      p.type === "array" ||
-      p.type === "string" ||
-      p.type === "number" ||
-      p.type === "integer" ||
-      p.type === "boolean"
-    )
-      return true
-    if (p.properties && Object.keys(p.properties as object).length > 0) return true
+  const hasSchemaContent = (schema: typeof props.tool.params) => {
+    if (schema.$ref || schema.allOf) return true
+    const primitives = ["array", "string", "number", "integer", "boolean"]
+    if (primitives.includes(schema.type as string)) return true
+    if (schema.properties && Object.keys(schema.properties as object).length > 0) return true
     return false
   }
 
-  const hasReturns = () => {
-    const r = props.tool.returns
-    if (r.$ref || r.allOf) return true
-    if (
-      r.type === "array" ||
-      r.type === "string" ||
-      r.type === "number" ||
-      r.type === "integer" ||
-      r.type === "boolean"
-    )
-      return true
-    if (r.properties && Object.keys(r.properties as object).length > 0) return true
-    return false
-  }
+  const hasParams = () => hasSchemaContent(props.tool.params)
+  const hasReturns = () => hasSchemaContent(props.tool.returns)
 
   const updateField = <K extends keyof AgentTool>(key: K, value: AgentTool[K]) => {
     props.onUpdate({ ...props.tool, [key]: value })
@@ -385,23 +338,14 @@ export function ToolInspector(props: {
       <CollapsibleSection title="Code">
         <div class="overflow-hidden rounded-md bg-surface-muted font-code text-xs">
           <div class="border-b border-border/50 px-3 py-2">
-            <span class="text-syntax-keyword">async function</span>{" "}
-            <span class="text-syntax-function">{props.tool.name || "tool"}</span>
-            <span class="text-syntax-punctuation">(</span>
-            <Show when={hasParams()}>
-              <span class="text-syntax-variable">params</span>
-              <span class="text-syntax-punctuation">: </span>
-              <SchemaTypeDisplay schema={props.tool.params} />
-              <span class="text-syntax-punctuation">, </span>
-            </Show>
-            <span class="text-syntax-variable">context</span>
-            <span class="text-syntax-punctuation">: </span>
-            <ContextTypeDisplay resources={resources()} />
-            <span class="text-syntax-punctuation">): </span>
-            <Show when={hasReturns()} fallback={<span class="text-syntax-type">void</span>}>
-              <SchemaTypeDisplay schema={props.tool.returns} />
-            </Show>
-            <span class="text-syntax-punctuation">{" {"}</span>
+            <FunctionSignature
+              name={props.tool.name || "tool"}
+              hasParams={hasParams()}
+              paramSchema={hasParams() ? props.tool.params : undefined}
+              returnSchema={hasReturns() ? props.tool.returns : undefined}
+              contextType={<ContextTypeDisplay resources={resources()} />}
+              defaultReturnType="void"
+            />
           </div>
           <CodeEditor
             value={props.tool.code}

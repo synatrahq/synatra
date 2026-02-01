@@ -13,7 +13,7 @@ import {
 } from "@synatra/core"
 import { requirePermission } from "../../../../middleware/principal"
 import { emitCopilotEvent } from "../threads/stream"
-import type { AgentRuntimeConfig, AskQuestionsResult } from "@synatra/core/types"
+import { UserConfigurableResourceType, type AgentRuntimeConfig, type AskQuestionsResult } from "@synatra/core/types"
 import type { TemplateInfo } from "../copilot-prompt"
 import { runCopilotLLMWithToolResult, type ResourceInfo } from "../threads/messages/run-llm"
 import { createError } from "@synatra/util/error"
@@ -75,12 +75,16 @@ export const submit = new Hono().post(
     })
 
     const allResources = await listResources()
-    const resources: ResourceInfo[] = allResources.map((r) => ({
-      id: r.id,
-      slug: r.slug,
-      type: r.type,
-      description: r.description,
-    }))
+    const resources: ResourceInfo[] = allResources
+      .filter((r): r is typeof r & { type: UserConfigurableResourceType } =>
+        UserConfigurableResourceType.includes(r.type as UserConfigurableResourceType),
+      )
+      .map((r) => ({
+        id: r.id,
+        slug: r.slug,
+        type: r.type,
+        description: r.description,
+      }))
 
     const answersResult: AskQuestionsResult = { answers: body.answers }
     const content = formatQuestionResponse(answersResult)

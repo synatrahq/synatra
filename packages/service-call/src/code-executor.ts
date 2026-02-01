@@ -13,7 +13,7 @@ export type ExecuteContext = {
 
 export type ExecuteInput = {
   code: string
-  params: Record<string, unknown>
+  params: unknown
   paramAlias?: "payload" | "input"
   context: ExecuteContext
   environmentId: string

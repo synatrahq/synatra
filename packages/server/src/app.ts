@@ -14,6 +14,7 @@ import { resources } from "./routes/resources"
 import { triggers } from "./routes/triggers"
 import { prompts } from "./routes/prompts"
 import { threads } from "./routes/threads"
+import { recipes } from "./routes/recipes"
 import { user } from "./routes/user"
 import { organizations } from "./routes/organizations"
 import { webhook } from "./routes/webhook"
@@ -80,6 +81,7 @@ export const app = new Hono()
   .use("/api/usage/*", principalMiddleware, requireAuth, requireOrganization)
   .use("/api/subscriptions/*", principalMiddleware, requireAuth, requireOrganization)
   .use("/api/organizations/*", principalMiddleware, requireAuth, requireOrganization)
+  .use("/api/recipes/*", principalMiddleware, requireAuth, requireOrganization)
   .route("/api/agents", agents)
   .route("/api/channels", channels)
   .route("/api/connectors", connectors)
@@ -93,6 +95,7 @@ export const app = new Hono()
   .route("/api/subscriptions", subscriptions)
   .route("/api/organizations", organizations)
   .route("/api/app-accounts", appAccounts)
+  .route("/api/recipes", recipes)
 
 setupStatic(app)
 

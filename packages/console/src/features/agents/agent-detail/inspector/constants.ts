@@ -138,7 +138,13 @@ export const TOOL_SAMPLES: Record<string, object> = {
     summary: "Fetched user data successfully.",
   },
   code_execute: {
-    code: "const sum = Array.from({length: 100}, (_, i) => i + 1).reduce((a, b) => a + b, 0);\nreturn { sum, average: sum / 100 };",
+    code: "return params.users.filter(u => u.active).map(u => u.name);",
+    params: {
+      users: [
+        { name: "Alice", active: true },
+        { name: "Bob", active: false },
+      ],
+    },
     timeout: 10000,
   },
 }
@@ -225,8 +231,10 @@ export const TOOL_PARAMS: Record<string, ParameterDef[]> = {
       name: "code",
       type: "string",
       required: true,
-      description: "JavaScript code to execute. Use 'return' to output results.",
+      description:
+        "JavaScript code to execute. Use 'return' to output results. Access parameters via 'params' variable.",
     },
+    { name: "params", type: "object", description: "Parameters accessible as 'params' variable in code." },
     { name: "timeout", type: "number", description: "Execution timeout in milliseconds (100-30000, default: 10000)." },
   ],
 }

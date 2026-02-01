@@ -84,7 +84,7 @@ const SYSTEM_TOOLS_DOCS = `
 <agent_system_tools>
 ## Agent's Built-in System Tools
 
-**Note**: These are tools available to the agents you configure, NOT tools you can call directly. Understanding these helps you design agents that use them effectively.
+**Note**: These are built-in tools that all agents have access to automatically. You can reference these in the agent's system prompt to guide behavior when needed (e.g., "Always display query results using output_table", "Use human_request to confirm before deletions").
 
 All agents have access to these tools automatically.
 
@@ -130,22 +130,22 @@ Unified tool to request user input. Execution pauses until user responds.
 
 Execute JavaScript code for reliable calculations and data transformations.
 
+**IMPORTANT**: This is an Agent-level tool called directly by the LLM, NOT available inside custom tool code. For calculations in tool code, use standard JavaScript (Math, Array methods, etc.) directly.
+
 \`\`\`typescript
 {
   code: string,      // JavaScript code with 'return' statement
+  params?: object,   // Parameters accessible as 'params' variable
   timeout?: number   // Optional timeout 100-30000ms, default 10s
 }
 \`\`\`
 
-**Use cases:**
-- Mathematical calculations (LLMs can make arithmetic errors)
-- Data transformations (sort, filter, aggregate arrays)
-- String manipulation and parsing
-- Date calculations
+**When Agent uses code_execute:**
+- Complex calculations after fetching data from tools
+- Data transformations between tool calls
+- Avoiding LLM arithmetic errors
 
-**Constraints:**
-- No database or API access (use custom tools for that)
-- Pure JavaScript only
+**NOT for use in custom tool code** - tool code already runs JavaScript.
 
 ### task_complete
 
@@ -655,10 +655,19 @@ const data = await context.resources.[slug].request(method, path, options?)
 - **method**: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
 - **path**: Stripe API path (e.g., "/v1/customers", "/v1/charges")
 - **options**: Optional object with:
-  - **queryParams**: Query parameters (e.g., { limit: "10", starting_after: "cus_xxx" })
+  - **queryParams**: Query parameters as Record<string, string> (all values must be strings)
   - **body**: Request body (for POST/PUT/PATCH)
 - **Returns**: Stripe API response (parsed JSON)
 - **Throws**: Error on API failure
+
+**Array parameters (e.g., expand)**: Use indexed keys since all values must be strings.
+\`\`\`javascript
+// Wrong - arrays not supported
+{ queryParams: { expand: ["customer", "charges"] } }
+
+// Correct - use indexed keys (Stripe standard format)
+{ queryParams: { "expand[0]": "customer", "expand[1]": "charges" } }
+\`\`\`
 
 Example:
 \`\`\`javascript
@@ -668,6 +677,16 @@ const customers = await context.resources.stripe.request(
   { queryParams: { limit: "10" } }
 )
 return customers
+\`\`\`
+
+Example with expand:
+\`\`\`javascript
+const subscription = await context.resources.stripe.request(
+  "GET",
+  "/v1/subscriptions/sub_xxx",
+  { queryParams: { "expand[0]": "customer", "expand[1]": "default_payment_method" } }
+)
+return subscription
 \`\`\`
 `
 
@@ -681,7 +700,7 @@ const data = await context.resources.[slug].request(method, endpoint, options?)
 - **method**: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
 - **endpoint**: GitHub API endpoint (e.g., "/repos/{owner}/{repo}/issues")
 - **options**: Optional object with:
-  - **queryParams**: Query parameters (e.g., { state: "open", per_page: "10" })
+  - **queryParams**: Query parameters as Record<string, string> (all values must be strings)
   - **body**: Request body (for POST/PUT/PATCH)
 - **Returns**: GitHub API response (parsed JSON)
 - **Throws**: Error on API failure
@@ -707,7 +726,7 @@ const data = await context.resources.[slug].request(method, endpoint, options?)
 - **method**: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
 - **endpoint**: Intercom API endpoint (e.g., "/contacts", "/conversations")
 - **options**: Optional object with:
-  - **queryParams**: Query parameters (e.g., { per_page: "10" })
+  - **queryParams**: Query parameters as Record<string, string> (all values must be strings)
   - **body**: Request body (for POST/PUT/PATCH)
 - **Returns**: Intercom API response (parsed JSON)
 - **Throws**: Error on API failure
@@ -733,11 +752,13 @@ const data = await context.resources.[slug].request(method, path, options?)
 - **method**: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"
 - **path**: API endpoint path (relative to baseUrl, e.g., "/users", "/orders/123")
 - **options**: Optional object with:
-  - **headers**: Additional headers (merged with resource config headers)
-  - **queryParams**: Additional query parameters (merged with resource config params)
+  - **headers**: Additional headers as Record<string, string>
+  - **queryParams**: Query parameters as Record<string, string> (all values must be strings)
   - **body**: Request body (auto-serialized as JSON)
 - **Returns**: API response (parsed JSON or text)
 - **Throws**: Error on API failure
+
+**Note**: For array query parameters, use indexed keys: \`{ "ids[0]": "1", "ids[1]": "2" }\`
 
 Example:
 \`\`\`javascript

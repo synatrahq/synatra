@@ -1,5 +1,5 @@
 import { Show, For, createSignal, createMemo } from "solid-js"
-import { Badge, Markdown } from "../../../ui"
+import { Badge, Markdown, Tooltip } from "../../../ui"
 import {
   getIconComponent,
   ICON_COLORS,
@@ -9,7 +9,7 @@ import {
   statusText,
   formatRelativeTime,
 } from "../../../components"
-import { Robot, CaretDown, CaretRight, Prohibit, ArrowBendDownRight } from "phosphor-solid-js"
+import { Robot, CaretDown, CaretRight, Prohibit, ArrowBendDownRight, ListChecks } from "phosphor-solid-js"
 import { user } from "../../../app/session"
 import { HumanRequestRenderer } from "../../../components/human-request"
 import { OutputItemRenderer } from "../../../components/output-item"
@@ -393,6 +393,8 @@ type AgentMessageProps = {
   isChannelOwner?: boolean
   onHumanRequestRespond?: (requestId: string, action: "respond" | "cancel" | "skip", data?: unknown) => void
   onAgentClick?: (agentId: string) => void
+  onCreateRecipe?: (runId: string) => void
+  isLastInRun?: boolean
   responding?: boolean
   status?: AgentStatus
   delegatedTo?: SubagentInfo | null
@@ -411,6 +413,21 @@ export function AgentMessage(props: AgentMessageProps) {
 
   const color = () => getAgentColor(props.agent?.iconColor ?? null)
   const displayedTools = () => (showAllTools() ? props.tools : props.tools.slice(0, 5))
+
+  const runId = () => props.message?.runId ?? props.tools[0]?.call.runId ?? null
+  const run = createMemo(() => {
+    const id = runId()
+    if (!id) return null
+    return props.runs?.find((r) => r.id === id) ?? null
+  })
+  const canCreateRecipe = () => {
+    if (props.isLastInRun === false) return false
+    const r = run()
+    if (!r) return false
+    if (r.status !== "completed") return false
+    const hasTools = props.tools.length > 0 || (props.subagentWorks?.some((w) => w.tools.length > 0) ?? false)
+    return hasTools && !!props.onCreateRecipe
+  }
 
   return (
     <div class="flex items-start gap-2.5">
@@ -511,6 +528,24 @@ export function AgentMessage(props: AgentMessageProps) {
 
         <Show when={props.summary}>
           <CompletedSummary summary={props.summary!} />
+        </Show>
+
+        <Show when={canCreateRecipe()}>
+          <div class="flex justify-end">
+            <Tooltip content="Create recipe from this run" side="top">
+              <button
+                type="button"
+                class="flex items-center gap-1.5 rounded-md px-2 py-1 text-2xs text-text-muted transition-colors hover:bg-surface-muted hover:text-text"
+                onClick={() => {
+                  const id = runId()
+                  if (id) props.onCreateRecipe?.(id)
+                }}
+              >
+                <ListChecks class="h-3.5 w-3.5" />
+                Create Recipe
+              </button>
+            </Tooltip>
+          </div>
         </Show>
 
         <Show when={isActive()}>

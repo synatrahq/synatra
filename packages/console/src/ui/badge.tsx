@@ -1,7 +1,7 @@
 import { splitProps } from "solid-js"
 import type { ComponentProps } from "solid-js"
 
-type BadgeVariant =
+export type BadgeVariant =
   | "default"
   | "secondary"
   | "outline"
