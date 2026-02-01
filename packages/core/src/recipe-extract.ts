@@ -403,6 +403,18 @@ function convertRawStepToExtractedStep(
         const data: Value = isBinding
           ? updateBindingRef(dataValue as Value, keyMap)
           : { type: "literal" as const, value: dataValue ?? [] }
+        const allowNoneValue = f.allowNone ?? f.allowNoneBinding
+        const allowNoneBinding =
+          allowNoneValue &&
+          typeof allowNoneValue === "object" &&
+          "type" in allowNoneValue &&
+          ["literal", "ref", "template", "object", "array"].includes((allowNoneValue as { type: string }).type)
+        const allowNone =
+          allowNoneBinding && allowNoneValue
+            ? updateBindingRef(allowNoneValue as Value, keyMap)
+            : allowNoneValue !== undefined
+              ? { type: "literal" as const, value: allowNoneValue }
+              : undefined
 
         return {
           kind: { type: "literal" as const, value: "select_rows" },
@@ -410,6 +422,7 @@ function convertRawStepToExtractedStep(
           columns: { type: "literal" as const, value: (f.columns as Array<{ key: string; label: string }>) ?? [] },
           data,
           selectionMode: { type: "literal" as const, value: (f.selectionMode as "single" | "multiple") ?? "multiple" },
+          allowNone,
         }
       }
       if (f.kind === "form") {

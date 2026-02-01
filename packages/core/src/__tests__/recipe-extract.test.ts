@@ -1,6 +1,7 @@
 import { test, expect } from "vitest"
-import { updateBindingRef } from "../recipe-extract"
+import { normalizeStepKeys, updateBindingRef } from "../recipe-extract"
 import type { Value } from "../types"
+import type { RawStep } from "../recipe-extract"
 
 test("updateBindingRef normalizes array items", () => {
   const binding = {
@@ -16,4 +17,38 @@ test("updateBindingRef normalizes array items", () => {
 
   expect(result.type).toBe("array")
   expect(result.items[0]).toMatchObject({ type: "ref", scope: "step", key: "step_one" })
+})
+
+test("normalizeStepKeys preserves select_rows allowNone", () => {
+  const rawSteps = [
+    {
+      stepKey: "Collect",
+      label: "Collect",
+      toolName: "human_request",
+      params: {
+        title: { type: "literal", value: "Pick" },
+        fields: {
+          type: "literal",
+          value: [
+            {
+              kind: "select_rows",
+              key: "rows",
+              columns: [{ key: "id", label: "ID" }],
+              data: [],
+              selectionMode: "single",
+              allowNone: false,
+            },
+          ],
+        },
+      },
+    },
+  ] as const
+
+  const { steps } = normalizeStepKeys(rawSteps as unknown as RawStep[])
+  const step = steps[0]
+
+  expect(step.type).toBe("input")
+  if (step.type !== "input") return
+  const allowNone = step.config.params.fields[0].allowNone as Value
+  expect(allowNone).toMatchObject({ type: "literal", value: false })
 })
