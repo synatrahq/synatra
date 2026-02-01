@@ -5,6 +5,7 @@ import {
   resolveStepParams,
   getStepExecutionOrder,
   isInputStep,
+  executeStepLoop,
   createRecipeRunner,
   getNextStep,
   advanceRunner,
@@ -468,5 +469,47 @@ describe("RecipeRunner", () => {
     expect(runner.status).toBe("running")
     expect(runner.currentStepIndex).toBe(1)
     expect(runner.context.results.step_0).toEqual({ userInput: "value" })
+  })
+})
+
+describe("executeStepLoop", () => {
+  test("returns failed status when input field kind is invalid", async () => {
+    const steps: NormalizedStep[] = [
+      {
+        stepKey: "step_0",
+        label: "Input",
+        type: "input",
+        config: {
+          params: {
+            title: { type: "literal", value: "Input" },
+            fields: [
+              {
+                kind: { type: "literal", value: "invalid_kind" },
+                key: { type: "literal", value: "data" },
+                schema: { type: "literal", value: {} },
+              },
+            ],
+          },
+        },
+      },
+    ]
+
+    const result = await executeStepLoop(
+      steps,
+      0,
+      { inputs: {}, results: {}, resolvedParams: {} },
+      {
+        organizationId: "org-1",
+        environmentId: "env-1",
+        resources: [],
+        executeCode: async () => ({ ok: true, data: { success: true, result: null } }),
+      },
+    )
+
+    expect(result.status).toBe("failed")
+    if (result.status !== "failed") return
+    expect(result.error.stepKey).toBe("step_0")
+    expect(result.error.stepType).toBe("input")
+    expect(result.error.message).toBe("Invalid input field kind: invalid_kind")
   })
 })

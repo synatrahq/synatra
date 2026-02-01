@@ -151,7 +151,7 @@ export function isInputStep(step: NormalizedStep): step is NormalizedStep & { ty
 export function buildPendingInputConfig(
   step: NormalizedStep & { type: "input"; config: InputStepConfig },
   context: RecipeExecutionContext,
-): PendingInputConfig {
+): { ok: true; config: PendingInputConfig } | { ok: false; message: string } {
   const resolvedFields = step.config.params.fields.map((field) => {
     const resolved = Object.fromEntries(
       Object.entries(field)
@@ -160,10 +160,15 @@ export function buildPendingInputConfig(
     )
     const kind = resolved.kind
     if (kind !== "select_rows" && kind !== "form" && kind !== "question") {
-      throw new Error(`Invalid input field kind: ${String(kind)}`)
+      return { ok: false, message: `Invalid input field kind: ${String(kind)}` } as const
     }
-    return resolved
+    return { ok: true, value: resolved } as const
   })
+
+  const invalidField = resolvedFields.find((field) => !field.ok)
+  if (invalidField && !invalidField.ok) {
+    return { ok: false, message: invalidField.message }
+  }
 
   const title = resolveBinding(step.config.params.title, context)
   const description = step.config.params.description
@@ -171,10 +176,13 @@ export function buildPendingInputConfig(
     : undefined
 
   return {
-    stepKey: step.stepKey,
-    title: typeof title === "string" ? title : String(title ?? ""),
-    description: typeof description === "string" ? description : description ? String(description) : undefined,
-    fields: resolvedFields as Array<Record<string, unknown>>,
+    ok: true,
+    config: {
+      stepKey: step.stepKey,
+      title: typeof title === "string" ? title : String(title ?? ""),
+      description: typeof description === "string" ? description : description ? String(description) : undefined,
+      fields: resolvedFields.map((field) => (field.ok ? field.value : field)) as Array<Record<string, unknown>>,
+    },
   }
 }
 
@@ -335,10 +343,19 @@ export async function executeStepLoop(
 
     if (step.type === "input") {
       const pendingInputConfig = buildPendingInputConfig(step, context)
+      if (!pendingInputConfig.ok) {
+        return {
+          status: "failed",
+          error: { stepKey: step.stepKey, stepType: step.type, message: pendingInputConfig.message },
+          currentStepKey: step.stepKey,
+          stepResults,
+          resolvedParams,
+        }
+      }
       return {
         status: "waiting_input",
         currentStepKey: step.stepKey,
-        pendingInputConfig,
+        pendingInputConfig: pendingInputConfig.config,
         stepResults,
         resolvedParams,
       }

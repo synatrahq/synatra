@@ -1102,6 +1102,7 @@ export const UpdateRecipeExecutionSchema = z.object({
   pendingInputConfig: PendingInputConfigSchema.optional().nullable(),
   results: z.record(z.string(), z.unknown()).optional(),
   status: z.enum(RecipeExecutionStatus).optional(),
+  expectedStatus: z.enum(RecipeExecutionStatus).optional(),
 })
 
 export async function updateRecipeExecution(raw: z.input<typeof UpdateRecipeExecutionSchema>) {
@@ -1114,15 +1115,33 @@ export async function updateRecipeExecution(raw: z.input<typeof UpdateRecipeExec
   if (input.results !== undefined) updateData.results = input.results
   if (input.status !== undefined) updateData.status = input.status
 
+  const conditions = [eq(RecipeExecutionTable.id, input.id), eq(RecipeExecutionTable.organizationId, organizationId)]
+  if (input.expectedStatus !== undefined) {
+    conditions.push(eq(RecipeExecutionTable.status, input.expectedStatus))
+  }
+
   const [updated] = await withDb((db) =>
     db
       .update(RecipeExecutionTable)
       .set(updateData)
-      .where(and(eq(RecipeExecutionTable.id, input.id), eq(RecipeExecutionTable.organizationId, organizationId)))
+      .where(and(...conditions))
       .returning(),
   )
 
-  if (!updated) throw createError("NotFoundError", { type: "RecipeExecution", id: input.id })
+  if (!updated) {
+    if (input.expectedStatus === undefined) {
+      throw createError("NotFoundError", { type: "RecipeExecution", id: input.id })
+    }
+    const current = await withDb((db) =>
+      db
+        .select()
+        .from(RecipeExecutionTable)
+        .where(and(eq(RecipeExecutionTable.id, input.id), eq(RecipeExecutionTable.organizationId, organizationId)))
+        .then(first),
+    )
+    if (!current) throw createError("NotFoundError", { type: "RecipeExecution", id: input.id })
+    throw createError("ConflictError", { message: "Execution status changed" })
+  }
   return updated
 }
 

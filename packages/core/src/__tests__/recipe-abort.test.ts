@@ -8,7 +8,7 @@ vi.mock("../database", () => ({
 
 import { withDb } from "../database"
 import { principal } from "../principal"
-import { abortRecipeExecution } from "../recipe"
+import { abortRecipeExecution, updateRecipeExecution } from "../recipe"
 
 type DbResult = {
   selectRows?: unknown[]
@@ -166,5 +166,53 @@ describe("abortRecipeExecution", () => {
     )
 
     expect(result.status).toBe("aborted")
+  })
+})
+
+describe("updateRecipeExecution", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  test("rejects when expected status does not match", async () => {
+    setupWithDb([
+      { updateRows: [] },
+      {
+        selectRows: [
+          {
+            id: "exec-1",
+            organizationId: "org-1",
+            status: "aborted",
+          },
+        ],
+      },
+    ])
+
+    await expect(
+      principal.withUser({ userId: "user-1", organizationId: "org-1", email: "user@example.com" }, () =>
+        updateRecipeExecution({ id: "exec-1", status: "waiting_input", expectedStatus: "waiting_input" }),
+      ),
+    ).rejects.toMatchObject({ name: "ConflictError" })
+  })
+
+  test("updates when expected status matches", async () => {
+    setupWithDb([
+      {
+        updateRows: [
+          {
+            id: "exec-1",
+            organizationId: "org-1",
+            status: "waiting_input",
+          },
+        ],
+      },
+    ])
+
+    const result = await principal.withUser(
+      { userId: "user-1", organizationId: "org-1", email: "user@example.com" },
+      () => updateRecipeExecution({ id: "exec-1", status: "waiting_input", expectedStatus: "waiting_input" }),
+    )
+
+    expect(result.status).toBe("waiting_input")
   })
 })

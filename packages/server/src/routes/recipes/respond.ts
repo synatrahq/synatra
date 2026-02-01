@@ -87,6 +87,7 @@ export const respond = new Hono().post(
         pendingInputConfig: result.pendingInputConfig,
         results: result.stepResults,
         status: "waiting_input",
+        expectedStatus: "waiting_input",
       })
       return c.json({
         executionId,

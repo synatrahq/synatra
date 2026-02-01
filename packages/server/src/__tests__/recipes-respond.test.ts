@@ -82,6 +82,7 @@ test("recipes.respond does not clear pending input before loop completes", async
   expect(res.status).toBe(200)
   expect(updateCalls.length).toBe(1)
   expect(updateCalls.some((call) => call.pendingInputConfig === null)).toBe(false)
+  expect(updateCalls[0]?.expectedStatus).toBe("waiting_input")
 })
 
 test("recipes.pending-execution returns null when none exists", async () => {
