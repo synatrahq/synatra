@@ -22,6 +22,8 @@ type ResourceInfo = {
 type MethodParam = { name: string; type: string; optional?: boolean }
 type MethodDef = { name: string; params: MethodParam[]; returnType: string }
 
+const HTTP_METHOD_TYPE = '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"'
+
 function getResourceMethods(type: string): MethodDef[] {
   if (type === "postgres" || type === "mysql") {
     return [
@@ -35,63 +37,13 @@ function getResourceMethods(type: string): MethodDef[] {
       },
     ]
   }
-  if (type === "stripe") {
-    return [
-      {
-        name: "request",
-        params: [
-          { name: "method", type: '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"' },
-          { name: "path", type: "string" },
-          {
-            name: "options",
-            type: "{ queryParams?: Record<string, string>, body?: unknown }",
-            optional: true,
-          },
-        ],
-        returnType: "Promise<unknown>",
-      },
-    ]
-  }
-  if (type === "github") {
-    return [
-      {
-        name: "request",
-        params: [
-          { name: "method", type: '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"' },
-          { name: "endpoint", type: "string" },
-          {
-            name: "options",
-            type: "{ queryParams?: Record<string, string>, body?: unknown }",
-            optional: true,
-          },
-        ],
-        returnType: "Promise<unknown>",
-      },
-    ]
-  }
-  if (type === "intercom") {
-    return [
-      {
-        name: "request",
-        params: [
-          { name: "method", type: '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"' },
-          { name: "endpoint", type: "string" },
-          {
-            name: "options",
-            type: "{ queryParams?: Record<string, string>, body?: unknown }",
-            optional: true,
-          },
-        ],
-        returnType: "Promise<unknown>",
-      },
-    ]
-  }
+
   if (type === "restapi") {
     return [
       {
         name: "request",
         params: [
-          { name: "method", type: '"GET" | "POST" | "PUT" | "PATCH" | "DELETE"' },
+          { name: "method", type: HTTP_METHOD_TYPE },
           { name: "path", type: "string" },
           {
             name: "options",
@@ -103,6 +55,26 @@ function getResourceMethods(type: string): MethodDef[] {
       },
     ]
   }
+
+  const apiPathParam = type === "stripe" ? "path" : "endpoint"
+  if (type === "stripe" || type === "github" || type === "intercom") {
+    return [
+      {
+        name: "request",
+        params: [
+          { name: "method", type: HTTP_METHOD_TYPE },
+          { name: apiPathParam, type: "string" },
+          {
+            name: "options",
+            type: "{ queryParams?: Record<string, string>, body?: unknown }",
+            optional: true,
+          },
+        ],
+        returnType: "Promise<unknown>",
+      },
+    ]
+  }
+
   return []
 }
 
@@ -257,35 +229,16 @@ export function ToolInspector(props: {
     }
   })
 
-  const hasParams = () => {
-    const p = props.tool.params
-    if (p.$ref || p.allOf) return true
-    if (
-      p.type === "array" ||
-      p.type === "string" ||
-      p.type === "number" ||
-      p.type === "integer" ||
-      p.type === "boolean"
-    )
-      return true
-    if (p.properties && Object.keys(p.properties as object).length > 0) return true
+  const hasSchemaContent = (schema: typeof props.tool.params) => {
+    if (schema.$ref || schema.allOf) return true
+    const primitives = ["array", "string", "number", "integer", "boolean"]
+    if (primitives.includes(schema.type as string)) return true
+    if (schema.properties && Object.keys(schema.properties as object).length > 0) return true
     return false
   }
 
-  const hasReturns = () => {
-    const r = props.tool.returns
-    if (r.$ref || r.allOf) return true
-    if (
-      r.type === "array" ||
-      r.type === "string" ||
-      r.type === "number" ||
-      r.type === "integer" ||
-      r.type === "boolean"
-    )
-      return true
-    if (r.properties && Object.keys(r.properties as object).length > 0) return true
-    return false
-  }
+  const hasParams = () => hasSchemaContent(props.tool.params)
+  const hasReturns = () => hasSchemaContent(props.tool.returns)
 
   const updateField = <K extends keyof AgentTool>(key: K, value: AgentTool[K]) => {
     props.onUpdate({ ...props.tool, [key]: value })

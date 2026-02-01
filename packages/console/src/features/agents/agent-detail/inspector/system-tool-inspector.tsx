@@ -1,4 +1,4 @@
-import { Show, For, createSignal } from "solid-js"
+import { Show, For, createSignal, Switch, Match } from "solid-js"
 import {
   Code,
   CaretRight,
@@ -520,54 +520,40 @@ function CodeExecuteInspector() {
 }
 
 export function SystemToolInspector(props: { tool: SystemToolDefinition }) {
-  const name = () => props.tool.name
-
   return (
-    <>
-      <Show when={name() === "output_table"}>
-        <OutputTableInspector />
-      </Show>
-      <Show when={name() === "output_chart"}>
-        <OutputChartInspector />
-      </Show>
-      <Show when={name() === "output_markdown"}>
-        <OutputMarkdownInspector />
-      </Show>
-      <Show when={name() === "output_key_value"}>
-        <OutputKeyValueInspector />
-      </Show>
-      <Show when={name() === "human_request"}>
-        <HumanRequestInspector />
-      </Show>
-      <Show when={name() === "task_complete"}>
-        <TaskCompleteInspector />
-      </Show>
-      <Show when={name() === "return_to_parent"}>
-        <ReturnToParentInspector />
-      </Show>
-      <Show when={name() === "code_execute"}>
-        <CodeExecuteInspector />
-      </Show>
-      <Show
-        when={
-          ![
-            "output_table",
-            "output_chart",
-            "output_markdown",
-            "output_key_value",
-            "human_request",
-            "task_complete",
-            "return_to_parent",
-            "code_execute",
-          ].includes(name())
-        }
-      >
+    <Switch
+      fallback={
         <div class="space-y-0">
           <CollapsibleSection title="Overview">
             <p class="text-xs text-text-muted leading-relaxed">{props.tool.description}</p>
           </CollapsibleSection>
         </div>
-      </Show>
-    </>
+      }
+    >
+      <Match when={props.tool.name === "output_table"}>
+        <OutputTableInspector />
+      </Match>
+      <Match when={props.tool.name === "output_chart"}>
+        <OutputChartInspector />
+      </Match>
+      <Match when={props.tool.name === "output_markdown"}>
+        <OutputMarkdownInspector />
+      </Match>
+      <Match when={props.tool.name === "output_key_value"}>
+        <OutputKeyValueInspector />
+      </Match>
+      <Match when={props.tool.name === "human_request"}>
+        <HumanRequestInspector />
+      </Match>
+      <Match when={props.tool.name === "task_complete"}>
+        <TaskCompleteInspector />
+      </Match>
+      <Match when={props.tool.name === "return_to_parent"}>
+        <ReturnToParentInspector />
+      </Match>
+      <Match when={props.tool.name === "code_execute"}>
+        <CodeExecuteInspector />
+      </Match>
+    </Switch>
   )
 }

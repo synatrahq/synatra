@@ -171,34 +171,37 @@ export function validateRecipeSteps(
       errors.push(`Step "${stepKey}" param "${paramPath}" is not a valid binding`)
       return
     }
-    switch (binding.type) {
-      case "ref":
-        if (binding.scope === "step" && !precedingKeys.has(binding.key)) {
-          errors.push(
-            `Step "${stepKey}" param "${paramPath}" references "${binding.key}" which is not a preceding step`,
-          )
+
+    if (binding.type === "ref") {
+      if (binding.scope === "step" && !precedingKeys.has(binding.key)) {
+        errors.push(`Step "${stepKey}" param "${paramPath}" references "${binding.key}" which is not a preceding step`)
+      }
+      if (binding.scope === "input" && !inputKeys.has(binding.key)) {
+        errors.push(`Step "${stepKey}" param "${paramPath}" references non-existent input "${binding.key}"`)
+      }
+      return
+    }
+
+    if (binding.type === "template") {
+      binding.parts.forEach((part, index) => {
+        if (part.type === "expr") {
+          validateBinding(part.value, stepKey, `${paramPath}.parts[${index}].value`)
         }
-        if (binding.scope === "input" && !inputKeys.has(binding.key)) {
-          errors.push(`Step "${stepKey}" param "${paramPath}" references non-existent input "${binding.key}"`)
-        }
-        break
-      case "template":
-        for (const [index, part] of binding.parts.entries()) {
-          if (part.type === "expr") {
-            validateBinding(part.value, stepKey, `${paramPath}.parts[${index}].value`)
-          }
-        }
-        break
-      case "object":
-        for (const [key, entryBinding] of Object.entries(binding.entries)) {
-          validateBinding(entryBinding, stepKey, `${paramPath}.entries.${key}`)
-        }
-        break
-      case "array":
-        binding.items.forEach((item, index) => {
-          validateBinding(item, stepKey, `${paramPath}.items[${index}]`)
-        })
-        break
+      })
+      return
+    }
+
+    if (binding.type === "object") {
+      for (const [key, entryBinding] of Object.entries(binding.entries)) {
+        validateBinding(entryBinding, stepKey, `${paramPath}.entries.${key}`)
+      }
+      return
+    }
+
+    if (binding.type === "array") {
+      binding.items.forEach((item, index) => {
+        validateBinding(item, stepKey, `${paramPath}.items[${index}]`)
+      })
     }
   }
 
