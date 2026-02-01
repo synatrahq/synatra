@@ -18,7 +18,7 @@ import { withDb } from "../database"
 import { canAccessCurrentUserChannelMember } from "../channel-member"
 import { getChannelById } from "../channel"
 import { principal } from "../principal"
-import { addRecipeToChannel } from "../recipe"
+import { addRecipeToChannel, deleteRecipe, listRecipeReleases, updateRecipe } from "../recipe"
 
 type DbResult = {
   selectRows?: unknown[]
@@ -32,9 +32,7 @@ function setupWithDb(results: DbResult[]) {
     const db = {
       select: () => ({
         from: () => ({
-          where: () => ({
-            then: (fn: (rows: unknown[]) => unknown) => fn(result.selectRows ?? []),
-          }),
+          where: () => Promise.resolve(result.selectRows ?? []),
         }),
       }),
       insert: () => ({
@@ -83,5 +81,56 @@ describe("addRecipeToChannel", () => {
     )
 
     expect(result).toMatchObject({ id: "channel-recipe-1" })
+  })
+})
+
+describe("recipe channel access", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  test("blocks updates when channel access is denied", async () => {
+    setupWithDb([
+      { selectRows: [{ id: "recipe-1" }] },
+      { selectRows: [{ id: "member-1", role: "member" }] },
+      { selectRows: [{ channelId: "channel-1" }] },
+      { selectRows: [{ channelId: "channel-2" }] },
+    ])
+
+    await expect(
+      principal.withUser({ userId: "user-1", organizationId: "org-1", email: "user@example.com" }, () =>
+        updateRecipe({ id: "recipe-1", name: "Updated" }),
+      ),
+    ).rejects.toMatchObject({ name: "ForbiddenError" })
+  })
+
+  test("blocks deletes when channel access is denied", async () => {
+    setupWithDb([
+      { selectRows: [{ id: "recipe-1" }] },
+      { selectRows: [{ id: "member-1", role: "member" }] },
+      { selectRows: [{ channelId: "channel-1" }] },
+      { selectRows: [{ channelId: "channel-2" }] },
+    ])
+
+    await expect(
+      principal.withUser({ userId: "user-1", organizationId: "org-1", email: "user@example.com" }, () =>
+        deleteRecipe({ id: "recipe-1" }),
+      ),
+    ).rejects.toMatchObject({ name: "ForbiddenError" })
+  })
+
+  test("blocks release listing when channel access is denied", async () => {
+    setupWithDb([
+      { selectRows: [{ id: "recipe-1" }] },
+      { selectRows: [{ id: "member-1", role: "member" }] },
+      { selectRows: [{ channelId: "channel-1" }] },
+      { selectRows: [{ channelId: "channel-2" }] },
+    ])
+
+    await expect(
+      principal.withUser({ userId: "user-1", organizationId: "org-1", email: "user@example.com" }, () =>
+        listRecipeReleases("recipe-1"),
+      ),
+    ).rejects.toMatchObject({ name: "ForbiddenError" })
   })
 })

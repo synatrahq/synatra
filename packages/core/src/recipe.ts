@@ -420,6 +420,8 @@ export async function updateRecipe(raw: z.input<typeof UpdateRecipeSchema>) {
     throw createError("BadRequestError", { message: `Slug "${input.slug}" is reserved` })
   }
 
+  await getRecipeById(input.id)
+
   const updateData: Record<string, unknown> = { updatedAt: new Date(), updatedBy: principal.userId() }
   if (input.name !== undefined) updateData.name = input.name
   if (input.slug !== undefined) updateData.slug = input.slug
@@ -577,6 +579,8 @@ export const DeleteRecipeSchema = z.object({ id: z.string() })
 export async function deleteRecipe(raw: z.input<typeof DeleteRecipeSchema>) {
   const input = DeleteRecipeSchema.parse(raw)
   const organizationId = principal.orgId()
+
+  await getRecipeById(input.id)
 
   const [deleted] = await withDb((db) =>
     db
@@ -996,6 +1000,8 @@ export async function getRecipeStepCount(releaseIds: string[]): Promise<Map<stri
 
 export async function listRecipeReleases(recipeId: string) {
   const organizationId = principal.orgId()
+
+  await getRecipeById(recipeId)
 
   return withDb((db) =>
     db
