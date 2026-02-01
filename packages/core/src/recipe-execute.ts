@@ -415,7 +415,6 @@ export async function executeStepLoop(
       const result = await deps.executeCode(deps.organizationId, {
         code,
         params,
-        paramAlias: "input",
         context: { resources: [] },
         environmentId: deps.environmentId,
         timeout,

@@ -452,7 +452,7 @@ function ReturnToParentInspector() {
 
 function CodeExecuteInspector() {
   const [showParams, setShowParams] = createSignal(false)
-  const sample = TOOL_SAMPLES.code_execute as { code: string; input?: object; timeout: number }
+  const sample = TOOL_SAMPLES.code_execute as { code: string; params?: object; timeout: number }
 
   return (
     <div class="space-y-0">
@@ -476,11 +476,11 @@ function CodeExecuteInspector() {
               <span class="ml-auto text-[9px] text-text-muted">{sample.timeout}ms timeout</span>
             </div>
             <div class="p-2.5 space-y-2">
-              <Show when={sample.input}>
+              <Show when={sample.params}>
                 <div>
-                  <span class="text-[9px] text-text-muted">input</span>
+                  <span class="text-[9px] text-text-muted">params</span>
                   <div class="mt-1 rounded border border-border/50 bg-surface-muted p-1.5 font-code text-[9px] text-text-muted overflow-x-auto max-h-20">
-                    <pre class="whitespace-pre-wrap">{JSON.stringify(sample.input, null, 2)}</pre>
+                    <pre class="whitespace-pre-wrap">{JSON.stringify(sample.params, null, 2)}</pre>
                   </div>
                 </div>
               </Show>

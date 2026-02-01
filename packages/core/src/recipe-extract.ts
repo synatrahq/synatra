@@ -452,10 +452,10 @@ function convertRawStepToExtractedStep(
 
   if (toolName === "code_execute") {
     const codeBinding = normalizedParams.code
-    const inputBinding = normalizedParams.input
+    const paramsBinding = normalizedParams.params
     const timeoutBinding = normalizedParams.timeout
     const code = codeBinding ?? { type: "literal" as const, value: "" }
-    const params = inputBinding ?? { type: "object" as const, entries: {} }
+    const params = paramsBinding ?? { type: "object" as const, entries: {} }
     const timeoutMs = timeoutBinding
 
     return {

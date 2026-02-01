@@ -36,7 +36,6 @@ test("executeCodePure returns result on success", async () => {
   expect(mockExecuteCode).toHaveBeenCalledWith("org-1", {
     code: "return Array.from({length: 100}, (_, i) => i + 1).reduce((a, b) => a + b, 0)",
     params: {},
-    paramAlias: undefined,
     context: { resources: [] },
     environmentId: "env-1",
     timeout: 10000,
@@ -154,7 +153,7 @@ test("executeCodePure uses default timeout when not specified", async () => {
   expect(mockExecuteCode).toHaveBeenCalledWith("org-1", expect.objectContaining({ timeout: 10000 }))
 })
 
-test("executeCodePure passes input data with paramAlias", async () => {
+test("executeCodePure passes params data", async () => {
   mockExecuteCode.mockResolvedValue({
     ok: true,
     data: { success: true, result: "Alice", logs: [] },
@@ -163,24 +162,23 @@ test("executeCodePure passes input data with paramAlias", async () => {
   const result = await executeCodePure({
     organizationId: "org-1",
     environmentId: "env-1",
-    code: "return input.name",
-    input: { name: "Alice", age: 30 },
+    code: "return params.name",
+    params: { name: "Alice", age: 30 },
   })
 
   expect(result.success).toBe(true)
   expect(result.result).toBe("Alice")
 
   expect(mockExecuteCode).toHaveBeenCalledWith("org-1", {
-    code: "return input.name",
+    code: "return params.name",
     params: { name: "Alice", age: 30 },
-    paramAlias: "input",
     context: { resources: [] },
     environmentId: "env-1",
     timeout: 10000,
   })
 })
 
-test("executeCodePure omits paramAlias when no input provided", async () => {
+test("executeCodePure uses empty params when not provided", async () => {
   mockExecuteCode.mockResolvedValue({
     ok: true,
     data: { success: true, result: 42, logs: [] },
@@ -195,7 +193,6 @@ test("executeCodePure omits paramAlias when no input provided", async () => {
   expect(mockExecuteCode).toHaveBeenCalledWith("org-1", {
     code: "return 42",
     params: {},
-    paramAlias: undefined,
     context: { resources: [] },
     environmentId: "env-1",
     timeout: 10000,

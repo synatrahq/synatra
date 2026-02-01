@@ -98,11 +98,11 @@ IMPORTANT: Remove exploration/debugging steps that aren't part of the final work
 ### Rule 4: Display ALL Available Data
 Output steps should show everything the tool returns, not just what was shown in conversation.
 
-### Rule 5: code_execute Input Must Be Object
+### Rule 5: code_execute Params Must Be Object
 Always wrap arrays in object binding.
 Example:
 {
-  "input": {
+  "params": {
     "type": "object",
     "entries": {
       "items": { "type": "ref", "scope": "step", "key": "fetch_items" }
@@ -112,7 +112,7 @@ Example:
 
 ### Rule 6: code_execute Must Include Schemas
 For code_execute steps, always provide paramSchema and returnSchema as JSON Schema objects.
-- paramSchema: Describes the input object structure (matches the "input" binding's entries)
+- paramSchema: Describes the params object structure (matches the "params" binding's entries)
 - returnSchema: Describes what the code returns (infer from the code's return statement)
 
 Example:
@@ -120,8 +120,8 @@ Example:
   "stepKey": "transform_data",
   "toolName": "code_execute",
   "params": {
-    "code": { "type": "literal", "value": "return input.items.map(i => ({ id: i.id, name: i.name }))" },
-    "input": { "type": "object", "entries": { "items": { "type": "ref", "scope": "step", "key": "fetch_items" } } }
+    "code": { "type": "literal", "value": "return params.items.map(i => ({ id: i.id, name: i.name }))" },
+    "params": { "type": "object", "entries": { "items": { "type": "ref", "scope": "step", "key": "fetch_items" } } }
   },
   "paramSchema": { "type": "object", "properties": { "items": { "type": "array" } }, "required": ["items"] },
   "returnSchema": { "type": "array", "items": { "type": "object", "properties": { "id": {}, "name": { "type": "string" } } } }
@@ -277,8 +277,8 @@ Recipe:
       "label": "Group by status",
       "toolName": "code_execute",
       "params": {
-        "code": { "type": "literal", "value": "const grouped = {}; for (const o of input.orders) { grouped[o.status] = (grouped[o.status] || 0) + o.amount; } return Object.entries(grouped).map(([status, total]) => ({ status, total }));" },
-        "input": {
+        "code": { "type": "literal", "value": "const grouped = {}; for (const o of params.orders) { grouped[o.status] = (grouped[o.status] || 0) + o.amount; } return Object.entries(grouped).map(([status, total]) => ({ status, total }));" },
+        "params": {
           "type": "object",
           "entries": {
             "orders": { "type": "ref", "scope": "step", "key": "fetch_orders" }
@@ -304,9 +304,9 @@ Recipe:
 }
 
 Key points:
-- code_execute input MUST be object (wrap array in entries)
-- Access as input.orders in code
-- paramSchema describes the input structure, returnSchema describes the output
+- code_execute params MUST be object (wrap array in entries)
+- Access as params.orders in code
+- paramSchema describes the params structure, returnSchema describes the output
 
 ### Example 3: User Selection Mid-Flow
 
@@ -345,8 +345,8 @@ Recipe:
       "label": "Process selected",
       "toolName": "code_execute",
       "params": {
-        "code": { "type": "literal", "value": "return input.users.map(u => u.email)" },
-        "input": {
+        "code": { "type": "literal", "value": "return params.users.map(u => u.email)" },
+        "params": {
           "type": "object",
           "entries": {
             "users": { "type": "ref", "scope": "step", "key": "select_users", "path": ["responses", "selected", "selectedRows"] }
@@ -424,9 +424,9 @@ Key points:
    BAD: Using ref to input "foo" without defining it in inputs array
    GOOD: Define input first, then reference
 
-4. code_execute with non-object input
-   BAD: "input": { "type": "ref", "scope": "step", "key": "items" }
-   GOOD: "input": { "type": "object", "entries": { "items": { "type": "ref", ... } } }
+4. code_execute with non-object params
+   BAD: "params": { "type": "ref", "scope": "step", "key": "items" }
+   GOOD: "params": { "type": "object", "entries": { "items": { "type": "ref", ... } } }
 
 5. Referencing future steps
    BAD: Step 0 references step 2

@@ -17,11 +17,11 @@ export const COMPUTE_TOOLS: SystemToolDefinition[] = [
         code: {
           type: "string",
           description:
-            "JavaScript code to execute. Use 'return' to output results. Access input data via 'input' variable.",
+            "JavaScript code to execute. Use 'return' to output results. Access parameters via 'params' variable.",
         },
-        input: {
+        params: {
           type: "object",
-          description: "Input data accessible as 'input' variable in code.",
+          description: "Parameters accessible as 'params' variable in code.",
         },
         timeout: {
           type: "number",

@@ -138,8 +138,8 @@ export const TOOL_SAMPLES: Record<string, object> = {
     summary: "Fetched user data successfully.",
   },
   code_execute: {
-    code: "return input.users.filter(u => u.active).map(u => u.name);",
-    input: {
+    code: "return params.users.filter(u => u.active).map(u => u.name);",
+    params: {
       users: [
         { name: "Alice", active: true },
         { name: "Bob", active: false },
@@ -232,9 +232,9 @@ export const TOOL_PARAMS: Record<string, ParameterDef[]> = {
       type: "string",
       required: true,
       description:
-        "JavaScript code to execute. Use 'return' to output results. Access input data via 'input' variable.",
+        "JavaScript code to execute. Use 'return' to output results. Access parameters via 'params' variable.",
     },
-    { name: "input", type: "object", description: "Input data accessible as 'input' variable in code." },
+    { name: "params", type: "object", description: "Parameters accessible as 'params' variable in code." },
     { name: "timeout", type: "number", description: "Execution timeout in milliseconds (100-30000, default: 10000)." },
   ],
 }
