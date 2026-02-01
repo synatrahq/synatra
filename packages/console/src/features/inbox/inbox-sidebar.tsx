@@ -100,6 +100,15 @@ function ChannelIcon(props: { size?: number }) {
 }
 
 export function InboxSidebar(props: InboxSidebarProps) {
+  const handleChannelViewChange = (view: ChannelView, channelId: string) => {
+    if (props.onChannelViewChange) {
+      props.onChannelViewChange(view, channelId)
+      return
+    }
+
+    props.onChannelChange(channelId)
+  }
+
   const statusItems: StatusItem[] = [
     { value: "all", label: "All", icon: Tray },
     { value: "waiting_human", label: "Waiting", icon: Clock },
@@ -203,7 +212,7 @@ export function InboxSidebar(props: InboxSidebarProps) {
                           "bg-surface-muted": isChannelActive() && !isExpanded(),
                           "hover:bg-surface-muted": !isChannelActive() || isExpanded(),
                         }}
-                        onClick={() => props.onChannelViewChange?.("threads", channel.id)}
+                        onClick={() => handleChannelViewChange("threads", channel.id)}
                       >
                         <div class="flex items-center gap-2 min-w-0">
                           <Show when={props.onToggleChannelExpand} fallback={<ChannelIcon size={14} />}>
@@ -242,7 +251,7 @@ export function InboxSidebar(props: InboxSidebarProps) {
                               "bg-surface-muted text-text": isThreadsActive(),
                               "text-text-muted hover:bg-surface-muted hover:text-text": !isThreadsActive(),
                             }}
-                            onClick={() => props.onChannelViewChange?.("threads", channel.id)}
+                            onClick={() => handleChannelViewChange("threads", channel.id)}
                           >
                             <ChatCircle class="h-3.5 w-3.5" />
                             <span>Threads</span>
@@ -254,7 +263,7 @@ export function InboxSidebar(props: InboxSidebarProps) {
                               "bg-surface-muted text-text": isRecipesActive(),
                               "text-text-muted hover:bg-surface-muted hover:text-text": !isRecipesActive(),
                             }}
-                            onClick={() => props.onChannelViewChange?.("recipes", channel.id)}
+                            onClick={() => handleChannelViewChange("recipes", channel.id)}
                           >
                             <ListChecks class="h-3.5 w-3.5" />
                             <span>Recipes</span>
