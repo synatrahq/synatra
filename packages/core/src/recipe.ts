@@ -540,29 +540,30 @@ export async function listRecipes(raw?: z.input<typeof ListRecipesSchema>) {
       .limit(limit * 2 + 1)
   })
 
-  if (!filters?.channelId && accessibleChannels !== null) {
-    const recipeIds = recipes.map((r) => r.id)
-    if (recipeIds.length > 0) {
-      const channelRecipes = await withDb((db) =>
-        db
-          .select({ recipeId: ChannelRecipeTable.recipeId, channelId: ChannelRecipeTable.channelId })
-          .from(ChannelRecipeTable)
-          .where(inArray(ChannelRecipeTable.recipeId, recipeIds)),
-      )
+  if (!filters?.channelId && accessibleChannels !== null && recipes.length > 0) {
+    const channelRecipes = await withDb((db) =>
+      db
+        .select({ recipeId: ChannelRecipeTable.recipeId, channelId: ChannelRecipeTable.channelId })
+        .from(ChannelRecipeTable)
+        .where(
+          inArray(
+            ChannelRecipeTable.recipeId,
+            recipes.map((r) => r.id),
+          ),
+        ),
+    )
 
-      const recipeChannelMap = new Map<string, string[]>()
-      for (const cr of channelRecipes) {
-        const channels = recipeChannelMap.get(cr.recipeId) ?? []
-        channels.push(cr.channelId)
-        recipeChannelMap.set(cr.recipeId, channels)
-      }
-
-      recipes = recipes.filter((r) => {
-        const channels = recipeChannelMap.get(r.id)
-        if (!channels || channels.length === 0) return true
-        return channels.some((ch) => accessibleChannels.includes(ch))
-      })
+    const recipeChannelMap = new Map<string, string[]>()
+    for (const cr of channelRecipes) {
+      const channels = recipeChannelMap.get(cr.recipeId) ?? []
+      channels.push(cr.channelId)
+      recipeChannelMap.set(cr.recipeId, channels)
     }
+
+    recipes = recipes.filter((r) => {
+      const channels = recipeChannelMap.get(r.id)
+      return !channels?.length || channels.some((ch) => accessibleChannels.includes(ch))
+    })
   }
 
   const hasMore = recipes.length > limit
