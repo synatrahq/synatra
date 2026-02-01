@@ -6,10 +6,11 @@ import { AgentTable, AgentReleaseTable } from "./agent.sql"
 import { ThreadTable } from "./thread.sql"
 import { RunTable } from "./run.sql"
 import { UserTable } from "./user.sql"
-import { RecipeStepType } from "../types"
+import { RecipeStepType, RecipeExecutionStatus } from "../types"
 import type { RecipeInput, RecipeOutput, PendingInputConfig, RecipeStepConfig } from "../types"
 import { versionModeEnum } from "./trigger.sql"
 export const recipeStepTypeEnum = pgEnum("recipe_step_type", RecipeStepType)
+export const recipeExecutionStatusEnum = pgEnum("recipe_execution_status", RecipeExecutionStatus)
 
 export const RecipeTable = pgTable(
   "recipe",
@@ -187,7 +188,7 @@ export const RecipeExecutionTable = pgTable(
     currentStepKey: text("current_step_key"),
     pendingInputConfig: jsonb("pending_input_config").$type<PendingInputConfig>(),
     results: jsonb("results").$type<Record<string, unknown>>().notNull().default({}),
-    status: text("status").notNull().default("waiting_input"),
+    status: recipeExecutionStatusEnum("status").notNull().default("waiting_input"),
     abortedAt: timestamp("aborted_at", { withTimezone: true }),
     abortedBy: uuid("aborted_by").references(() => UserTable.id, { onDelete: "set null" }),
     createdBy: uuid("created_by").references(() => UserTable.id, { onDelete: "set null" }),

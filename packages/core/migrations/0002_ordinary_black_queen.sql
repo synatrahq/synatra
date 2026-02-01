@@ -1,3 +1,4 @@
+CREATE TYPE "public"."recipe_execution_status" AS ENUM('pending', 'running', 'waiting_input', 'completed', 'failed', 'aborted');--> statement-breakpoint
 CREATE TYPE "public"."recipe_step_type" AS ENUM('query', 'code', 'output', 'input');--> statement-breakpoint
 CREATE TABLE "channel_recipe" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -27,7 +28,7 @@ CREATE TABLE "recipe_execution" (
 	"current_step_key" text,
 	"pending_input_config" jsonb,
 	"results" jsonb DEFAULT '{}'::jsonb NOT NULL,
-	"status" text DEFAULT 'waiting_input' NOT NULL,
+	"status" "recipe_execution_status" DEFAULT 'waiting_input' NOT NULL,
 	"aborted_at" timestamp with time zone,
 	"aborted_by" uuid,
 	"created_by" uuid,

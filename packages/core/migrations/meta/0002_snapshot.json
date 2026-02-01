@@ -1,5 +1,5 @@
 {
-  "id": "cc798606-b838-46d0-8681-be6203af2650",
+  "id": "b094e8ea-f141-429c-a447-df497ff8f4f3",
   "prevId": "9a5cd05c-1415-434d-8e80-7c1cd69aad55",
   "version": "7",
   "dialect": "postgresql",
@@ -4059,7 +4059,8 @@
         },
         "status": {
           "name": "status",
-          "type": "text",
+          "type": "recipe_execution_status",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'waiting_input'"
@@ -7923,6 +7924,18 @@
       "values": [
         "template",
         "script"
+      ]
+    },
+    "public.recipe_execution_status": {
+      "name": "recipe_execution_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "running",
+        "waiting_input",
+        "completed",
+        "failed",
+        "aborted"
       ]
     },
     "public.recipe_step_type": {
