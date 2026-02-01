@@ -152,3 +152,49 @@ test("executeCodePure uses default timeout when not specified", async () => {
 
   expect(mockExecuteCode).toHaveBeenCalledWith("org-1", expect.objectContaining({ timeout: 10000 }))
 })
+
+test("executeCodePure passes params data", async () => {
+  mockExecuteCode.mockResolvedValue({
+    ok: true,
+    data: { success: true, result: "Alice", logs: [] },
+  })
+
+  const result = await executeCodePure({
+    organizationId: "org-1",
+    environmentId: "env-1",
+    code: "return params.name",
+    params: { name: "Alice", age: 30 },
+  })
+
+  expect(result.success).toBe(true)
+  expect(result.result).toBe("Alice")
+
+  expect(mockExecuteCode).toHaveBeenCalledWith("org-1", {
+    code: "return params.name",
+    params: { name: "Alice", age: 30 },
+    context: { resources: [] },
+    environmentId: "env-1",
+    timeout: 10000,
+  })
+})
+
+test("executeCodePure uses empty params when not provided", async () => {
+  mockExecuteCode.mockResolvedValue({
+    ok: true,
+    data: { success: true, result: 42, logs: [] },
+  })
+
+  await executeCodePure({
+    organizationId: "org-1",
+    environmentId: "env-1",
+    code: "return 42",
+  })
+
+  expect(mockExecuteCode).toHaveBeenCalledWith("org-1", {
+    code: "return 42",
+    params: {},
+    context: { resources: [] },
+    environmentId: "env-1",
+    timeout: 10000,
+  })
+})

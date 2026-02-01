@@ -6,15 +6,20 @@ import {
   XCircle,
   Circle,
   CaretRight,
+  CaretDown,
   Prohibit,
   Robot,
   Plus,
   Hash,
   Archive,
   FastForward,
+  ChatCircle,
+  ListChecks,
 } from "phosphor-solid-js"
 import { Button } from "../../ui"
 import { EntityIcon } from "../../components"
+
+export type ChannelView = "threads" | "recipes"
 
 type ThreadStatus = "all" | "running" | "waiting_human" | "completed" | "failed" | "rejected" | "skipped" | "archive"
 
@@ -61,6 +66,10 @@ type InboxSidebarProps = {
   onChannelsExpandedChange: (expanded: boolean) => void
   onNewThread: () => void
   onNewChannel: () => void
+  expandedChannels?: Set<string>
+  onToggleChannelExpand?: (channelId: string) => void
+  channelView?: ChannelView
+  onChannelViewChange?: (view: ChannelView, channelId: string) => void
 }
 
 function StatusIcon(props: { status: ThreadStatus; class?: string }) {
@@ -91,6 +100,15 @@ function ChannelIcon(props: { size?: number }) {
 }
 
 export function InboxSidebar(props: InboxSidebarProps) {
+  const handleChannelViewChange = (view: ChannelView, channelId: string) => {
+    if (props.onChannelViewChange) {
+      props.onChannelViewChange(view, channelId)
+      return
+    }
+
+    props.onChannelChange(channelId)
+  }
+
   const statusItems: StatusItem[] = [
     { value: "all", label: "All", icon: Tray },
     { value: "waiting_human", label: "Waiting", icon: Clock },
@@ -181,27 +199,78 @@ export function InboxSidebar(props: InboxSidebarProps) {
             <div class="flex flex-col gap-0.5">
               <For each={props.channels}>
                 {(channel) => {
-                  const isActive = () => props.channelFilter === channel.id
+                  const isExpanded = () => props.expandedChannels?.has(channel.id) ?? false
+                  const isChannelActive = () => props.channelFilter === channel.id
+                  const isThreadsActive = () => isChannelActive() && props.channelView !== "recipes"
+                  const isRecipesActive = () => isChannelActive() && props.channelView === "recipes"
                   return (
-                    <button
-                      type="button"
-                      class="flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-xs font-medium text-text transition-colors"
-                      classList={{
-                        "bg-surface-muted": isActive(),
-                        "hover:bg-surface-muted": !isActive(),
-                      }}
-                      onClick={() => {
-                        props.onChannelChange(channel.id)
-                      }}
-                    >
-                      <div class="flex items-center gap-2 min-w-0">
-                        <ChannelIcon size={14} />
-                        <span class="truncate">{channel.name}</span>
-                      </div>
-                      <Show when={channel.count > 0}>
-                        <span class="text-2xs text-text-muted">{channel.count}</span>
+                    <div class="flex flex-col">
+                      <button
+                        type="button"
+                        class="group flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-xs font-medium text-text transition-colors"
+                        classList={{
+                          "bg-surface-muted": isChannelActive() && !isExpanded(),
+                          "hover:bg-surface-muted": !isChannelActive() || isExpanded(),
+                        }}
+                        onClick={() => handleChannelViewChange("threads", channel.id)}
+                      >
+                        <div class="flex items-center gap-2 min-w-0">
+                          <Show when={props.onToggleChannelExpand} fallback={<ChannelIcon size={14} />}>
+                            <span
+                              role="button"
+                              class="relative h-3.5 w-3.5 flex items-center justify-center"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                props.onToggleChannelExpand?.(channel.id)
+                              }}
+                            >
+                              <Hash
+                                size={14}
+                                weight="bold"
+                                class="text-text-muted transition-opacity group-hover:opacity-0"
+                              />
+                              <span class="absolute inset-0 flex items-center justify-center text-text-muted opacity-0 transition-opacity group-hover:opacity-100">
+                                <Show when={isExpanded()} fallback={<CaretRight class="h-3 w-3" />}>
+                                  <CaretDown class="h-3 w-3" />
+                                </Show>
+                              </span>
+                            </span>
+                          </Show>
+                          <span class="truncate">{channel.name}</span>
+                        </div>
+                        <Show when={channel.count > 0}>
+                          <span class="text-2xs text-text-muted">{channel.count}</span>
+                        </Show>
+                      </button>
+                      <Show when={isExpanded() && props.onChannelViewChange}>
+                        <div class="ml-4 flex flex-col gap-0.5 mt-0.5">
+                          <button
+                            type="button"
+                            class="flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs font-medium transition-colors"
+                            classList={{
+                              "bg-surface-muted text-text": isThreadsActive(),
+                              "text-text-muted hover:bg-surface-muted hover:text-text": !isThreadsActive(),
+                            }}
+                            onClick={() => handleChannelViewChange("threads", channel.id)}
+                          >
+                            <ChatCircle class="h-3.5 w-3.5" />
+                            <span>Threads</span>
+                          </button>
+                          <button
+                            type="button"
+                            class="flex w-full items-center gap-2 rounded-md px-2 py-1 text-xs font-medium transition-colors"
+                            classList={{
+                              "bg-surface-muted text-text": isRecipesActive(),
+                              "text-text-muted hover:bg-surface-muted hover:text-text": !isRecipesActive(),
+                            }}
+                            onClick={() => handleChannelViewChange("recipes", channel.id)}
+                          >
+                            <ListChecks class="h-3.5 w-3.5" />
+                            <span>Recipes</span>
+                          </button>
+                        </div>
                       </Show>
-                    </button>
+                    </div>
                   )
                 }}
               </For>

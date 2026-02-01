@@ -390,7 +390,7 @@ export function buildTimeline(opts: BuildTimelineOptions): TimelineItem[] {
     }
 
     if (msg.type === "tool_call" && msg.toolCall) {
-      if (isSystemTool(msg.toolCall.name) && !isComputeTool(msg.toolCall.name)) {
+      if (isSystemTool(msg.toolCall.name)) {
         if (isOutputTool(msg.toolCall.name)) {
           const outputs = outputByToolCallId.get(msg.toolCall.id) ?? []
           if (msgIsSubagent && subagentRunId) {
@@ -399,6 +399,21 @@ export function buildTimeline(opts: BuildTimelineOptions): TimelineItem[] {
             pendingSubagentOutputs.set(subagentRunId, list)
           } else {
             pendingParentOutputs.push(...outputs)
+          }
+          continue
+        }
+
+        if (isComputeTool(msg.toolCall.name)) {
+          const result = resultMap.get(msg.toolCall.id) ?? null
+          const humanRequest = humanRequestByToolCallId.get(msg.toolCall.id)
+          const status = getToolStatus(result)
+          const pair: ToolPair = { call: msg, result, status, humanRequest }
+          if (msgIsSubagent && subagentRunId) {
+            const list = pendingSubagentTools.get(subagentRunId) ?? []
+            list.push(pair)
+            pendingSubagentTools.set(subagentRunId, list)
+          } else {
+            pendingParentTools.push(pair)
           }
           continue
         }

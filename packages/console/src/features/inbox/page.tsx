@@ -1,18 +1,21 @@
 import { createSignal, createEffect, on, onCleanup, Show, createMemo } from "solid-js"
 import { Title, Meta } from "@solidjs/meta"
 import { useParams, useNavigate, useSearchParams } from "@solidjs/router"
-import { useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/solid-query"
+import { useQuery, useInfiniteQuery, useQueryClient, useMutation } from "@tanstack/solid-query"
 import { api, apiBaseURL, OrgGuard, setPendingCount, user, memberRole, activeOrg } from "../../app"
 import { IconButton, Input } from "../../ui"
 import { Shell } from "../../components"
 import { ThreadList, type ThreadListItem } from "./thread-list"
 import { ThreadDetail } from "./thread-detail"
 import { ComposeModal } from "./compose-modal"
-import { InboxSidebar } from "./inbox-sidebar"
+import { InboxSidebar, type ChannelView } from "./inbox-sidebar"
 import { AgentInfoPanel } from "./agent-info-panel"
 import { ThreadDeleteModal } from "./thread-delete-modal"
 import { ChannelCreateModal } from "./channel-create-modal"
 import { ThreadListHeader } from "./thread-list-header"
+import { RecipeList } from "./recipe-list"
+import { RecipeDetail } from "./recipe-detail"
+import { RecipeDeleteModal } from "./recipe-delete-modal"
 import type {
   ChannelMembers,
   ChannelAgents,
@@ -22,9 +25,16 @@ import type {
   ThreadOutputItem,
   ThreadHumanRequest,
   ThreadHumanResponse,
+  RecipeExtractResult,
+  Recipes,
+  Recipe,
+  RecipePendingExecution,
+  Agents,
+  Environments,
 } from "../../app/api"
 import type { ThreadStatus } from "@synatra/core/types"
 import { ChannelPanel } from "./channel-panel"
+import { RecipeExtractModal } from "./recipe-extract-modal"
 import { MagnifyingGlass, ArrowClockwise } from "phosphor-solid-js"
 import { threadStreamEventSchemas, type ThreadStreamEventType } from "@synatra/core/thread-events"
 
@@ -175,7 +185,13 @@ const applyStatusPatch = (
 
 export default function InboxPage() {
   const params = useParams<{ channelSlug?: string }>()
-  const [searchParams, setSearchParams] = useSearchParams<{ status?: string; agent?: string; thread?: string }>()
+  const [searchParams, setSearchParams] = useSearchParams<{
+    status?: string
+    agent?: string
+    thread?: string
+    recipe?: string
+    view?: string
+  }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
@@ -184,10 +200,12 @@ export default function InboxPage() {
   const [responding, setResponding] = createSignal(false)
   const [replying, setReplying] = createSignal(false)
   const [searchQuery, setSearchQuery] = createSignal("")
+  const [recipeSearchQuery, setRecipeSearchQuery] = createSignal("")
   const [refreshing, setRefreshing] = createSignal(false)
   const [composeOpen, setComposeOpen] = createSignal(false)
   const [agentsExpanded, setAgentsExpanded] = createSignal(true)
   const [channelsExpanded, setChannelsExpanded] = createSignal(true)
+  const [expandedChannels, setExpandedChannels] = createSignal<Set<string>>(new Set())
   const [agentPanelId, setAgentPanelId] = createSignal<string | null>(null)
   const [lastSeq, setLastSeq] = createSignal<number | null>(null)
   const [pendingMessage, setPendingMessage] = createSignal<{ threadId: string; message: string } | null>(null)
@@ -198,6 +216,30 @@ export default function InboxPage() {
   const [creatingChannel, setCreatingChannel] = createSignal(false)
   const [channelPanelOpen, setChannelPanelOpen] = createSignal(false)
   const [savingChannel, setSavingChannel] = createSignal(false)
+  const [recipeExtractOpen, setRecipeExtractOpen] = createSignal(false)
+  const [recipeExtracting, setRecipeExtracting] = createSignal(false)
+  const [recipeExtractResult, setRecipeExtractResult] = createSignal<RecipeExtractResult | null>(null)
+  const [recipeExtractContext, setRecipeExtractContext] = createSignal<{
+    threadId: string
+    runId: string
+    agentId: string
+    agentName: string
+    channelId: string
+  } | null>(null)
+  const [recipeSaving, setRecipeSaving] = createSignal(false)
+  const [recipeDeleteModalOpen, setRecipeDeleteModalOpen] = createSignal(false)
+  const [recipeToDelete, setRecipeToDelete] = createSignal<Recipes["items"][number] | null>(null)
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = createSignal<string | null>(null)
+  const [lastRecipeResult, setLastRecipeResult] = createSignal<{
+    status: "completed" | "failed" | "waiting_input"
+    stepResults?: Record<string, unknown>
+    resolvedParams?: Record<string, unknown>
+    error?: { stepKey: string; stepType: string; message: string }
+    executionId?: string
+    pendingInputConfig?: unknown
+    durationMs?: number
+  } | null>(null)
+  const [recipeExecuteStartedAt, setRecipeExecuteStartedAt] = createSignal<number | null>(null)
 
   const channelsQuery = useQuery(() => ({
     queryKey: ["inbox", "channels", activeOrg()?.id],
@@ -293,6 +335,235 @@ export default function InboxPage() {
   const channelMembers = () => channelMembersQuery.data ?? []
   const channelAgents = () => channelAgentsQuery.data ?? []
   const selectedChannelData = () => channelDataQuery.data ?? null
+
+  const allAgentsQuery = useQuery(() => ({
+    queryKey: ["agents", activeOrg()?.id],
+    queryFn: async (): Promise<Agents> => {
+      const res = await api.api.agents.$get()
+      return res.json()
+    },
+    enabled: !!activeOrg()?.id,
+  }))
+
+  const environmentsQuery = useQuery(() => ({
+    queryKey: ["environments", activeOrg()?.id],
+    queryFn: async (): Promise<Environments> => {
+      const res = await api.api.environments.$get()
+      return res.json()
+    },
+    enabled: !!activeOrg()?.id,
+  }))
+
+  createEffect(() => {
+    const envs = environmentsQuery.data
+    if (!envs || envs.length === 0) return
+    const current = selectedEnvironmentId()
+    const isValid = current && envs.some((e) => e.id === current)
+    if (!isValid) {
+      const production = envs.find((e) => e.slug === "production")
+      setSelectedEnvironmentId(production?.id ?? envs[0].id)
+    }
+  })
+
+  const recipesQuery = useQuery(() => {
+    const channelId = selectedChannelId()
+    return {
+      queryKey: ["recipes", channelId ?? "", activeOrg()?.id],
+      queryFn: async (): Promise<Recipes> => {
+        if (!channelId) return { items: [], nextCursor: null }
+        const res = await api.api.recipes.$get({ query: { channelId } })
+        return res.json()
+      },
+      enabled: !!channelId && !!activeOrg()?.id,
+    }
+  })
+
+  const recipeModelsQuery = useQuery(() => ({
+    queryKey: ["recipe-models", activeOrg()?.id],
+    queryFn: async () => {
+      const res = await api.api.recipes.models.$get()
+      return res.json()
+    },
+    enabled: recipeExtractOpen() && !!activeOrg()?.id,
+  }))
+
+  const channelView = (): ChannelView => (searchParams.view === "recipes" ? "recipes" : "threads")
+
+  const selectedRecipeId = createMemo(() => (searchParams.recipe ? searchParams.recipe : null))
+
+  const selectedRecipeFromList = createMemo(() => {
+    const id = selectedRecipeId()
+    if (!id || !recipesQuery.data) return null
+    return recipesQuery.data.items.find((r) => r.id === id) ?? null
+  })
+
+  const recipeDetailQuery = useQuery(() => {
+    const id = selectedRecipeId()
+    return {
+      queryKey: ["recipe", id ?? "", activeOrg()?.id],
+      queryFn: async (): Promise<Recipe | null> => {
+        if (!id) return null
+        const res = await api.api.recipes[":id"].$get({ param: { id } })
+        return res.json()
+      },
+      enabled: !!id && !!activeOrg()?.id,
+    }
+  })
+
+  const pendingExecutionQuery = useQuery(() => {
+    const id = selectedRecipeId()
+    return {
+      queryKey: ["pending-execution", id ?? "", activeOrg()?.id],
+      queryFn: async (): Promise<RecipePendingExecution> => {
+        if (!id) return null
+        const res = await api.api.recipes[":id"]["pending-execution"].$get({ param: { id } })
+        return res.json()
+      },
+      enabled: !!id && !!activeOrg()?.id,
+    }
+  })
+
+  const selectedRecipe = createMemo(() => recipeDetailQuery.data ?? selectedRecipeFromList())
+
+  const recipeUpdateMutation = useMutation(() => ({
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string }) => {
+      const res = await api.api.recipes[":id"].$patch({ param: { id }, json: data })
+      return res.json()
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["recipes"] })
+      queryClient.invalidateQueries({ queryKey: ["recipe", variables.id, activeOrg()?.id] })
+    },
+  }))
+
+  createEffect(
+    on(
+      () => searchParams.recipe,
+      () => {
+        setLastRecipeResult(null)
+      },
+    ),
+  )
+
+  const recipeExecuteMutation = useMutation(() => ({
+    mutationFn: async ({
+      id,
+      environmentId,
+      inputs,
+    }: {
+      id: string
+      environmentId: string
+      inputs: Record<string, unknown>
+    }) => {
+      setRecipeExecuteStartedAt(Date.now())
+      const res = await api.api.recipes[":id"].execute.$post({
+        param: { id },
+        json: { inputs, environmentId },
+      })
+      return res.json()
+    },
+    onSuccess: (data, { id }) => {
+      const startedAt = recipeExecuteStartedAt()
+      const durationMs = startedAt ? Date.now() - startedAt : undefined
+      const result = data as {
+        ok: boolean
+        status: "completed" | "failed" | "waiting_input"
+        stepResults?: Record<string, unknown>
+        resolvedParams?: Record<string, unknown>
+        error?: { stepKey: string; stepType: string; message: string }
+        executionId?: string
+        pendingInputConfig?: unknown
+      }
+      setLastRecipeResult({
+        status: result.status,
+        stepResults: result.stepResults,
+        resolvedParams: result.resolvedParams,
+        error: result.error,
+        executionId: result.executionId,
+        pendingInputConfig: result.pendingInputConfig,
+        durationMs,
+      })
+      setRecipeExecuteStartedAt(null)
+      if (result.status === "waiting_input") {
+        queryClient.invalidateQueries({ queryKey: ["pending-execution", id, activeOrg()?.id] })
+      }
+    },
+  }))
+
+  const recipeDeleteMutation = useMutation(() => ({
+    mutationFn: async (id: string) => {
+      await api.api.recipes[":id"].$delete({ param: { id } })
+    },
+    onSuccess: () => {
+      const deletedId = recipeToDelete()?.id
+      queryClient.invalidateQueries({ queryKey: ["recipes"] })
+      setRecipeDeleteModalOpen(false)
+      setRecipeToDelete(null)
+      if (searchParams.recipe === deletedId) {
+        setSearchParams({ recipe: undefined })
+      }
+    },
+  }))
+
+  const [recipeResponding, setRecipeResponding] = createSignal(false)
+  const [recipeAborting, setRecipeAborting] = createSignal(false)
+
+  const handleRecipeRespond = async (executionId: string, response: Record<string, unknown>) => {
+    const recipe = selectedRecipe()
+    const envId = selectedEnvironmentId()
+    if (!recipe || !envId) return
+
+    setRecipeResponding(true)
+    try {
+      const res = await api.api.recipes[":id"].executions[":executionId"].respond.$post({
+        param: { id: recipe.id, executionId },
+        json: { response, environmentId: envId },
+      })
+      const data = (await res.json()) as {
+        ok: boolean
+        status: "completed" | "failed" | "waiting_input"
+        stepResults?: Record<string, unknown>
+        resolvedParams?: Record<string, unknown>
+        error?: { stepKey: string; stepType: string; message: string }
+        executionId?: string
+        pendingInputConfig?: unknown
+      }
+      setLastRecipeResult({
+        status: data.status,
+        stepResults: data.stepResults,
+        resolvedParams: data.resolvedParams,
+        error: data.error,
+        executionId: data.executionId,
+        pendingInputConfig: data.pendingInputConfig,
+      })
+      if (data.status === "waiting_input") {
+        queryClient.invalidateQueries({ queryKey: ["pending-execution", recipe.id, activeOrg()?.id] })
+      }
+    } finally {
+      setRecipeResponding(false)
+    }
+  }
+
+  const handleRecipeAbort = async (executionId: string) => {
+    const recipe = selectedRecipe()
+    if (!recipe) return
+
+    setRecipeAborting(true)
+    try {
+      await api.api.recipes[":id"].executions[":executionId"].abort.$post({
+        param: { id: recipe.id, executionId },
+        json: {},
+      })
+      setLastRecipeResult(null)
+      queryClient.invalidateQueries({ queryKey: ["pending-execution", recipe.id, activeOrg()?.id] })
+    } finally {
+      setRecipeAborting(false)
+    }
+  }
+
+  const allAgents = () => allAgentsQuery.data ?? []
+  const environments = () => environmentsQuery.data ?? []
+  const recipes = () => recipesQuery.data?.items ?? []
 
   const statusFilter = (): StatusFilter => {
     const s = searchParams.status
@@ -1017,6 +1288,83 @@ export default function InboxPage() {
     invalidateChannelData()
   }
 
+  const handleCreateRecipe = (runId: string) => {
+    const thread = selectedThread()
+    if (!thread || !thread.channelId) return
+
+    setRecipeExtractContext({
+      threadId: thread.id,
+      runId,
+      agentId: thread.agentId,
+      agentName: thread.agent?.name ?? "Agent",
+      channelId: thread.channelId,
+    })
+    setRecipeExtractResult(null)
+    setRecipeExtracting(false)
+    setRecipeExtractOpen(true)
+  }
+
+  const handleExtractRecipe = async (modelId: string | null) => {
+    const context = recipeExtractContext()
+    const envId = selectedEnvironmentId()
+    if (!context || !envId) return
+
+    setRecipeExtracting(true)
+
+    try {
+      const res = await api.api.recipes.extract.$post({
+        json: { threadId: context.threadId, runId: context.runId, environmentId: envId, modelId: modelId ?? undefined },
+      })
+      const result = await res.json()
+      setRecipeExtractResult(result)
+    } catch (e) {
+      console.error("Failed to extract recipe", e)
+      setRecipeExtractOpen(false)
+    } finally {
+      setRecipeExtracting(false)
+    }
+  }
+
+  const handleSaveRecipe = async (data: { name: string; description: string }) => {
+    const context = recipeExtractContext()
+    const result = recipeExtractResult()
+    if (!context || !result || !("steps" in result)) return
+
+    setRecipeSaving(true)
+    try {
+      const res = await api.api.recipes.$post({
+        json: {
+          agentId: context.agentId,
+          channelIds: context.channelId ? [context.channelId] : [],
+          name: data.name,
+          description: data.description || undefined,
+          inputs: result.inputs,
+          steps: result.steps,
+          outputs: result.outputs,
+          sourceThreadId: context.threadId,
+          sourceRunId: context.runId,
+        },
+      })
+      if (!res.ok) {
+        const err = (await res.json()) as { message?: string }
+        throw new Error(err.message ?? "Failed to create recipe")
+      }
+      const recipe = await res.json()
+      setRecipeExtractOpen(false)
+      setRecipeExtractResult(null)
+      const channel = channels().find((c) => c.id === context.channelId)
+      setRecipeExtractContext(null)
+      queryClient.invalidateQueries({ queryKey: ["recipes"] })
+      if (channel) {
+        navigate(`/inbox/${channel.slug}?view=recipes&recipe=${recipe.id}`)
+      } else {
+        setSearchParams({ view: "recipes", thread: undefined, recipe: recipe.id })
+      }
+    } finally {
+      setRecipeSaving(false)
+    }
+  }
+
   const selectedChannel = () => channels().find((c) => c.slug === params.channelSlug)
   const selectedAgent = () => agents().find((a) => a.slug === searchParams.agent)
 
@@ -1035,6 +1383,28 @@ export default function InboxPage() {
     const channel = channels().find((c) => c.id === channelId)
     if (channel) {
       navigate(`/inbox/${channel.slug}`)
+    }
+  }
+
+  const handleToggleChannelExpand = (channelId: string) => {
+    setExpandedChannels((prev) => {
+      const next = new Set(prev)
+      if (next.has(channelId)) {
+        next.delete(channelId)
+      } else {
+        next.add(channelId)
+      }
+      return next
+    })
+  }
+
+  const handleChannelViewChange = (view: ChannelView, channelId: string) => {
+    const channel = channels().find((c) => c.id === channelId)
+    if (!channel) return
+    if (view === "threads") {
+      navigate(`/inbox/${channel.slug}`)
+    } else {
+      navigate(`/inbox/${channel.slug}?view=recipes`)
     }
   }
 
@@ -1068,6 +1438,19 @@ export default function InboxPage() {
     )
   }
 
+  const filteredRecipes = () => {
+    const query = recipeSearchQuery().toLowerCase()
+    if (!query) return recipes()
+    return recipes().filter(
+      (r) =>
+        r.name.toLowerCase().includes(query) ||
+        allAgents()
+          .find((a) => a.id === r.agentId)
+          ?.name?.toLowerCase()
+          ?.includes(query),
+    )
+  }
+
   createEffect(
     on(
       () => searchParams.thread,
@@ -1092,9 +1475,23 @@ export default function InboxPage() {
       (slug) => {
         if (!slug) {
           setChannelPanelOpen(false)
+          setSearchParams({ view: undefined, recipe: undefined })
         }
       },
     ),
+  )
+
+  createEffect(
+    on(selectedChannelId, (channelId) => {
+      if (channelId) {
+        setExpandedChannels((prev) => {
+          if (prev.has(channelId)) return prev
+          const next = new Set(prev)
+          next.add(channelId)
+          return next
+        })
+      }
+    }),
   )
 
   onCleanup(() => {
@@ -1129,6 +1526,10 @@ export default function InboxPage() {
             onChannelsExpandedChange={setChannelsExpanded}
             onNewThread={() => setComposeOpen(true)}
             onNewChannel={() => setChannelCreateOpen(true)}
+            expandedChannels={expandedChannels()}
+            onToggleChannelExpand={handleToggleChannelExpand}
+            channelView={channelView()}
+            onChannelViewChange={handleChannelViewChange}
           />
 
           <div class="flex h-full w-1/3 min-w-[300px] max-w-[500px] shrink-0 flex-col border-r border-border bg-surface-elevated">
@@ -1155,46 +1556,115 @@ export default function InboxPage() {
               />
             </Show>
 
-            <div class="flex items-center gap-2 px-3.5 py-1.5">
-              <div class="relative flex-1">
-                <MagnifyingGlass class="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted/60" />
-                <Input
-                  type="text"
-                  placeholder="Search"
-                  value={searchQuery()}
-                  onInput={(e) => setSearchQuery(e.currentTarget.value)}
-                  class="w-full pl-7"
-                />
+            <Show when={channelView() === "threads" || !channelFilter()}>
+              <div class="flex items-center gap-2 px-3.5 py-1.5">
+                <div class="relative flex-1">
+                  <MagnifyingGlass class="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted/60" />
+                  <Input
+                    type="text"
+                    placeholder="Search"
+                    value={searchQuery()}
+                    onInput={(e) => setSearchQuery(e.currentTarget.value)}
+                    class="w-full pl-7"
+                  />
+                </div>
+                <IconButton variant="outline" size="md" onClick={handleRefresh} disabled={refreshing()}>
+                  <ArrowClockwise class="h-3.5 w-3.5" classList={{ "animate-spin": refreshing() }} />
+                </IconButton>
               </div>
-              <IconButton variant="outline" size="md" onClick={handleRefresh} disabled={refreshing()}>
-                <ArrowClockwise class="h-3.5 w-3.5" classList={{ "animate-spin": refreshing() }} />
-              </IconButton>
-            </div>
 
-            <ThreadList
-              threads={filteredThreads()}
-              selectedId={searchParams.thread}
-              loading={threadsQuery.isPending}
-              loadingMore={threadsQuery.isFetchingNextPage}
-              hasMore={hasMoreThreads() && !searchQuery()}
-              isArchiveView={statusFilter() === "archive"}
-              onLoadMore={() => threadsQuery.fetchNextPage()}
-              onDelete={handleDelete}
-              onArchive={handleArchive}
-              onUnarchive={handleUnarchive}
-            />
+              <ThreadList
+                threads={filteredThreads()}
+                selectedId={searchParams.thread}
+                loading={threadsQuery.isPending}
+                loadingMore={threadsQuery.isFetchingNextPage}
+                hasMore={hasMoreThreads() && !searchQuery()}
+                isArchiveView={statusFilter() === "archive"}
+                onLoadMore={() => threadsQuery.fetchNextPage()}
+                onDelete={handleDelete}
+                onArchive={handleArchive}
+                onUnarchive={handleUnarchive}
+              />
+            </Show>
+
+            <Show when={channelView() === "recipes" && channelFilter()}>
+              <div class="flex items-center gap-2 px-3.5 py-1.5">
+                <div class="relative flex-1">
+                  <MagnifyingGlass class="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted/60" />
+                  <Input
+                    type="text"
+                    placeholder="Search"
+                    value={recipeSearchQuery()}
+                    onInput={(e) => setRecipeSearchQuery(e.currentTarget.value)}
+                    class="w-full pl-7"
+                  />
+                </div>
+              </div>
+
+              <RecipeList
+                recipes={filteredRecipes()}
+                agents={allAgents()}
+                selectedId={searchParams.recipe}
+                loading={recipesQuery.isPending}
+                onDelete={(recipe) => {
+                  setRecipeToDelete(recipe)
+                  setRecipeDeleteModalOpen(true)
+                }}
+              />
+            </Show>
           </div>
 
-          <ThreadDetail
-            thread={selectedThread()}
-            loading={threadLoading()}
-            isChannelOwner={isChannelOwner()}
-            onHumanRequestRespond={handleHumanRequestRespond}
-            onReply={handleReply}
-            onAgentClick={(agentId) => setAgentPanelId(agentId)}
-            responding={responding()}
-            replying={replying()}
-          />
+          <Show
+            when={channelView() === "recipes" && channelFilter()}
+            fallback={
+              <ThreadDetail
+                thread={selectedThread()}
+                loading={threadLoading()}
+                isChannelOwner={isChannelOwner()}
+                onHumanRequestRespond={handleHumanRequestRespond}
+                onReply={handleReply}
+                onAgentClick={(agentId) => setAgentPanelId(agentId)}
+                onCreateRecipe={handleCreateRecipe}
+                responding={responding()}
+                replying={replying()}
+              />
+            }
+          >
+            <RecipeDetail
+              recipe={recipeDetailQuery.data ?? null}
+              pendingExecution={pendingExecutionQuery.data ?? null}
+              lastResult={lastRecipeResult()}
+              agents={allAgents()}
+              environments={environments()}
+              selectedEnvironmentId={selectedEnvironmentId()}
+              onEnvironmentChange={setSelectedEnvironmentId}
+              loading={recipeDetailQuery.isLoading}
+              onUpdateName={async (name) => {
+                const recipe = selectedRecipe()
+                if (recipe) {
+                  await recipeUpdateMutation.mutateAsync({ id: recipe.id, name })
+                }
+              }}
+              onUpdateDescription={async (description) => {
+                const recipe = selectedRecipe()
+                if (recipe) {
+                  await recipeUpdateMutation.mutateAsync({ id: recipe.id, description })
+                }
+              }}
+              onExecute={(inputs) => {
+                const recipe = selectedRecipe()
+                const envId = selectedEnvironmentId()
+                if (recipe && envId) {
+                  recipeExecuteMutation.mutate({ id: recipe.id, environmentId: envId, inputs })
+                }
+              }}
+              executing={recipeExecuteMutation.isPending}
+              onRespond={handleRecipeRespond}
+              responding={recipeResponding()}
+              onAbort={handleRecipeAbort}
+              aborting={recipeAborting()}
+            />
+          </Show>
 
           <Show when={agentPanelId()}>
             {(id) => <AgentInfoPanel agentId={id()} onClose={() => setAgentPanelId(null)} />}
@@ -1251,6 +1721,40 @@ export default function InboxPage() {
               />
             )}
           </Show>
+
+          <RecipeExtractModal
+            open={recipeExtractOpen()}
+            models={recipeModelsQuery.data?.models ?? []}
+            modelsLoading={recipeModelsQuery.isPending}
+            extracting={recipeExtracting()}
+            extractResult={recipeExtractResult()}
+            agentId={recipeExtractContext()?.agentId ?? ""}
+            agentName={recipeExtractContext()?.agentName ?? "Agent"}
+            onClose={() => {
+              setRecipeExtractOpen(false)
+              setRecipeExtractResult(null)
+              setRecipeExtractContext(null)
+            }}
+            onExtract={handleExtractRecipe}
+            onSave={handleSaveRecipe}
+            saving={recipeSaving()}
+          />
+
+          <RecipeDeleteModal
+            open={recipeDeleteModalOpen()}
+            recipeName={recipeToDelete()?.name ?? ""}
+            onClose={() => {
+              setRecipeDeleteModalOpen(false)
+              setRecipeToDelete(null)
+            }}
+            onConfirm={async () => {
+              const recipe = recipeToDelete()
+              if (recipe) {
+                await recipeDeleteMutation.mutateAsync(recipe.id)
+              }
+            }}
+            deleting={recipeDeleteMutation.isPending}
+          />
         </Shell>
       </OrgGuard>
     </>

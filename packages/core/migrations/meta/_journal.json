@@ -15,6 +15,13 @@
       "when": 1769152337764,
       "tag": "0001_glorious_jane_foster",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769935624589,
+      "tag": "0002_ordinary_black_queen",
+      "breakpoints": true
     }
   ]
 }

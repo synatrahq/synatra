@@ -35,7 +35,7 @@ export type { DropdownMenuItem } from "./dropdown-menu"
 export { PopoverSelect } from "./popover-select"
 export type { PopoverSelectOption } from "./popover-select"
 
-export { Badge } from "./badge"
+export { Badge, type BadgeVariant } from "./badge"
 export { Avatar, AvatarGroup } from "./avatar"
 export { Markdown } from "./markdown"
 
@@ -46,6 +46,7 @@ export { Skeleton, SkeletonText, SkeletonAvatar, SkeletonCard } from "./skeleton
 
 export { SchemaEditor, TopLevelSchemaEditor, parseRef } from "./schema-editor"
 export { SchemaTypeDisplay } from "./schema-type-display"
+export { FunctionSignature } from "./function-signature"
 
 export {
   JSONSchemaField,

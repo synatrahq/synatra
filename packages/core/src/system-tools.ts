@@ -4,6 +4,7 @@ export type SystemToolDefinition = {
   name: string
   description: string
   params: Record<string, unknown>
+  returns?: Record<string, unknown>
 }
 
 export const COMPUTE_TOOLS: SystemToolDefinition[] = [
@@ -15,7 +16,12 @@ export const COMPUTE_TOOLS: SystemToolDefinition[] = [
       properties: {
         code: {
           type: "string",
-          description: "JavaScript code to execute. Use 'return' to output results.",
+          description:
+            "JavaScript code to execute. Use 'return' to output results. Access parameters via 'params' variable.",
+        },
+        params: {
+          type: "object",
+          description: "Parameters accessible as 'params' variable in code.",
         },
         timeout: {
           type: "number",
@@ -26,6 +32,10 @@ export const COMPUTE_TOOLS: SystemToolDefinition[] = [
         },
       },
       required: ["code"],
+    },
+    returns: {
+      type: "any",
+      description: "The value from the return statement in your code. Structure depends on your code logic.",
     },
   },
 ]
@@ -63,15 +73,18 @@ export const OUTPUT_TOOLS: SystemToolDefinition[] = [
         type: { type: "string", enum: ["line", "bar", "pie"], description: "Chart type" },
         data: {
           type: "object",
+          description:
+            "Chart data structure. Must be dynamically built from previous step results using code_execute, not hardcoded.",
           properties: {
-            labels: { type: "array", items: { type: "string" } },
+            labels: { type: "array", items: { type: "string" }, description: "X-axis labels" },
             datasets: {
               type: "array",
+              description: "Data series array",
               items: {
                 type: "object",
                 properties: {
-                  label: { type: "string" },
-                  data: { type: "array", items: { type: "number" } },
+                  label: { type: "string", description: "Series label for legend" },
+                  data: { type: "array", items: { type: "number" }, description: "Numeric values" },
                 },
                 required: ["data"],
               },
@@ -198,6 +211,17 @@ export const HUMAN_TOOLS: SystemToolDefinition[] = [
         },
       },
       required: ["title", "fields"],
+    },
+    returns: {
+      type: "object",
+      description: "User responses keyed by field key",
+      properties: {
+        responses: {
+          type: "object",
+          description:
+            "Map of field key to user response. For form: { [key]: { values: {...} } }. For question: { [key]: { answers: {...} } }. For select_rows: { [key]: { selectedRows: [...] } }.",
+        },
+      },
     },
   },
 ]

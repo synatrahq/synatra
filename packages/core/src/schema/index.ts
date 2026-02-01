@@ -10,6 +10,7 @@ import { ConnectorTable, ConnectorStatus } from "./connector.sql"
 import { ChannelTable } from "./channel.sql"
 import { ChannelMemberTable } from "./channel-member.sql"
 import { ChannelAgentTable } from "./channel-agent.sql"
+import { ChannelRecipeTable } from "./channel-recipe.sql"
 import { TriggerTable, TriggerReleaseTable, TriggerWorkingCopyTable, TriggerEnvironmentTable } from "./trigger.sql"
 import { PromptTable } from "./prompt.sql"
 import { ThreadTable } from "./thread.sql"
@@ -30,6 +31,14 @@ import { HumanRequestTable, HumanResponseTable } from "./human-request.sql"
 import { UsageMonthTable } from "./usage.sql"
 import { SubscriptionTable } from "./subscription.sql"
 import { StripeEventTable } from "./stripe-event.sql"
+import {
+  RecipeTable,
+  RecipeReleaseTable,
+  RecipeWorkingCopyTable,
+  RecipeStepTable,
+  RecipeEdgeTable,
+  RecipeExecutionTable,
+} from "./recipe.sql"
 
 import { MemberRole } from "../types"
 import { InvitationStatus } from "../types"
@@ -43,6 +52,7 @@ import { AppId } from "../types"
 import { OutputKind } from "../types"
 import { HumanRequestKind, HumanRequestStatus, HumanResponseStatus } from "../types"
 import { LlmProvider } from "../types"
+import { RecipeStepType } from "../types"
 
 export * from "./user.sql"
 export * from "./session.sql"
@@ -56,6 +66,7 @@ export * from "./connector.sql"
 export * from "./channel.sql"
 export * from "./channel-member.sql"
 export * from "./channel-agent.sql"
+export * from "./channel-recipe.sql"
 export * from "./trigger.sql"
 export * from "./prompt.sql"
 export * from "./thread.sql"
@@ -69,6 +80,7 @@ export * from "./human-request.sql"
 export * from "./usage.sql"
 export * from "./subscription.sql"
 export * from "./stripe-event.sql"
+export * from "./recipe.sql"
 
 export const schema = {
   user: UserTable,
@@ -86,6 +98,7 @@ export const schema = {
   channelMember: ChannelMemberTable,
   ChannelMemberRole,
   channelAgent: ChannelAgentTable,
+  channelRecipe: ChannelRecipeTable,
   trigger: TriggerTable,
   triggerRelease: TriggerReleaseTable,
   triggerWorkingCopy: TriggerWorkingCopyTable,
@@ -126,4 +139,11 @@ export const schema = {
   usageMonth: UsageMonthTable,
   subscription: SubscriptionTable,
   stripeEvent: StripeEventTable,
+  recipe: RecipeTable,
+  recipeRelease: RecipeReleaseTable,
+  recipeWorkingCopy: RecipeWorkingCopyTable,
+  recipeStep: RecipeStepTable,
+  recipeEdge: RecipeEdgeTable,
+  recipeExecution: RecipeExecutionTable,
+  RecipeStepType,
 }

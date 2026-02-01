@@ -141,7 +141,13 @@ export interface AgentLoopActivities {
     agentConfigHash: string
   }>
 
-  executeCodePure(input: { organizationId: string; environmentId: string; code: string; timeout?: number }): Promise<{
+  executeCodePure(input: {
+    organizationId: string
+    environmentId: string
+    code: string
+    params?: unknown
+    timeout?: number
+  }): Promise<{
     success: boolean
     result?: unknown
     error?: string
@@ -940,12 +946,13 @@ async function handleSystemTools(
       await persistence.addMessage({ organizationId, threadId, runId, type: "tool_call", toolCall: call })
 
       if (call.name === "code_execute") {
-        const callParams = call.params as { code: string; timeout?: number }
+        const callParams = call.params as { code: string; params?: unknown; timeout?: number }
 
         const execResult = await activities.executeCodePure({
           organizationId,
           environmentId: context.environmentId,
           code: callParams.code,
+          params: callParams.params,
           timeout: callParams.timeout,
         })
 

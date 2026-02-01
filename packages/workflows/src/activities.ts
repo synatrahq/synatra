@@ -120,6 +120,7 @@ export interface ExecuteCodePureInput {
   organizationId: string
   environmentId: string
   code: string
+  params?: unknown
   timeout?: number
 }
 

@@ -1,4 +1,4 @@
-import { Show, For, createSignal } from "solid-js"
+import { Show, For, createSignal, Switch, Match } from "solid-js"
 import {
   Code,
   CaretRight,
@@ -452,7 +452,7 @@ function ReturnToParentInspector() {
 
 function CodeExecuteInspector() {
   const [showParams, setShowParams] = createSignal(false)
-  const sample = TOOL_SAMPLES.code_execute as { code: string; timeout: number }
+  const sample = TOOL_SAMPLES.code_execute as { code: string; params?: object; timeout: number }
 
   return (
     <div class="space-y-0">
@@ -475,13 +475,26 @@ function CodeExecuteInspector() {
               <span class="text-[10px] font-medium text-text">Code Execution</span>
               <span class="ml-auto text-[9px] text-text-muted">{sample.timeout}ms timeout</span>
             </div>
-            <div class="p-2.5 bg-surface-muted">
-              <pre class="font-code text-[10px] text-text whitespace-pre-wrap">{sample.code}</pre>
+            <div class="p-2.5 space-y-2">
+              <Show when={sample.params}>
+                <div>
+                  <span class="text-[9px] text-text-muted">params</span>
+                  <div class="mt-1 rounded border border-border/50 bg-surface-muted p-1.5 font-code text-[9px] text-text-muted overflow-x-auto max-h-20">
+                    <pre class="whitespace-pre-wrap">{JSON.stringify(sample.params, null, 2)}</pre>
+                  </div>
+                </div>
+              </Show>
+              <div>
+                <span class="text-[9px] text-text-muted">code</span>
+                <div class="mt-1 rounded border border-border/50 bg-surface-muted p-1.5 font-code text-[10px] text-text overflow-x-auto">
+                  <pre class="whitespace-pre-wrap">{sample.code}</pre>
+                </div>
+              </div>
             </div>
             <div class="flex items-center gap-1.5 px-2.5 py-2 border-t border-border bg-success/5">
               <CheckCircle class="h-3 w-3 text-success" weight="fill" />
               <span class="text-[10px] text-success">Result:</span>
-              <code class="text-[10px] text-text">{`{ sum: 5050, average: 50.5 }`}</code>
+              <code class="text-[10px] text-text">{`["Alice"]`}</code>
             </div>
           </div>
           <button
@@ -507,54 +520,40 @@ function CodeExecuteInspector() {
 }
 
 export function SystemToolInspector(props: { tool: SystemToolDefinition }) {
-  const name = () => props.tool.name
-
   return (
-    <>
-      <Show when={name() === "output_table"}>
-        <OutputTableInspector />
-      </Show>
-      <Show when={name() === "output_chart"}>
-        <OutputChartInspector />
-      </Show>
-      <Show when={name() === "output_markdown"}>
-        <OutputMarkdownInspector />
-      </Show>
-      <Show when={name() === "output_key_value"}>
-        <OutputKeyValueInspector />
-      </Show>
-      <Show when={name() === "human_request"}>
-        <HumanRequestInspector />
-      </Show>
-      <Show when={name() === "task_complete"}>
-        <TaskCompleteInspector />
-      </Show>
-      <Show when={name() === "return_to_parent"}>
-        <ReturnToParentInspector />
-      </Show>
-      <Show when={name() === "code_execute"}>
-        <CodeExecuteInspector />
-      </Show>
-      <Show
-        when={
-          ![
-            "output_table",
-            "output_chart",
-            "output_markdown",
-            "output_key_value",
-            "human_request",
-            "task_complete",
-            "return_to_parent",
-            "code_execute",
-          ].includes(name())
-        }
-      >
+    <Switch
+      fallback={
         <div class="space-y-0">
           <CollapsibleSection title="Overview">
             <p class="text-xs text-text-muted leading-relaxed">{props.tool.description}</p>
           </CollapsibleSection>
         </div>
-      </Show>
-    </>
+      }
+    >
+      <Match when={props.tool.name === "output_table"}>
+        <OutputTableInspector />
+      </Match>
+      <Match when={props.tool.name === "output_chart"}>
+        <OutputChartInspector />
+      </Match>
+      <Match when={props.tool.name === "output_markdown"}>
+        <OutputMarkdownInspector />
+      </Match>
+      <Match when={props.tool.name === "output_key_value"}>
+        <OutputKeyValueInspector />
+      </Match>
+      <Match when={props.tool.name === "human_request"}>
+        <HumanRequestInspector />
+      </Match>
+      <Match when={props.tool.name === "task_complete"}>
+        <TaskCompleteInspector />
+      </Match>
+      <Match when={props.tool.name === "return_to_parent"}>
+        <ReturnToParentInspector />
+      </Match>
+      <Match when={props.tool.name === "code_execute"}>
+        <CodeExecuteInspector />
+      </Match>
+    </Switch>
   )
 }
