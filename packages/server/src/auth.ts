@@ -1,4 +1,6 @@
 import { betterAuth } from "better-auth"
+
+const REGISTRATION_DISABLED = true
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { magicLink, organization } from "better-auth/plugins"
 import {
@@ -177,6 +179,11 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
+        before: async () => {
+          if (REGISTRATION_DISABLED) {
+            throw new APIError("FORBIDDEN", { message: "New registrations are currently disabled." })
+          }
+        },
         after: async (user) => {
           sendWelcomeEmail(user.email, user.name).catch((e) => console.error("Failed to send welcome email:", e))
         },
