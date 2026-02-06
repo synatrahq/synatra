@@ -1,6 +1,6 @@
 import { For } from "solid-js"
 import { A, useLocation } from "@solidjs/router"
-import { TreeStructure, Users, Plugs, Cube, ChartBar, CreditCard } from "phosphor-solid-js"
+import { TreeStructure, Users, Plugs, Cube } from "phosphor-solid-js"
 import type { JSX } from "solid-js"
 
 type NavItem = {
@@ -34,18 +34,6 @@ const navItems: NavItem[] = [
     label: "Apps",
     href: "/settings/apps",
     icon: (props) => <Cube class={props.class} />,
-  },
-  {
-    id: "usage",
-    label: "Usage",
-    href: "/settings/usage",
-    icon: (props) => <ChartBar class={props.class} />,
-  },
-  {
-    id: "billing",
-    label: "Billing",
-    href: "/settings/billing",
-    icon: (props) => <CreditCard class={props.class} />,
   },
 ]
 

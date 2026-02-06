@@ -1,6 +1,6 @@
-import { createSignal, createEffect, Show, createMemo } from "solid-js"
+import { createSignal, createEffect, Show } from "solid-js"
 import type { Role } from "@synatra/core/permissions"
-import { MemberRole, type SubscriptionPlan } from "@synatra/core/types"
+import { MemberRole } from "@synatra/core/types"
 import {
   Modal,
   ModalContainer,
@@ -15,7 +15,6 @@ import {
   FormError,
 } from "../../ui"
 import type { SelectOption } from "../../ui"
-import { checkUserLimit } from "../../utils/subscription-limits"
 import { capitalize } from "../../utils/string"
 
 type MemberInviteModalProps = {
@@ -23,8 +22,6 @@ type MemberInviteModalProps = {
   onClose: () => void
   onInvite: (emails: string[], role: Role) => Promise<void>
   inviting?: boolean
-  currentUserCount: number
-  plan: SubscriptionPlan | null
 }
 
 const roleOptions: SelectOption<Role>[] = MemberRole.map((r) => ({
@@ -78,17 +75,6 @@ export function MemberInviteModal(props: MemberInviteModalProps) {
     return parsed.filter(isValidEmail).length
   }
 
-  const limitCheck = createMemo(() => {
-    if (!props.plan) return null
-    return checkUserLimit(props.currentUserCount, validCount(), props.plan)
-  })
-
-  const limitError = createMemo(() => {
-    const check = limitCheck()
-    if (!check || check.allowed) return null
-    return check.message
-  })
-
   return (
     <Modal open={props.open} onBackdropClick={props.onClose} onEscape={props.onClose}>
       <ModalContainer size="sm">
@@ -113,18 +99,12 @@ export function MemberInviteModal(props: MemberInviteModalProps) {
           </FormField>
 
           <FormError message={error()} />
-
-          <Show when={limitError()}>
-            <div class="rounded-md border border-warning bg-warning/5 px-2.5 py-1.5 text-2xs text-warning">
-              {limitError()}
-            </div>
-          </Show>
         </ModalBody>
         <ModalFooter>
           <Button variant="ghost" size="sm" onClick={props.onClose} disabled={props.inviting}>
             Cancel
           </Button>
-          <Button size="sm" onClick={handleInvite} disabled={props.inviting || validCount() === 0 || !!limitError()}>
+          <Button size="sm" onClick={handleInvite} disabled={props.inviting || validCount() === 0}>
             {props.inviting && <Spinner size="xs" class="border-white border-t-transparent" />}
             {props.inviting ? "Inviting..." : `Invite ${validCount() > 0 ? validCount() : ""}`}
           </Button>

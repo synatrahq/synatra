@@ -1,6 +1,6 @@
 import { createSignal, createEffect, Show, createMemo } from "solid-js"
 import { Title, Meta } from "@solidjs/meta"
-import { useParams, useNavigate, useSearchParams } from "@solidjs/router"
+import { useParams, useNavigate } from "@solidjs/router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/solid-query"
 import { api, AdminGuard, auth, activeOrg } from "../../app"
 import { Shell } from "../../components"
@@ -16,9 +16,6 @@ import type {
   EnvironmentCreateInput,
   EnvironmentUpdateInput,
   ConnectorCreateInput,
-  UsageCurrent,
-  UsagePeriod,
-  SubscriptionCurrent,
 } from "../../app/api"
 import { EnvironmentDeleteModal } from "./environment-delete-modal"
 import { MemberList, type Member, type Invitation } from "./member-list"
@@ -31,19 +28,8 @@ import { ConnectorTokenModal } from "./connector-token-modal"
 import { AppAccountList } from "./app-account-list"
 import { AppConnectModal } from "./app-connect-modal"
 import { AppAccountDeleteModal } from "./app-account-delete-modal"
-import { UsageList } from "./usage-list"
-import { BillingList } from "./billing-list"
-import { PlanChangeModal } from "./plan-change-modal"
-import { CancelScheduleModal } from "./cancel-schedule-modal"
-import { CancelSubscriptionModal } from "./cancel-subscription-modal"
-import { ResumeSubscriptionModal } from "./resume-subscription-modal"
-import { PLAN_HIERARCHY, type SubscriptionPlan } from "@synatra/core/types"
 
 const noop = () => {}
-
-function isUpgrade(current: SubscriptionPlan, target: SubscriptionPlan): boolean {
-  return PLAN_HIERARCHY[target] > PLAN_HIERARCHY[current]
-}
 
 function PageSkeleton() {
   return (
@@ -66,18 +52,7 @@ function PageSkeleton() {
 export default function SettingsPage() {
   const params = useParams<{ tab?: string }>()
   const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
-
-  createEffect(() => {
-    const sessionId = searchParams.session_id
-    if (!sessionId || typeof sessionId !== "string") return
-
-    api.api.subscriptions["verify-checkout"]
-      .$post({ json: { sessionId } })
-      .then(() => queryClient.invalidateQueries({ queryKey: ["settings", "subscription"] }))
-      .finally(() => setSearchParams({ session_id: undefined }, { replace: true }))
-  })
 
   const [envCreateModalOpen, setEnvCreateModalOpen] = createSignal(false)
   const [envEditModalOpen, setEnvEditModalOpen] = createSignal(false)
@@ -104,12 +79,6 @@ export default function SettingsPage() {
   const [appConnecting, setAppConnecting] = createSignal(false)
   const [appDeleteModalOpen, setAppDeleteModalOpen] = createSignal(false)
   const [deletingAppAccount, setDeletingAppAccount] = createSignal<AppAccount | null>(null)
-
-  const [planChangeModalOpen, setPlanChangeModalOpen] = createSignal(false)
-  const [targetPlan, setTargetPlan] = createSignal<string | null>(null)
-  const [cancelScheduleModalOpen, setCancelScheduleModalOpen] = createSignal(false)
-  const [cancelSubscriptionModalOpen, setCancelSubscriptionModalOpen] = createSignal(false)
-  const [resumeSubscriptionModalOpen, setResumeSubscriptionModalOpen] = createSignal(false)
 
   const currentTab = createMemo(() => params.tab ?? "users")
 
@@ -167,33 +136,6 @@ export default function SettingsPage() {
     queryFn: async () => {
       const res = await api.api["app-accounts"].$get()
       return res.json() as Promise<AppAccount[]>
-    },
-    enabled: !!activeOrg()?.id,
-  }))
-
-  const usageCurrentQuery = useQuery(() => ({
-    queryKey: ["settings", "usage", "current", activeOrg()?.id],
-    queryFn: async () => {
-      const res = await api.api.usage.current.$get()
-      return res.json() as Promise<UsageCurrent>
-    },
-    enabled: !!activeOrg()?.id,
-  }))
-
-  const usageHistoryQuery = useQuery(() => ({
-    queryKey: ["settings", "usage", "history", activeOrg()?.id],
-    queryFn: async () => {
-      const res = await api.api.usage.history.$get({ query: { months: "6" } })
-      return res.json() as Promise<{ periods: UsagePeriod[] }>
-    },
-    enabled: !!activeOrg()?.id,
-  }))
-
-  const subscriptionQuery = useQuery(() => ({
-    queryKey: ["settings", "subscription", activeOrg()?.id],
-    queryFn: async () => {
-      const res = await api.api.subscriptions.current.$get()
-      return res.json() as Promise<SubscriptionCurrent>
     },
     enabled: !!activeOrg()?.id,
   }))
@@ -322,90 +264,6 @@ export default function SettingsPage() {
     },
   }))
 
-  const changePlanMutate = useMutation(() => ({
-    mutationFn: async (plan: string) => {
-      if (plan === "free" || plan === "enterprise") throw new Error("Cannot change to free or enterprise plan")
-      const typedPlan = plan as "starter" | "pro" | "business"
-
-      if (subscription()?.stripeSubscriptionId) {
-        const res = await api.api.subscriptions["change-plan"].$post({ json: { plan: typedPlan } })
-        return { type: "change" as const, data: await res.json() }
-      }
-
-      const res = await api.api.subscriptions["create-checkout"].$post({
-        json: {
-          plan: typedPlan,
-          successUrl: `${window.location.origin}/settings/billing?session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${window.location.origin}/settings/billing?cancelled=true`,
-        },
-      })
-      return { type: "checkout" as const, data: await res.json() }
-    },
-    onSuccess: (result) => {
-      if (result.type === "checkout" && result.data.url) window.location.href = result.data.url
-      else if (result.type === "change") void subscriptionQuery.refetch()
-    },
-  }))
-
-  const cancelScheduleMutate = useMutation(() => ({
-    mutationFn: async () => {
-      const res = await api.api.subscriptions["cancel-schedule"].$post()
-      return res.json()
-    },
-    onSuccess: () => {
-      void subscriptionQuery.refetch()
-    },
-  }))
-
-  const billingPortalMutate = useMutation(() => ({
-    mutationFn: async () => {
-      const res = await api.api.subscriptions["billing-portal"].$post({
-        json: { returnUrl: window.location.href },
-      })
-      return res.json()
-    },
-    onSuccess: (result) => {
-      if (result.url) window.location.href = result.url
-    },
-  }))
-
-  const cancelSubscriptionMutate = useMutation(() => ({
-    mutationFn: async () => {
-      const res = await api.api.subscriptions.cancel.$post()
-      return res.json()
-    },
-    onSuccess: () => {
-      void subscriptionQuery.refetch()
-    },
-  }))
-
-  const resumeSubscriptionMutate = useMutation(() => ({
-    mutationFn: async () => {
-      const res = await api.api.subscriptions.resume.$post()
-      return res.json()
-    },
-    onSuccess: () => {
-      void subscriptionQuery.refetch()
-    },
-  }))
-
-  const handlePlanChangeRequest = (plan: string) => {
-    setTargetPlan(plan)
-    setPlanChangeModalOpen(true)
-  }
-
-  const handlePlanChangeConfirm = async () => {
-    const plan = targetPlan()
-    if (!plan) return
-    await changePlanMutate.mutateAsync(plan)
-    setPlanChangeModalOpen(false)
-  }
-
-  const handleCancelScheduleConfirm = async () => {
-    await cancelScheduleMutate.mutateAsync()
-    setCancelScheduleModalOpen(false)
-  }
-
   createEffect(() => {
     if (!params.tab) {
       navigate("/settings/users", { replace: true })
@@ -417,9 +275,6 @@ export default function SettingsPage() {
   const invitations = () => membersQuery.data?.invitations ?? []
   const connectors = () => connectorsQuery.data ?? []
   const appAccounts = () => appAccountsQuery.data ?? []
-  const usageCurrent = () => usageCurrentQuery.data ?? null
-  const usageHistory = () => usageHistoryQuery.data?.periods ?? []
-  const subscription = () => subscriptionQuery.data ?? null
 
   const handleRoleChange = async (memberId: string, role: Role) => {
     await memberRoleChangeMutate.mutateAsync({ memberId, role })
@@ -531,32 +386,6 @@ export default function SettingsPage() {
               }}
             />
           </Show>
-
-          <Show when={currentTab() === "usage"}>
-            <UsageList
-              current={usageCurrent()}
-              history={usageHistory()}
-              subscription={subscription()}
-              loading={usageCurrentQuery.isPending || usageHistoryQuery.isPending}
-            />
-          </Show>
-
-          <Show when={currentTab() === "billing"}>
-            <BillingList
-              subscription={subscription()}
-              loading={subscriptionQuery.isPending}
-              onPlanChangeRequest={handlePlanChangeRequest}
-              changingPlan={changePlanMutate.isPending}
-              onCancelScheduleRequest={() => setCancelScheduleModalOpen(true)}
-              cancellingSchedule={cancelScheduleMutate.isPending}
-              onManageBilling={() => billingPortalMutate.mutate()}
-              managingBilling={billingPortalMutate.isPending}
-              onCancelSubscription={() => setCancelSubscriptionModalOpen(true)}
-              cancellingSubscription={cancelSubscriptionMutate.isPending}
-              onResumeSubscription={() => setResumeSubscriptionModalOpen(true)}
-              resumingSubscription={resumeSubscriptionMutate.isPending}
-            />
-          </Show>
         </Shell>
 
         <EnvironmentCreateModal
@@ -602,8 +431,6 @@ export default function SettingsPage() {
             await memberInviteMutate.mutateAsync({ emails, role })
           }}
           inviting={memberInviteMutate.isPending}
-          currentUserCount={members().length + invitations().filter((i) => i.status === "pending").length}
-          plan={(subscriptionQuery.data?.plan as SubscriptionPlan) ?? null}
         />
 
         <MemberRemoveModal
@@ -678,63 +505,6 @@ export default function SettingsPage() {
           }}
           deleting={appDeleteMutate.isPending}
         />
-
-        <Show when={planChangeModalOpen() && subscription() && targetPlan()}>
-          <PlanChangeModal
-            open={planChangeModalOpen()}
-            currentPlan={subscription()!.plan as SubscriptionPlan}
-            targetPlan={targetPlan()! as SubscriptionPlan}
-            isUpgrade={isUpgrade(subscription()!.plan as SubscriptionPlan, targetPlan()! as SubscriptionPlan)}
-            onClose={() => setPlanChangeModalOpen(false)}
-            onConfirm={handlePlanChangeConfirm}
-            changing={changePlanMutate.isPending}
-          />
-        </Show>
-
-        <Show when={cancelScheduleModalOpen() && subscription()?.scheduledPlan && subscription()?.scheduledAt}>
-          <CancelScheduleModal
-            open={cancelScheduleModalOpen()}
-            currentPlan={subscription()!.plan as SubscriptionPlan}
-            scheduledPlan={subscription()!.scheduledPlan! as SubscriptionPlan}
-            scheduledDate={new Date(subscription()!.scheduledAt!).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
-            onClose={() => setCancelScheduleModalOpen(false)}
-            onConfirm={handleCancelScheduleConfirm}
-            cancelling={cancelScheduleMutate.isPending}
-          />
-        </Show>
-
-        <Show when={cancelSubscriptionModalOpen() && subscription()?.currentPeriodEnd}>
-          <CancelSubscriptionModal
-            open={cancelSubscriptionModalOpen()}
-            cancelDate={new Date(subscription()!.currentPeriodEnd!).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
-            onClose={() => setCancelSubscriptionModalOpen(false)}
-            onConfirm={async () => {
-              await cancelSubscriptionMutate.mutateAsync()
-              setCancelSubscriptionModalOpen(false)
-            }}
-            cancelling={cancelSubscriptionMutate.isPending}
-          />
-        </Show>
-
-        <Show when={resumeSubscriptionModalOpen()}>
-          <ResumeSubscriptionModal
-            open={resumeSubscriptionModalOpen()}
-            onClose={() => setResumeSubscriptionModalOpen(false)}
-            onConfirm={async () => {
-              await resumeSubscriptionMutate.mutateAsync()
-              setResumeSubscriptionModalOpen(false)
-            }}
-            resuming={resumeSubscriptionMutate.isPending}
-          />
-        </Show>
       </AdminGuard>
     </>
   )
