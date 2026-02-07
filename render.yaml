@@ -346,7 +346,7 @@ projects:
             name: synatra-production-server
             runtime: docker
             region: oregon
-            plan: standard
+            plan: starter
             branch: main
             dockerfilePath: ./docker/Dockerfile.server
             dockerContext: .
@@ -396,7 +396,7 @@ projects:
             name: synatra-production-worker
             runtime: docker
             region: oregon
-            plan: standard
+            plan: starter
             branch: main
             dockerfilePath: ./docker/Dockerfile.worker
             dockerContext: .
@@ -487,14 +487,14 @@ projects:
 
           - type: redis
             name: synatra-production-redis
-            plan: starter
+            plan: free
             region: oregon
             maxmemoryPolicy: allkeys-lru
             ipAllowList: []
 
         databases:
           - name: synatra-production-db
-            plan: basic-1gb
+            plan: basic-256mb
             region: oregon
             postgresMajorVersion: "18"
             ipAllowList: []
