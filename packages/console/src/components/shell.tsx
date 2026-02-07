@@ -57,6 +57,22 @@ export function Shell(props: ShellProps) {
 
   return (
     <div class="flex h-screen flex-col bg-surface text-text">
+      <a
+        href="https://github.com/synatrahq/synatra"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="flex w-full items-center justify-center gap-2 bg-accent px-3 py-1.5 text-white transition-colors hover:bg-accent/90"
+      >
+        <Warning size={14} weight="fill" />
+        <span class="text-xs font-medium">
+          Cloud service ends Feb 28, 2025. Please migrate to self-hosted version.
+        </span>
+        <span class="flex items-center gap-1 text-xs font-medium">
+          View on GitHub
+          <ArrowRight size={12} />
+        </span>
+      </a>
+
       <Show when={!llmConfigured() && synatraAiResource()}>
         <A
           href={`/resources/${synatraAiResource()!.id}`}
