@@ -3681,6 +3681,16 @@
       "description": "Delete an issue comment"
     },
     {
+      "method": "PUT",
+      "path": "/repos/{owner}/{repo}/issues/comments/{comment_id}/pin",
+      "description": "Pin an issue comment"
+    },
+    {
+      "method": "DELETE",
+      "path": "/repos/{owner}/{repo}/issues/comments/{comment_id}/pin",
+      "description": "Unpin an issue comment"
+    },
+    {
       "method": "GET",
       "path": "/repos/{owner}/{repo}/issues/comments/{comment_id}/reactions",
       "description": "List reactions for an issue comment"

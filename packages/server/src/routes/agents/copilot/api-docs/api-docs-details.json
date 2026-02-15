@@ -3426,7 +3426,8 @@
         "budgets": [
           {}
         ],
-        "has_next_page": true
+        "has_next_page": true,
+        "total_count": 0
       }
     },
     {
@@ -6155,7 +6156,7 @@
         },
         "deployment_name": {
           "type": "string",
-          "description": "The name of the deployment.",
+          "description": "The unique identifier for the deployment represented by the new record. To accommodate differing\ncontainers and namespaces within a cluster, the following format is recommended:\n{namespaceName}-{deploymentName}-{containerName}.\n",
           "required": true
         },
         "tags": {
@@ -7008,6 +7009,11 @@
           "description": "The enablement status of Dependabot security updates",
           "required": false
         },
+        "dependabot_delegated_alert_dismissal": {
+          "type": "\"enabled\" | \"disabled\" | \"not_set\"",
+          "description": "The enablement status of Dependabot delegated alert dismissal. Requires Dependabot alerts to be enabled.",
+          "required": false
+        },
         "code_scanning_options": {
           "type": "object",
           "description": "Security Configuration feature options for code scanning",
@@ -7220,6 +7226,11 @@
         "dependabot_security_updates": {
           "type": "\"enabled\" | \"disabled\" | \"not_set\"",
           "description": "The enablement status of Dependabot security updates",
+          "required": false
+        },
+        "dependabot_delegated_alert_dismissal": {
+          "type": "\"enabled\" | \"disabled\" | \"not_set\"",
+          "description": "The enablement status of Dependabot delegated alert dismissal. Requires Dependabot alerts to be enabled.",
           "required": false
         },
         "code_scanning_default_setup": {
@@ -24876,6 +24887,68 @@
     {
       "method": "DELETE",
       "path": "/repos/{owner}/{repo}/issues/comments/{comment_id}",
+      "pathParams": {
+        "owner": {
+          "type": "string",
+          "description": "The account owner of the repository. The name is not case sensitive.",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "description": "The name of the repository without the `.git` extension. The name is not case sensitive.",
+          "required": true
+        },
+        "comment_id": {
+          "type": "number",
+          "description": "The unique identifier of the comment.",
+          "required": true
+        }
+      },
+      "responseExample": {}
+    },
+    {
+      "method": "PUT",
+      "path": "/repos/{owner}/{repo}/issues/comments/{comment_id}/pin",
+      "pathParams": {
+        "owner": {
+          "type": "string",
+          "description": "The account owner of the repository. The name is not case sensitive.",
+          "required": true
+        },
+        "repo": {
+          "type": "string",
+          "description": "The name of the repository without the `.git` extension. The name is not case sensitive.",
+          "required": true
+        },
+        "comment_id": {
+          "type": "number",
+          "description": "The unique identifier of the comment.",
+          "required": true
+        }
+      },
+      "responseExample": {
+        "id": 42,
+        "node_id": "string",
+        "url": "https://api.github.com/repositories/42/issues/comments/1",
+        "body": "What version of Safari were you using when you observed this bug?",
+        "body_text": "string",
+        "body_html": "string",
+        "html_url": "https://example.com",
+        "user": {
+          "name": "string",
+          "email": "string",
+          "login": "octocat",
+          "id": 1,
+          "node_id": "MDQ6VXNlcjE=",
+          "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+          "gravatar_id": "41d064eb2195891e12d0413f63227ea7",
+          "url": "https://api.github.com/users/octocat"
+        }
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/repos/{owner}/{repo}/issues/comments/{comment_id}/pin",
       "pathParams": {
         "owner": {
           "type": "string",
@@ -67249,10 +67322,7 @@
         "id": "123456",
         "name": "Test tag",
         "applied_at": 1663597223,
-        "applied_by": {
-          "type": "contact",
-          "id": "1a2b3c"
-        }
+        "applied_by": {}
       }
     },
     {
@@ -67275,10 +67345,7 @@
         "id": "123456",
         "name": "Test tag",
         "applied_at": 1663597223,
-        "applied_by": {
-          "type": "contact",
-          "id": "1a2b3c"
-        }
+        "applied_by": {}
       }
     },
     {
@@ -67462,10 +67529,7 @@
         "id": "123456",
         "name": "Test tag",
         "applied_at": 1663597223,
-        "applied_by": {
-          "type": "contact",
-          "id": "1a2b3c"
-        }
+        "applied_by": {}
       }
     },
     {
@@ -67495,10 +67559,7 @@
         "id": "123456",
         "name": "Test tag",
         "applied_at": 1663597223,
-        "applied_by": {
-          "type": "contact",
-          "id": "1a2b3c"
-        }
+        "applied_by": {}
       }
     },
     {
@@ -68830,12 +68891,7 @@
       "responseExample": {
         "type": "tag",
         "id": "123456",
-        "name": "Test tag",
-        "applied_at": 1663597223,
-        "applied_by": {
-          "type": "contact",
-          "id": "1a2b3c"
-        }
+        "name": "Test tag"
       }
     },
     {
@@ -68851,12 +68907,7 @@
       "responseExample": {
         "type": "tag",
         "id": "123456",
-        "name": "Test tag",
-        "applied_at": 1663597223,
-        "applied_by": {
-          "type": "contact",
-          "id": "1a2b3c"
-        }
+        "name": "Test tag"
       }
     },
     {
@@ -69267,10 +69318,7 @@
         "id": "123456",
         "name": "Test tag",
         "applied_at": 1663597223,
-        "applied_by": {
-          "type": "contact",
-          "id": "1a2b3c"
-        }
+        "applied_by": {}
       }
     },
     {
@@ -69300,10 +69348,7 @@
         "id": "123456",
         "name": "Test tag",
         "applied_at": 1663597223,
-        "applied_by": {
-          "type": "contact",
-          "id": "1a2b3c"
-        }
+        "applied_by": {}
       }
     },
     {
