@@ -17,6 +17,31 @@
     },
     {
       "method": "GET",
+      "path": "/agents/repos/{owner}/{repo}/tasks",
+      "description": "List tasks for repository"
+    },
+    {
+      "method": "POST",
+      "path": "/agents/repos/{owner}/{repo}/tasks",
+      "description": "Start a task"
+    },
+    {
+      "method": "GET",
+      "path": "/agents/repos/{owner}/{repo}/tasks/{task_id}",
+      "description": "Get a task by repo"
+    },
+    {
+      "method": "GET",
+      "path": "/agents/tasks",
+      "description": "List tasks"
+    },
+    {
+      "method": "GET",
+      "path": "/agents/tasks/{task_id}",
+      "description": "Get a task by ID"
+    },
+    {
+      "method": "GET",
       "path": "/app",
       "description": "Get the authenticated app"
     },
@@ -118,32 +143,32 @@
     {
       "method": "GET",
       "path": "/assignments/{assignment_id}",
-      "description": "Get an assignment"
+      "description": "Closed - Get an assignment"
     },
     {
       "method": "GET",
       "path": "/assignments/{assignment_id}/accepted_assignments",
-      "description": "List accepted assignments for an assignment"
+      "description": "Closed - List accepted assignments for an assignment"
     },
     {
       "method": "GET",
       "path": "/assignments/{assignment_id}/grades",
-      "description": "Get assignment grades"
+      "description": "Closed - Get assignment grades"
     },
     {
       "method": "GET",
       "path": "/classrooms",
-      "description": "List classrooms"
+      "description": "Closed - List classrooms"
     },
     {
       "method": "GET",
       "path": "/classrooms/{classroom_id}",
-      "description": "Get a classroom"
+      "description": "Closed - Get a classroom"
     },
     {
       "method": "GET",
       "path": "/classrooms/{classroom_id}/assignments",
-      "description": "List assignments for a classroom"
+      "description": "Closed - List assignments for a classroom"
     },
     {
       "method": "GET",
@@ -184,6 +209,21 @@
       "method": "PUT",
       "path": "/enterprises/{enterprise}/actions/cache/storage-limit",
       "description": "Set GitHub Actions cache storage limit for an enterprise"
+    },
+    {
+      "method": "GET",
+      "path": "/enterprises/{enterprise}/actions/oidc/customization/properties/repo",
+      "description": "List OIDC custom property inclusions for an enterprise"
+    },
+    {
+      "method": "POST",
+      "path": "/enterprises/{enterprise}/actions/oidc/customization/properties/repo",
+      "description": "Create an OIDC custom property inclusion for an enterprise"
+    },
+    {
+      "method": "DELETE",
+      "path": "/enterprises/{enterprise}/actions/oidc/customization/properties/repo/{custom_property_name}",
+      "description": "Delete an OIDC custom property inclusion for an enterprise"
     },
     {
       "method": "GET",
@@ -232,8 +272,73 @@
     },
     {
       "method": "GET",
+      "path": "/enterprises/{enterprise}/copilot/metrics/reports/enterprise-1-day",
+      "description": "Get Copilot enterprise usage metrics for a specific day"
+    },
+    {
+      "method": "GET",
+      "path": "/enterprises/{enterprise}/copilot/metrics/reports/enterprise-28-day/latest",
+      "description": "Get Copilot enterprise usage metrics"
+    },
+    {
+      "method": "GET",
+      "path": "/enterprises/{enterprise}/copilot/metrics/reports/repos-1-day",
+      "description": "Get Copilot enterprise repository report for a specific day"
+    },
+    {
+      "method": "GET",
+      "path": "/enterprises/{enterprise}/copilot/metrics/reports/user-teams-1-day",
+      "description": "Get Copilot enterprise user-teams report for a specific day"
+    },
+    {
+      "method": "GET",
+      "path": "/enterprises/{enterprise}/copilot/metrics/reports/users-1-day",
+      "description": "Get Copilot users usage metrics for a specific day"
+    },
+    {
+      "method": "GET",
+      "path": "/enterprises/{enterprise}/copilot/metrics/reports/users-28-day/latest",
+      "description": "Get Copilot users usage metrics"
+    },
+    {
+      "method": "PUT",
+      "path": "/enterprises/{enterprise}/copilot/policies/coding_agent",
+      "description": "Set the coding agent policy for an enterprise"
+    },
+    {
+      "method": "POST",
+      "path": "/enterprises/{enterprise}/copilot/policies/coding_agent/organizations",
+      "description": "Add organizations to the enterprise coding agent policy"
+    },
+    {
+      "method": "DELETE",
+      "path": "/enterprises/{enterprise}/copilot/policies/coding_agent/organizations",
+      "description": "Remove organizations from the enterprise coding agent policy"
+    },
+    {
+      "method": "GET",
       "path": "/enterprises/{enterprise}/dependabot/alerts",
       "description": "List Dependabot alerts for an enterprise"
+    },
+    {
+      "method": "GET",
+      "path": "/enterprises/{enterprise}/dependabot/repository-access",
+      "description": "Lists the repositories Dependabot can access in an enterprise"
+    },
+    {
+      "method": "PATCH",
+      "path": "/enterprises/{enterprise}/dependabot/repository-access",
+      "description": "Updates Dependabot's repository access list for an enterprise"
+    },
+    {
+      "method": "PUT",
+      "path": "/enterprises/{enterprise}/dependabot/repository-access/default-level",
+      "description": "Set the default repository access level for Dependabot in an enterprise"
+    },
+    {
+      "method": "GET",
+      "path": "/enterprises/{enterprise}/members/{username}/teams",
+      "description": "List enterprise teams for a user"
     },
     {
       "method": "GET",
@@ -582,23 +687,18 @@
     },
     {
       "method": "GET",
-      "path": "/organizations/{org}/dependabot/repository-access",
-      "description": "Lists the repositories Dependabot can access in an organization"
-    },
-    {
-      "method": "PATCH",
-      "path": "/organizations/{org}/dependabot/repository-access",
-      "description": "Updates Dependabot's repository access list for an organization"
-    },
-    {
-      "method": "PUT",
-      "path": "/organizations/{org}/dependabot/repository-access/default-level",
-      "description": "Set the default repository access level for Dependabot"
+      "path": "/organizations/{org}/settings/billing/ai_credit/usage",
+      "description": "Get billing AI credit usage report for an organization"
     },
     {
       "method": "GET",
       "path": "/organizations/{org}/settings/billing/budgets",
       "description": "Get all budgets for an organization"
+    },
+    {
+      "method": "POST",
+      "path": "/organizations/{org}/settings/billing/budgets",
+      "description": "Create a budget for an organization"
     },
     {
       "method": "GET",
@@ -734,6 +834,21 @@
       "method": "DELETE",
       "path": "/orgs/{org}/actions/hosted-runners/{hosted_runner_id}",
       "description": "Delete a GitHub-hosted runner for an organization"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/actions/oidc/customization/properties/repo",
+      "description": "List OIDC custom property inclusions for an organization"
+    },
+    {
+      "method": "POST",
+      "path": "/orgs/{org}/actions/oidc/customization/properties/repo",
+      "description": "Create an OIDC custom property inclusion for an organization"
+    },
+    {
+      "method": "DELETE",
+      "path": "/orgs/{org}/actions/oidc/customization/properties/repo/{custom_property_name}",
+      "description": "Delete an OIDC custom property inclusion for an organization"
     },
     {
       "method": "GET",
@@ -932,6 +1047,11 @@
     },
     {
       "method": "GET",
+      "path": "/orgs/{org}/actions/runners/deprecations/{version}",
+      "description": "Get runner version end-of-life schedule for an organization"
+    },
+    {
+      "method": "GET",
       "path": "/orgs/{org}/actions/runners/downloads",
       "description": "List runner applications for an organization"
     },
@@ -1076,6 +1196,96 @@
       "description": "Remove selected repository from an organization variable"
     },
     {
+      "method": "GET",
+      "path": "/orgs/{org}/agents/secrets",
+      "description": "List organization secrets"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/agents/secrets/public-key",
+      "description": "Get an organization public key"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/agents/secrets/{secret_name}",
+      "description": "Get an organization secret"
+    },
+    {
+      "method": "PUT",
+      "path": "/orgs/{org}/agents/secrets/{secret_name}",
+      "description": "Create or update an organization secret"
+    },
+    {
+      "method": "DELETE",
+      "path": "/orgs/{org}/agents/secrets/{secret_name}",
+      "description": "Delete an organization secret"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/agents/secrets/{secret_name}/repositories",
+      "description": "List selected repositories for an organization secret"
+    },
+    {
+      "method": "PUT",
+      "path": "/orgs/{org}/agents/secrets/{secret_name}/repositories",
+      "description": "Set selected repositories for an organization secret"
+    },
+    {
+      "method": "PUT",
+      "path": "/orgs/{org}/agents/secrets/{secret_name}/repositories/{repository_id}",
+      "description": "Add selected repository to an organization secret"
+    },
+    {
+      "method": "DELETE",
+      "path": "/orgs/{org}/agents/secrets/{secret_name}/repositories/{repository_id}",
+      "description": "Remove selected repository from an organization secret"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/agents/variables",
+      "description": "List organization variables"
+    },
+    {
+      "method": "POST",
+      "path": "/orgs/{org}/agents/variables",
+      "description": "Create an organization variable"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/agents/variables/{name}",
+      "description": "Get an organization variable"
+    },
+    {
+      "method": "PATCH",
+      "path": "/orgs/{org}/agents/variables/{name}",
+      "description": "Update an organization variable"
+    },
+    {
+      "method": "DELETE",
+      "path": "/orgs/{org}/agents/variables/{name}",
+      "description": "Delete an organization variable"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/agents/variables/{name}/repositories",
+      "description": "List selected repositories for an organization variable"
+    },
+    {
+      "method": "PUT",
+      "path": "/orgs/{org}/agents/variables/{name}/repositories",
+      "description": "Set selected repositories for an organization variable"
+    },
+    {
+      "method": "PUT",
+      "path": "/orgs/{org}/agents/variables/{name}/repositories/{repository_id}",
+      "description": "Add selected repository to an organization variable"
+    },
+    {
+      "method": "DELETE",
+      "path": "/orgs/{org}/agents/variables/{name}/repositories/{repository_id}",
+      "description": "Remove selected repository from an organization variable"
+    },
+    {
       "method": "POST",
       "path": "/orgs/{org}/artifacts/metadata/deployment-record",
       "description": "Create an artifact deployment record"
@@ -1084,6 +1294,16 @@
       "method": "POST",
       "path": "/orgs/{org}/artifacts/metadata/deployment-record/cluster/{cluster}",
       "description": "Set cluster deployment records"
+    },
+    {
+      "method": "POST",
+      "path": "/orgs/{org}/artifacts/metadata/deployment-record/cluster/{cluster}/jobs",
+      "description": "Create a cluster deployment records job"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/artifacts/metadata/deployment-record/cluster/{cluster}/jobs/{job_id}",
+      "description": "Get cluster deployment records job status"
     },
     {
       "method": "POST",
@@ -1174,6 +1394,16 @@
       "method": "DELETE",
       "path": "/orgs/{org}/campaigns/{campaign_number}",
       "description": "Delete a campaign for an organization"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/code-scanning/ai-scan",
+      "description": "Get the AI Scan setting for an organization"
+    },
+    {
+      "method": "PATCH",
+      "path": "/orgs/{org}/code-scanning/ai-scan",
+      "description": "Update the AI Scan setting for an organization"
     },
     {
       "method": "GET",
@@ -1297,6 +1527,76 @@
     },
     {
       "method": "GET",
+      "path": "/orgs/{org}/copilot-spaces",
+      "description": "List organization Copilot Spaces"
+    },
+    {
+      "method": "POST",
+      "path": "/orgs/{org}/copilot-spaces",
+      "description": "Create an organization Copilot Space"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/copilot-spaces/{space_number}",
+      "description": "Get an organization Copilot Space"
+    },
+    {
+      "method": "PUT",
+      "path": "/orgs/{org}/copilot-spaces/{space_number}",
+      "description": "Set an organization Copilot Space"
+    },
+    {
+      "method": "DELETE",
+      "path": "/orgs/{org}/copilot-spaces/{space_number}",
+      "description": "Delete an organization Copilot Space"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/copilot-spaces/{space_number}/collaborators",
+      "description": "List collaborators for an organization Copilot Space"
+    },
+    {
+      "method": "POST",
+      "path": "/orgs/{org}/copilot-spaces/{space_number}/collaborators",
+      "description": "Add a collaborator to an organization Copilot Space"
+    },
+    {
+      "method": "PUT",
+      "path": "/orgs/{org}/copilot-spaces/{space_number}/collaborators/{actor_type}/{actor_identifier}",
+      "description": "Set a collaborator role for an organization Copilot Space"
+    },
+    {
+      "method": "DELETE",
+      "path": "/orgs/{org}/copilot-spaces/{space_number}/collaborators/{actor_type}/{actor_identifier}",
+      "description": "Remove a collaborator from an organization Copilot Space"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/copilot-spaces/{space_number}/resources",
+      "description": "List resources for an organization Copilot Space"
+    },
+    {
+      "method": "POST",
+      "path": "/orgs/{org}/copilot-spaces/{space_number}/resources",
+      "description": "Create a resource for an organization Copilot Space"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/copilot-spaces/{space_number}/resources/{space_resource_id}",
+      "description": "Get a resource for an organization Copilot Space"
+    },
+    {
+      "method": "PUT",
+      "path": "/orgs/{org}/copilot-spaces/{space_number}/resources/{space_resource_id}",
+      "description": "Set a resource for an organization Copilot Space"
+    },
+    {
+      "method": "DELETE",
+      "path": "/orgs/{org}/copilot-spaces/{space_number}/resources/{space_resource_id}",
+      "description": "Delete a resource from an organization Copilot Space"
+    },
+    {
+      "method": "GET",
       "path": "/orgs/{org}/copilot/billing",
       "description": "Get Copilot seat information and settings for an organization"
     },
@@ -1327,13 +1627,93 @@
     },
     {
       "method": "GET",
-      "path": "/orgs/{org}/copilot/metrics",
-      "description": "Get Copilot metrics for an organization"
+      "path": "/orgs/{org}/copilot/coding-agent/permissions",
+      "description": "Get Copilot cloud agent permissions for an organization"
+    },
+    {
+      "method": "PUT",
+      "path": "/orgs/{org}/copilot/coding-agent/permissions",
+      "description": "Set Copilot cloud agent permissions for an organization"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/copilot/coding-agent/permissions/repositories",
+      "description": "List repositories enabled for Copilot cloud agent in an organization"
+    },
+    {
+      "method": "PUT",
+      "path": "/orgs/{org}/copilot/coding-agent/permissions/repositories",
+      "description": "Set selected repositories for Copilot cloud agent in an organization"
+    },
+    {
+      "method": "PUT",
+      "path": "/orgs/{org}/copilot/coding-agent/permissions/repositories/{repository_id}",
+      "description": "Enable a repository for Copilot cloud agent in an organization"
+    },
+    {
+      "method": "DELETE",
+      "path": "/orgs/{org}/copilot/coding-agent/permissions/repositories/{repository_id}",
+      "description": "Disable a repository for Copilot cloud agent in an organization"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/copilot/content_exclusion",
+      "description": "Get Copilot content exclusion rules for an organization"
+    },
+    {
+      "method": "PUT",
+      "path": "/orgs/{org}/copilot/content_exclusion",
+      "description": "Set Copilot content exclusion rules for an organization"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/copilot/metrics/reports/organization-1-day",
+      "description": "Get Copilot organization usage metrics for a specific day"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/copilot/metrics/reports/organization-28-day/latest",
+      "description": "Get Copilot organization usage metrics"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/copilot/metrics/reports/repos-1-day",
+      "description": "Get Copilot organization repository report for a specific day"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/copilot/metrics/reports/user-teams-1-day",
+      "description": "Get Copilot organization user-teams report for a specific day"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/copilot/metrics/reports/users-1-day",
+      "description": "Get Copilot organization users usage metrics for a specific day"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/copilot/metrics/reports/users-28-day/latest",
+      "description": "Get Copilot organization users usage metrics"
     },
     {
       "method": "GET",
       "path": "/orgs/{org}/dependabot/alerts",
       "description": "List Dependabot alerts for an organization"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/dependabot/repository-access",
+      "description": "Lists the repositories Dependabot can access in an organization"
+    },
+    {
+      "method": "PATCH",
+      "path": "/orgs/{org}/dependabot/repository-access",
+      "description": "Updates Dependabot's repository access list for an organization"
+    },
+    {
+      "method": "PUT",
+      "path": "/orgs/{org}/dependabot/repository-access/default-level",
+      "description": "Set the default repository access level for Dependabot"
     },
     {
       "method": "GET",
@@ -1522,6 +1902,16 @@
     },
     {
       "method": "GET",
+      "path": "/orgs/{org}/interaction-limits/pulls/creation-cap",
+      "description": "Get pull request creation cap for an org"
+    },
+    {
+      "method": "PATCH",
+      "path": "/orgs/{org}/interaction-limits/pulls/creation-cap",
+      "description": "Update pull request creation cap for an org"
+    },
+    {
+      "method": "GET",
       "path": "/orgs/{org}/invitations",
       "description": "List pending organization invitations"
     },
@@ -1539,6 +1929,26 @@
       "method": "GET",
       "path": "/orgs/{org}/invitations/{invitation_id}/teams",
       "description": "List organization invitation teams"
+    },
+    {
+      "method": "GET",
+      "path": "/orgs/{org}/issue-fields",
+      "description": "List issue fields for an organization"
+    },
+    {
+      "method": "POST",
+      "path": "/orgs/{org}/issue-fields",
+      "description": "Create issue field for an organization"
+    },
+    {
+      "method": "PATCH",
+      "path": "/orgs/{org}/issue-fields/{issue_field_id}",
+      "description": "Update issue field for an organization"
+    },
+    {
+      "method": "DELETE",
+      "path": "/orgs/{org}/issue-fields/{issue_field_id}",
+      "description": "Delete issue field for an organization"
     },
     {
       "method": "GET",
@@ -2007,6 +2417,26 @@
     },
     {
       "method": "GET",
+      "path": "/orgs/{org}/secret-scanning/custom-patterns",
+      "description": "List organization custom patterns"
+    },
+    {
+      "method": "POST",
+      "path": "/orgs/{org}/secret-scanning/custom-patterns",
+      "description": "Bulk create organization custom patterns"
+    },
+    {
+      "method": "DELETE",
+      "path": "/orgs/{org}/secret-scanning/custom-patterns",
+      "description": "Bulk delete organization custom patterns"
+    },
+    {
+      "method": "PATCH",
+      "path": "/orgs/{org}/secret-scanning/custom-patterns/{pattern_id}",
+      "description": "Update an organization custom pattern"
+    },
+    {
+      "method": "GET",
       "path": "/orgs/{org}/secret-scanning/pattern-configurations",
       "description": "List organization pattern configurations"
     },
@@ -2094,11 +2524,6 @@
       "method": "GET",
       "path": "/orgs/{org}/settings/network-settings/{network_settings_id}",
       "description": "Get a hosted compute network settings resource for an organization"
-    },
-    {
-      "method": "GET",
-      "path": "/orgs/{org}/team/{team_slug}/copilot/metrics",
-      "description": "Get Copilot metrics for a team"
     },
     {
       "method": "GET",
@@ -2262,6 +2687,16 @@
     },
     {
       "method": "GET",
+      "path": "/repos/{owner}/{repo}/actions/concurrency_groups",
+      "description": "List concurrency groups for a repository"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/actions/concurrency_groups/{concurrency_group_name}",
+      "description": "Get a concurrency group for a repository"
+    },
+    {
+      "method": "GET",
       "path": "/repos/{owner}/{repo}/actions/jobs/{job_id}",
       "description": "Get a job for a workflow run"
     },
@@ -2372,6 +2807,11 @@
     },
     {
       "method": "GET",
+      "path": "/repos/{owner}/{repo}/actions/runners/deprecations/{version}",
+      "description": "Get runner version end-of-life schedule for a repository"
+    },
+    {
+      "method": "GET",
       "path": "/repos/{owner}/{repo}/actions/runners/downloads",
       "description": "List runner applications for a repository"
     },
@@ -2474,6 +2914,11 @@
       "method": "POST",
       "path": "/repos/{owner}/{repo}/actions/runs/{run_id}/cancel",
       "description": "Cancel a workflow run"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/actions/runs/{run_id}/concurrency_groups",
+      "description": "List concurrency groups for a workflow run"
     },
     {
       "method": "POST",
@@ -2614,6 +3059,66 @@
       "method": "GET",
       "path": "/repos/{owner}/{repo}/activity",
       "description": "List repository activities"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/agents/organization-secrets",
+      "description": "List repository organization secrets"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/agents/organization-variables",
+      "description": "List repository organization variables"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/agents/secrets",
+      "description": "List repository secrets"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/agents/secrets/public-key",
+      "description": "Get a repository public key"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/agents/secrets/{secret_name}",
+      "description": "Get a repository secret"
+    },
+    {
+      "method": "PUT",
+      "path": "/repos/{owner}/{repo}/agents/secrets/{secret_name}",
+      "description": "Create or update a repository secret"
+    },
+    {
+      "method": "DELETE",
+      "path": "/repos/{owner}/{repo}/agents/secrets/{secret_name}",
+      "description": "Delete a repository secret"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/agents/variables",
+      "description": "List repository variables"
+    },
+    {
+      "method": "POST",
+      "path": "/repos/{owner}/{repo}/agents/variables",
+      "description": "Create a repository variable"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/agents/variables/{name}",
+      "description": "Get a repository variable"
+    },
+    {
+      "method": "PATCH",
+      "path": "/repos/{owner}/{repo}/agents/variables/{name}",
+      "description": "Update a repository variable"
+    },
+    {
+      "method": "DELETE",
+      "path": "/repos/{owner}/{repo}/agents/variables/{name}",
+      "description": "Delete a repository variable"
     },
     {
       "method": "GET",
@@ -2899,6 +3404,36 @@
       "method": "POST",
       "path": "/repos/{owner}/{repo}/check-suites/{check_suite_id}/rerequest",
       "description": "Rerequest a check suite"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/code-quality/findings",
+      "description": "List code quality findings for a repository"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/code-quality/findings/{finding_number}",
+      "description": "Get a code quality finding"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/code-quality/setup",
+      "description": "Get a code quality setup configuration"
+    },
+    {
+      "method": "PATCH",
+      "path": "/repos/{owner}/{repo}/code-quality/setup",
+      "description": "Update a code quality setup configuration"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/code-scanning/ai-scan",
+      "description": "Get AI Scan enablement for a repository"
+    },
+    {
+      "method": "PATCH",
+      "path": "/repos/{owner}/{repo}/code-scanning/ai-scan",
+      "description": "Update AI Scan enablement for a repository"
     },
     {
       "method": "GET",
@@ -3207,6 +3742,11 @@
     },
     {
       "method": "GET",
+      "path": "/repos/{owner}/{repo}/copilot/cloud-agent/configuration",
+      "description": "Get Copilot cloud agent configuration for a repository"
+    },
+    {
+      "method": "GET",
       "path": "/repos/{owner}/{repo}/dependabot/alerts",
       "description": "List Dependabot alerts for a repository"
     },
@@ -3254,6 +3794,16 @@
       "method": "GET",
       "path": "/repos/{owner}/{repo}/dependency-graph/sbom",
       "description": "Export a software bill of materials (SBOM) for a repository."
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/dependency-graph/sbom/fetch-report/{sbom_uuid}",
+      "description": "Fetch a software bill of materials (SBOM) for a repository."
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/dependency-graph/sbom/generate-report",
+      "description": "Request generation of a software bill of materials (SBOM) for a repository."
     },
     {
       "method": "POST",
@@ -3502,6 +4052,11 @@
     },
     {
       "method": "GET",
+      "path": "/repos/{owner}/{repo}/hash-algorithm",
+      "description": "Get the hash algorithm for a repository"
+    },
+    {
+      "method": "GET",
       "path": "/repos/{owner}/{repo}/hooks",
       "description": "List repository webhooks"
     },
@@ -3637,6 +4192,31 @@
     },
     {
       "method": "GET",
+      "path": "/repos/{owner}/{repo}/interaction-limits/pulls/bypass-list",
+      "description": "Get pull request creation cap bypass list for a repository"
+    },
+    {
+      "method": "PUT",
+      "path": "/repos/{owner}/{repo}/interaction-limits/pulls/bypass-list",
+      "description": "Add users to the pull request creation cap bypass list for a repository"
+    },
+    {
+      "method": "DELETE",
+      "path": "/repos/{owner}/{repo}/interaction-limits/pulls/bypass-list",
+      "description": "Remove users from the pull request creation cap bypass list for a repository"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/interaction-limits/pulls/creation-cap",
+      "description": "Get pull request creation cap for a repository"
+    },
+    {
+      "method": "PATCH",
+      "path": "/repos/{owner}/{repo}/interaction-limits/pulls/creation-cap",
+      "description": "Update pull request creation cap for a repository"
+    },
+    {
+      "method": "GET",
       "path": "/repos/{owner}/{repo}/invitations",
       "description": "List repository invitations"
     },
@@ -3649,6 +4229,11 @@
       "method": "DELETE",
       "path": "/repos/{owner}/{repo}/invitations/{invitation_id}",
       "description": "Delete a repository invitation"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/issue-types",
+      "description": "List issue types for a repository"
     },
     {
       "method": "GET",
@@ -3679,6 +4264,16 @@
       "method": "DELETE",
       "path": "/repos/{owner}/{repo}/issues/comments/{comment_id}",
       "description": "Delete an issue comment"
+    },
+    {
+      "method": "PUT",
+      "path": "/repos/{owner}/{repo}/issues/comments/{comment_id}/pin",
+      "description": "Pin an issue comment"
+    },
+    {
+      "method": "DELETE",
+      "path": "/repos/{owner}/{repo}/issues/comments/{comment_id}/pin",
+      "description": "Unpin an issue comment"
     },
     {
       "method": "GET",
@@ -3767,6 +4362,26 @@
     },
     {
       "method": "GET",
+      "path": "/repos/{owner}/{repo}/issues/{issue_number}/issue-field-values",
+      "description": "List issue field values for an issue"
+    },
+    {
+      "method": "POST",
+      "path": "/repos/{owner}/{repo}/issues/{issue_number}/issue-field-values",
+      "description": "Add issue field values to an issue"
+    },
+    {
+      "method": "PUT",
+      "path": "/repos/{owner}/{repo}/issues/{issue_number}/issue-field-values",
+      "description": "Set issue field values for an issue"
+    },
+    {
+      "method": "DELETE",
+      "path": "/repos/{owner}/{repo}/issues/{issue_number}/issue-field-values/{issue_field_id}",
+      "description": "Delete an issue field value from an issue"
+    },
+    {
+      "method": "GET",
       "path": "/repos/{owner}/{repo}/issues/{issue_number}/labels",
       "description": "List labels for an issue"
     },
@@ -3839,6 +4454,21 @@
       "method": "PATCH",
       "path": "/repos/{owner}/{repo}/issues/{issue_number}/sub_issues/priority",
       "description": "Reprioritize sub-issue"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/issues/{issue_number}/suggestions",
+      "description": "List issue suggestions"
+    },
+    {
+      "method": "POST",
+      "path": "/repos/{owner}/{repo}/issues/{issue_number}/suggestions/{suggestion_id}/approve",
+      "description": "Approve an issue suggestion"
+    },
+    {
+      "method": "POST",
+      "path": "/repos/{owner}/{repo}/issues/{issue_number}/suggestions/{suggestion_id}/dismiss",
+      "description": "Dismiss an issue suggestion"
     },
     {
       "method": "GET",
@@ -4131,6 +4761,16 @@
       "description": "Merge a pull request"
     },
     {
+      "method": "PUT",
+      "path": "/repos/{owner}/{repo}/pulls/{pull_number}/merge-async",
+      "description": "Merge a pull request asynchronously"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/pulls/{pull_number}/merge-async/{uuid}",
+      "description": "Get the result of an asynchronous merge"
+    },
+    {
       "method": "GET",
       "path": "/repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers",
       "description": "Get all requested reviewers for a pull request"
@@ -4351,6 +4991,26 @@
       "description": "List locations for a secret scanning alert"
     },
     {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/secret-scanning/custom-patterns",
+      "description": "List repository custom patterns"
+    },
+    {
+      "method": "POST",
+      "path": "/repos/{owner}/{repo}/secret-scanning/custom-patterns",
+      "description": "Bulk create repository custom patterns"
+    },
+    {
+      "method": "DELETE",
+      "path": "/repos/{owner}/{repo}/secret-scanning/custom-patterns",
+      "description": "Bulk delete repository custom patterns"
+    },
+    {
+      "method": "PATCH",
+      "path": "/repos/{owner}/{repo}/secret-scanning/custom-patterns/{pattern_id}",
+      "description": "Update a repository custom pattern"
+    },
+    {
       "method": "POST",
       "path": "/repos/{owner}/{repo}/secret-scanning/push-protection-bypasses",
       "description": "Create a push protection bypass"
@@ -4397,8 +5057,43 @@
     },
     {
       "method": "GET",
+      "path": "/repos/{owner}/{repo}/stacks",
+      "description": "List pull request stacks"
+    },
+    {
+      "method": "POST",
+      "path": "/repos/{owner}/{repo}/stacks",
+      "description": "Create a pull request stack"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/stacks/{stack_number}",
+      "description": "Get a pull request stack"
+    },
+    {
+      "method": "POST",
+      "path": "/repos/{owner}/{repo}/stacks/{stack_number}/add",
+      "description": "Add pull requests to a pull request stack"
+    },
+    {
+      "method": "POST",
+      "path": "/repos/{owner}/{repo}/stacks/{stack_number}/unstack",
+      "description": "Remove pull requests from a pull request stack"
+    },
+    {
+      "method": "GET",
       "path": "/repos/{owner}/{repo}/stargazers",
       "description": "List stargazers"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/stargazers/count",
+      "description": "Get stargazer count"
+    },
+    {
+      "method": "GET",
+      "path": "/repos/{owner}/{repo}/stargazers/history",
+      "description": "Get repository star history"
     },
     {
       "method": "GET",
@@ -4454,21 +5149,6 @@
       "method": "GET",
       "path": "/repos/{owner}/{repo}/tags",
       "description": "List repository tags"
-    },
-    {
-      "method": "GET",
-      "path": "/repos/{owner}/{repo}/tags/protection",
-      "description": "Closing down - List tag protection states for a repository"
-    },
-    {
-      "method": "POST",
-      "path": "/repos/{owner}/{repo}/tags/protection",
-      "description": "Closing down - Create a tag protection state for a repository"
-    },
-    {
-      "method": "DELETE",
-      "path": "/repos/{owner}/{repo}/tags/protection/{tag_protection_id}",
-      "description": "Closing down - Delete a tag protection state for a repository"
     },
     {
       "method": "GET",
@@ -5172,6 +5852,76 @@
     },
     {
       "method": "GET",
+      "path": "/users/{username}/copilot-spaces",
+      "description": "List Copilot Spaces for a user"
+    },
+    {
+      "method": "POST",
+      "path": "/users/{username}/copilot-spaces",
+      "description": "Create a Copilot Space for a user"
+    },
+    {
+      "method": "GET",
+      "path": "/users/{username}/copilot-spaces/{space_number}",
+      "description": "Get a Copilot Space for a user"
+    },
+    {
+      "method": "PUT",
+      "path": "/users/{username}/copilot-spaces/{space_number}",
+      "description": "Set a Copilot Space for a user"
+    },
+    {
+      "method": "DELETE",
+      "path": "/users/{username}/copilot-spaces/{space_number}",
+      "description": "Delete a Copilot Space for a user"
+    },
+    {
+      "method": "GET",
+      "path": "/users/{username}/copilot-spaces/{space_number}/collaborators",
+      "description": "List collaborators for a Copilot Space for a user"
+    },
+    {
+      "method": "POST",
+      "path": "/users/{username}/copilot-spaces/{space_number}/collaborators",
+      "description": "Add a collaborator to a Copilot Space for a user"
+    },
+    {
+      "method": "PUT",
+      "path": "/users/{username}/copilot-spaces/{space_number}/collaborators/{actor_type}/{actor_identifier}",
+      "description": "Set a collaborator role for a Copilot Space for a user"
+    },
+    {
+      "method": "DELETE",
+      "path": "/users/{username}/copilot-spaces/{space_number}/collaborators/{actor_type}/{actor_identifier}",
+      "description": "Remove a collaborator from a Copilot Space for a user"
+    },
+    {
+      "method": "GET",
+      "path": "/users/{username}/copilot-spaces/{space_number}/resources",
+      "description": "List resources for a Copilot Space for a user"
+    },
+    {
+      "method": "POST",
+      "path": "/users/{username}/copilot-spaces/{space_number}/resources",
+      "description": "Create a resource for a Copilot Space for a user"
+    },
+    {
+      "method": "GET",
+      "path": "/users/{username}/copilot-spaces/{space_number}/resources/{space_resource_id}",
+      "description": "Get a resource for a Copilot Space for a user"
+    },
+    {
+      "method": "PUT",
+      "path": "/users/{username}/copilot-spaces/{space_number}/resources/{space_resource_id}",
+      "description": "Set a resource for a Copilot Space for a user"
+    },
+    {
+      "method": "DELETE",
+      "path": "/users/{username}/copilot-spaces/{space_number}/resources/{space_resource_id}",
+      "description": "Delete a resource from a Copilot Space for a user"
+    },
+    {
+      "method": "GET",
       "path": "/users/{username}/docker/conflicts",
       "description": "Get list of conflicting packages during Docker migration for user"
     },
@@ -5347,6 +6097,11 @@
     },
     {
       "method": "GET",
+      "path": "/users/{username}/settings/billing/ai_credit/usage",
+      "description": "Get billing AI credit usage report for a user"
+    },
+    {
+      "method": "GET",
       "path": "/users/{username}/settings/billing/premium_request/usage",
       "description": "Get billing premium request usage report for a user"
     },
@@ -5415,7 +6170,7 @@
     {
       "method": "POST",
       "path": "/v1/accounts",
-      "description": "<p>With <a href=\"/docs/connect\">Connect</a>, you can create Stripe accounts for your users.\nTo do this, you’ll first need to <a href=\"https://dashboard.stripe.com/account/applications/settings\">register your platform</a>.</p>\n\n<p>If you’ve already collected information for your connected accounts, you <a href=\"/docs/connect/best-practices#onboarding\">can prefill that information</a> when\ncreating the account. Connect Onboarding won’t ask for the prefilled information during account onboarding.\nYou can prefill any information on the account.</p>"
+      "description": "Create an account"
     },
     {
       "method": "GET",
@@ -5445,7 +6200,7 @@
     {
       "method": "POST",
       "path": "/v1/accounts/{account}/bank_accounts/{id}",
-      "description": "<p>Updates the metadata, account holder name, account holder type of a bank account belonging to\na connected account and optionally sets it as the default for its currency. Other bank account\ndetails are not editable by design.</p>\n\n<p>You can only update bank accounts when <a href=\"/api/accounts/object#account_object-controller-requirement_collection\">account.controller.requirement_collection</a> is <code>application</code>, which includes <a href=\"/connect/custom-accounts\">Custom accounts</a>.</p>\n\n<p>You can re-enable a disabled bank account by performing an update call without providing any\narguments or changes.</p>"
+      "description": "Update a bank account"
     },
     {
       "method": "DELETE",
@@ -5485,7 +6240,7 @@
     {
       "method": "POST",
       "path": "/v1/accounts/{account}/external_accounts/{id}",
-      "description": "<p>Updates the metadata, account holder name, account holder type of a bank account belonging to\na connected account and optionally sets it as the default for its currency. Other bank account\ndetails are not editable by design.</p>\n\n<p>You can only update bank accounts when <a href=\"/api/accounts/object#account_object-controller-requirement_collection\">account.controller.requirement_collection</a> is <code>application</code>, which includes <a href=\"/connect/custom-accounts\">Custom accounts</a>.</p>\n\n<p>You can re-enable a disabled bank account by performing an update call without providing any\narguments or changes.</p>"
+      "description": "Update a bank account"
     },
     {
       "method": "DELETE",
@@ -5551,6 +6306,11 @@
       "method": "POST",
       "path": "/v1/accounts/{account}/reject",
       "description": "Reject an account"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/accounts/{account}/unreject",
+      "description": "Unreject an account"
     },
     {
       "method": "GET",
@@ -5738,6 +6498,31 @@
       "description": "Void a credit grant"
     },
     {
+      "method": "GET",
+      "path": "/v1/billing/feedback_options",
+      "description": "Feedback Options List API Method"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/billing/feedback_options",
+      "description": "Create a feedback option"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/billing/feedback_options/{id}",
+      "description": "Retrieve a feedback option"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/billing/feedback_options/{id}",
+      "description": "Update a feedback option"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/billing/feedback_options/{id}/deactivate",
+      "description": "Deactivate a feedback option"
+    },
+    {
       "method": "POST",
       "path": "/v1/billing/meter_event_adjustments",
       "description": "Create a billing meter event adjustment"
@@ -5815,7 +6600,7 @@
     {
       "method": "POST",
       "path": "/v1/charges",
-      "description": "<p>This method is no longer recommended—use the <a href=\"/docs/api/payment_intents\">Payment Intents API</a>\nto initiate a new payment instead. Confirmation of the PaymentIntent creates the <code>Charge</code>\nobject used to request payment.</p>"
+      "description": "Create a charge"
     },
     {
       "method": "GET",
@@ -5835,7 +6620,7 @@
     {
       "method": "POST",
       "path": "/v1/charges/{charge}/capture",
-      "description": "Capture a payment"
+      "description": "Capture a charge"
     },
     {
       "method": "GET",
@@ -5865,7 +6650,7 @@
     {
       "method": "POST",
       "path": "/v1/charges/{charge}/refunds",
-      "description": "Create customer balance refund"
+      "description": "Create a refund"
     },
     {
       "method": "GET",
@@ -6105,7 +6890,7 @@
     {
       "method": "POST",
       "path": "/v1/customers/{customer}/bank_accounts/{id}",
-      "description": "<p>Update a specified source for a given customer.</p>"
+      "description": "Update a card"
     },
     {
       "method": "DELETE",
@@ -6135,7 +6920,7 @@
     {
       "method": "POST",
       "path": "/v1/customers/{customer}/cards/{id}",
-      "description": "<p>Update a specified source for a given customer.</p>"
+      "description": "Update a card"
     },
     {
       "method": "DELETE",
@@ -6205,7 +6990,7 @@
     {
       "method": "POST",
       "path": "/v1/customers/{customer}/sources/{id}",
-      "description": "<p>Update a specified source for a given customer.</p>"
+      "description": "Update a card"
     },
     {
       "method": "DELETE",
@@ -6355,17 +7140,7 @@
     {
       "method": "POST",
       "path": "/v1/external_accounts/{id}",
-      "description": "<p>Updates the metadata, account holder name, account holder type of a bank account belonging to\na connected account and optionally sets it as the default for its currency. Other bank account\ndetails are not editable by design.</p>\n\n<p>You can only update bank accounts when <a href=\"/api/accounts/object#account_object-controller-requirement_collection\">account.controller.requirement_collection</a> is <code>application</code>, which includes <a href=\"/connect/custom-accounts\">Custom accounts</a>.</p>\n\n<p>You can re-enable a disabled bank account by performing an update call without providing any\narguments or changes.</p>"
-    },
-    {
-      "method": "GET",
-      "path": "/v1/fabric/service/integration_config",
-      "description": ""
-    },
-    {
-      "method": "POST",
-      "path": "/v1/fabric/service/subscribe",
-      "description": ""
+      "description": "Update a bank account"
     },
     {
       "method": "GET",
@@ -7005,7 +7780,7 @@
     {
       "method": "POST",
       "path": "/v1/payment_methods",
-      "description": "Shares a PaymentMethod"
+      "description": "Create a PaymentMethod"
     },
     {
       "method": "GET",
@@ -7026,6 +7801,11 @@
       "method": "POST",
       "path": "/v1/payment_methods/{payment_method}/detach",
       "description": "Detach a PaymentMethod from a Customer"
+    },
+    {
+      "method": "GET",
+      "path": "/v1/payment_records",
+      "description": "List Payment Records"
     },
     {
       "method": "POST",
@@ -7335,7 +8115,7 @@
     {
       "method": "POST",
       "path": "/v1/refunds",
-      "description": "Create customer balance refund"
+      "description": "Create a refund"
     },
     {
       "method": "GET",
@@ -7470,7 +8250,7 @@
     {
       "method": "POST",
       "path": "/v1/sources",
-      "description": "Shares a source"
+      "description": "Create a source"
     },
     {
       "method": "GET",
@@ -7610,17 +8390,17 @@
     {
       "method": "POST",
       "path": "/v1/tax/calculations",
-      "description": "Create a Tax Calculation"
+      "description": "Create a Calculation"
     },
     {
       "method": "GET",
       "path": "/v1/tax/calculations/{calculation}",
-      "description": "Retrieve a Tax Calculation"
+      "description": "Retrieve a Calculation"
     },
     {
       "method": "GET",
       "path": "/v1/tax/calculations/{calculation}/line_items",
-      "description": "Retrieve a calculation's line items"
+      "description": "Retrieve a Calculation's line items"
     },
     {
       "method": "GET",
@@ -7655,22 +8435,22 @@
     {
       "method": "POST",
       "path": "/v1/tax/transactions/create_from_calculation",
-      "description": "Create a transaction from a calculation"
+      "description": "Create a Transaction from a Calculation"
     },
     {
       "method": "POST",
       "path": "/v1/tax/transactions/create_reversal",
-      "description": "Create a reversal transaction"
+      "description": "Create a reversal Transaction"
     },
     {
       "method": "GET",
       "path": "/v1/tax/transactions/{transaction}",
-      "description": "Retrieve a transaction"
+      "description": "Retrieve a Transaction"
     },
     {
       "method": "GET",
       "path": "/v1/tax/transactions/{transaction}/line_items",
-      "description": "Retrieve a transaction's line items"
+      "description": "Retrieve a Transaction's line items"
     },
     {
       "method": "GET",
@@ -7846,6 +8626,11 @@
       "method": "POST",
       "path": "/v1/terminal/readers/{reader}/set_reader_display",
       "description": "Set reader display"
+    },
+    {
+      "method": "POST",
+      "path": "/v1/terminal/refunds",
+      "description": "Create a refund using a Terminal-supported device."
     },
     {
       "method": "POST",
@@ -8070,7 +8855,7 @@
     {
       "method": "POST",
       "path": "/v1/tokens",
-      "description": "Create a CVC update token"
+      "description": "Create a bank account token"
     },
     {
       "method": "GET",
@@ -8465,6 +9250,21 @@
       "description": "Download completed export job data"
     },
     {
+      "method": "POST",
+      "path": "/fin/start",
+      "description": "Start a conversation with Fin"
+    },
+    {
+      "method": "POST",
+      "path": "/fin/reply",
+      "description": "Reply to Fin"
+    },
+    {
+      "method": "POST",
+      "path": "/fin/csat",
+      "description": "Submit a CSAT rating"
+    },
+    {
       "method": "GET",
       "path": "/help_center/collections",
       "description": "List all collections"
@@ -8768,26 +9568,6 @@
       "method": "POST",
       "path": "/conversations/{conversation_id}/convert",
       "description": "Convert a conversation to a ticket"
-    },
-    {
-      "method": "POST",
-      "path": "/custom_channel_events/notify_new_conversation",
-      "description": "Notify Intercom of a new conversation created in a custom channel"
-    },
-    {
-      "method": "POST",
-      "path": "/custom_channel_events/notify_new_message",
-      "description": "Notify Intercom of a new message in a custom channel conversation"
-    },
-    {
-      "method": "POST",
-      "path": "/custom_channel_events/notify_quick_reply_selected",
-      "description": "Notify Intercom of a quick reply response in a custom channel conversation"
-    },
-    {
-      "method": "POST",
-      "path": "/custom_channel_events/notify_attribute_collected",
-      "description": "Notify Intercom of an attribute collector response in a custom channel conversation"
     },
     {
       "method": "GET",
